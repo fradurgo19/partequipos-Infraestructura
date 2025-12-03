@@ -1,0 +1,25 @@
+# Backend - PostgreSQL Local Configuration
+# Copiar este archivo a server/.env
+
+# Usar base de datos local
+USE_LOCAL_DB=true
+
+# Configuración de PostgreSQL Local
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=maintenance_db
+DB_USER=postgres
+DB_PASSWORD=password
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+
+# JWT Secret (cambia esto por algo más seguro en producción)
+JWT_SECRET=mi_secreto_super_seguro_para_desarrollo_local_12345
+
+# Logging
+LOG_LEVEL=debug
+DEBUG=true
+

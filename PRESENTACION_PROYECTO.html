@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentación - Sistema de Gestión de Mantenimiento</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        header {
+            text-align: center;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #cf1b22;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            max-width: 300px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .db-diagram {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }
+
+        .db-table {
+            background: white;
+            border: 2px solid #cf1b22;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px;
+            display: inline-block;
+            vertical-align: top;
+            min-width: 200px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .db-table h4 {
+            color: #cf1b22;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #cf1b22;
+            padding-bottom: 5px;
+        }
+
+        .db-relationship {
+            text-align: center;
+            color: #50504f;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        h1 {
+            color: #cf1b22;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #50504f;
+            font-size: 1.8em;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #cf1b22;
+        }
+
+        h3 {
+            color: #50504f;
+            font-size: 1.4em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #cf1b22 0%, #a0151a 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(207, 27, 34, 0.3);
+        }
+
+        .highlight h3 {
+            color: white;
+            border: none;
+            margin-top: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #cf1b22;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .cost-highlight {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .tech-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #cf1b22;
+        }
+
+        .gantt-container {
+            overflow-x: auto;
+            margin: 30px 0;
+        }
+
+        .gantt-chart {
+            min-width: 1000px;
+            margin: 20px 0;
+        }
+
+        .gantt-row {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            min-height: 40px;
+            align-items: center;
+        }
+
+        .gantt-label {
+            min-width: 200px;
+            padding: 10px;
+            font-weight: bold;
+            background: #f8f9fa;
+            border-right: 2px solid #ddd;
+        }
+
+        .gantt-bars {
+            flex: 1;
+            display: flex;
+            position: relative;
+            height: 100%;
+            min-height: 40px;
+        }
+
+        .gantt-bar {
+            background: #cf1b22;
+            border-radius: 4px;
+            margin: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .gantt-bar.phase1 { background: #cf1b22; }
+        .gantt-bar.phase2 { background: #007bff; }
+        .gantt-bar.phase3 { background: #28a745; }
+        .gantt-bar.phase4 { background: #ffc107; color: #333; }
+
+        .gantt-timeline {
+            display: flex;
+            margin-left: 200px;
+            border-bottom: 2px solid #333;
+        }
+
+        .gantt-month {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            font-weight: bold;
+            border-right: 1px solid #ddd;
+        }
+
+        .diagram {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .flow-box {
+            display: inline-block;
+            background: #cf1b22;
+            color: white;
+            padding: 15px 25px;
+            margin: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .flow-arrow {
+            display: inline-block;
+            font-size: 2em;
+            color: #50504f;
+            margin: 0 10px;
+        }
+
+        .summary-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+        }
+
+        .summary-box h3 {
+            color: white;
+            border: none;
+        }
+
+        ul {
+            margin-left: 30px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png" alt="Logo Empresa" class="logo">
+            <h1>🏗️ Sistema de Gestión de Mantenimiento</h1>
+            <p style="font-size: 1.2em; color: #50504f; margin-top: 10px;">
+                Presentación de Proyecto - Desarrollo e Implementación
+            </p>
+            <p style="margin-top: 5px; color: #666;">
+                Período: 15 de Noviembre 2025 - 30 de Enero 2026
+            </p>
+        </header>
+
+        <section>
+            <h2>📋 Resumen Ejecutivo</h2>
+            <p style="font-size: 1.1em; text-align: justify;">
+                El Sistema de Gestión de Mantenimiento es una plataforma web completa desarrollada con tecnologías modernas 
+                que digitaliza y automatiza todos los procesos de mantenimiento de infraestructura. El proyecto busca optimizar 
+                la gestión de sitios, tareas, órdenes de servicio, mediciones y cotizaciones, mejorando significativamente la 
+                eficiencia operativa y la trazabilidad de los procesos.
+            </p>
+        </section>
+
+        <section>
+            <h2>🗄️ Relación de Bases de Datos del Proyecto</h2>
+            <div class="db-diagram">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h3 style="color: #50504f; margin-bottom: 20px;">Modelo de Datos - PostgreSQL</h3>
+                    
+                    <!-- Profiles -->
+                    <div class="db-table">
+                        <h4>profiles</h4>
+                        <ul style="text-align: left; font-size: 0.9em; margin: 10px 0;">
+                            <li>id (PK, UUID)</li>
+                            <li>email</li>
+                            <li>full_name</li>
+                            <li>role (enum)</li>
+                            <li>department</li>
+                            <li>phone</li>
+                        </ul>
+                    </div>
+
+                    <div class="db-relationship">↓ referencia</div>
+
+                    <!-- Sites -->
+                    <div class="db-table">
+                        <h4>sites</h4>
+                        <ul style="text-align: left; font-size: 0.9em; margin: 10px 0;">
+                            <li>id (PK)</li>
+                            <li>name</li>
+                            <li>location</li>
+                            <li>latitude/longitude</li>
+                            <li>area_to_paint</li>
+                            <li>created_by (FK → profiles)</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin: 20px 0;">
+                        <div class="db-relationship">↓</div>
+                        
+                        <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 20px;">
+                            <div class="db-table" style="min-width: 180px;">
+                                <h4>tasks</h4>
+                                <ul style="text-align: left; font-size: 0.85em; margin: 8px 0;">
+                                    <li>id (PK)</li>
+                                    <li>title, description</li>
+                                    <li>site_id (FK)</li>
+                                    <li>requester_id (FK)</li>
+                                    <li>assignee_id (FK)</li>
+                                    <li>status, budget_amount</li>
+                                </ul>
+                            </div>
+
+                            <div class="db-table" style="min-width: 180px;">
+                                <h4>service_orders</h4>
+                                <ul style="text-align: left; font-size: 0.85em; margin: 8px 0;">
+                                    <li>id (PK)</li>
+                                    <li>order_number</li>
+                                    <li>site_id (FK)</li>
+                                    <li>contractor_id (FK)</li>
+                                    <li>budget_amount</li>
+                                    <li>status</li>
+                                </ul>
+                            </div>
+
+                            <div class="db-table" style="min-width: 180px;">
+                                <h4>measurements</h4>
+                                <ul style="text-align: left; font-size: 0.85em; margin: 8px 0;">
+                                    <li>id (PK)</li>
+                                    <li>title</li>
+                                    <li>site_id (FK)</li>
+                                    <li>length, height, depth</li>
+                                    <li>calculated_area/volume</li>
+                                    <li>approved_by_* (FK)</li>
+                                </ul>
+                            </div>
+
+                            <div class="db-table" style="min-width: 180px;">
+                                <h4>internal_requests</h4>
+                                <ul style="text-align: left; font-size: 0.85em; margin: 8px 0;">
+                                    <li>id (PK)</li>
+                                    <li>title, description</li>
+                                    <li>department</li>
+                                    <li>created_by (FK)</li>
+                                    <li>assigned_to (FK)</li>
+                                    <li>status</li>
+                                </ul>
+                            </div>
+
+                            <div class="db-table" style="min-width: 180px;">
+                                <h4>quotations</h4>
+                                <ul style="text-align: left; font-size: 0.85em; margin: 8px 0;">
+                                    <li>id (PK)</li>
+                                    <li>title, description</li>
+                                    <li>quotation_1/2/3_url</li>
+                                    <li>quotation_1/2/3_amount</li>
+                                    <li>status</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="db-relationship" style="margin-top: 20px;">↑ referencia</div>
+
+                        <div class="db-table" style="margin-top: 20px;">
+                            <h4>contractors</h4>
+                            <ul style="text-align: left; font-size: 0.9em; margin: 10px 0;">
+                                <li>id (PK)</li>
+                                <li>company_name</li>
+                                <li>contact_name</li>
+                                <li>email, phone</li>
+                                <li>specialty[]</li>
+                                <li>rating</li>
+                            </ul>
+                        </div>
+
+                        <div style="margin-top: 30px;">
+                            <div class="db-table" style="min-width: 180px;">
+                                <h4>task_timeline</h4>
+                                <ul style="text-align: left; font-size: 0.85em; margin: 8px 0;">
+                                    <li>id (PK)</li>
+                                    <li>task_id (FK)</li>
+                                    <li>event_type</li>
+                                    <li>user_id (FK)</li>
+                                    <li>description</li>
+                                </ul>
+                            </div>
+
+                            <div class="db-table" style="min-width: 180px;">
+                                <h4>notifications</h4>
+                                <ul style="text-align: left; font-size: 0.85em; margin: 8px 0;">
+                                    <li>id (PK)</li>
+                                    <li>user_id (FK)</li>
+                                    <li>title, message</li>
+                                    <li>type</li>
+                                    <li>reference_id</li>
+                                    <li>read</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-top: 30px;">
+                    <h3 style="color: #50504f; margin-bottom: 15px;">Relaciones Principales</h3>
+                    <ul style="text-align: left;">
+                        <li><strong>profiles</strong> → Relación con todas las tablas mediante foreign keys (created_by, assignee_id, etc.)</li>
+                        <li><strong>sites</strong> → Referenciado por tasks, service_orders, measurements</li>
+                        <li><strong>contractors</strong> → Referenciado por service_orders</li>
+                        <li><strong>tasks</strong> → Relacionado con task_timeline (uno a muchos)</li>
+                        <li><strong>Todas las tablas</strong> → Pueden generar notifications</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>💰 Sueldos Colombia 2024 - Base Mensual</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rol</th>
+                        <th>Experiencia</th>
+                        <th>Salario Mensual (COP)</th>
+                        <th>Salario USD (aprox.)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Desarrollador Frontend Junior</td>
+                        <td>0-2 años</td>
+                        <td>$3.500.000 - $4.500.000</td>
+                        <td>$850 - $1.100</td>
+                    </tr>
+                    <tr>
+                        <td>Desarrollador Backend Junior</td>
+                        <td>0-2 años</td>
+                        <td>$3.800.000 - $4.800.000</td>
+                        <td>$930 - $1.175</td>
+                    </tr>
+                    <tr>
+                        <td>Desarrollador Full Stack Junior</td>
+                        <td>0-2 años</td>
+                        <td>$4.000.000 - $5.000.000</td>
+                        <td>$980 - $1.225</td>
+                    </tr>
+                    <tr>
+                        <td>Diseñador UI/UX Junior</td>
+                        <td>0-2 años</td>
+                        <td>$3.200.000 - $4.000.000</td>
+                        <td>$785 - $980</td>
+                    </tr>
+                    <tr>
+                        <td>Project Manager / Tech Lead</td>
+                        <td>3+ años</td>
+                        <td>$6.000.000 - $8.000.000</td>
+                        <td>$1.470 - $1.960</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                <em>* Salarios basados en mercado colombiano 2024 para nivel junior/entry level</em>
+            </p>
+        </section>
+
+        <section>
+            <h2>💰 Costos de Licencias Críticas</h2>
+            <div class="highlight">
+                <h3>Vercel Pro</h3>
+                <ul>
+                    <li><strong>Costo:</strong> $20 USD/mes (1 licencia)</li>
+                    <li><strong>Período del proyecto (2.5 meses):</strong> $50 USD</li>
+                    <li><strong>Beneficios:</strong> Deployments ilimitados, mayor ancho de banda, builds más rápidos, 
+                        preview deployments, analytics avanzado, protección DDoS, SSL automático</li>
+                    <li><strong>Justificación:</strong> Esencial para desarrollo profesional, testing en producción y 
+                        deployment automatizado</li>
+                </ul>
+            </div>
+
+            <div class="highlight">
+                <h3>Neon Database (PostgreSQL Serverless)</h3>
+                <ul>
+                    <li><strong>Costo:</strong> $19 USD/mes (plan Launch)</li>
+                    <li><strong>Período del proyecto (2.5 meses):</strong> $48 USD</li>
+                    <li><strong>Beneficios:</strong> Base de datos PostgreSQL serverless, backups automáticos, 
+                        escalabilidad automática, branching de bases de datos, conectividad global, 
+                        alta disponibilidad</li>
+                    <li><strong>Justificación:</strong> Base de datos robusta y escalable sin gestión de infraestructura, 
+                        ideal para desarrollo ágil y producción</li>
+                </ul>
+            </div>
+
+            <div class="cost-highlight">
+                <strong>💰 Inversión Total en Licencias (período proyecto):</strong><br>
+                Vercel Pro: $50 USD + Neon Launch: $48 USD = 
+                <strong style="font-size: 1.2em; color: #cf1b22;">$98 USD ($392.000 COP aprox.)</strong>
+            </div>
+        </section>
+
+        <section>
+            <h2>👥 Recursos Humanos Necesarios</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rol</th>
+                        <th>Cantidad</th>
+                        <th>Duración (semanas)</th>
+                        <th>Costo Total (COP)</th>
+                        <th>Responsabilidades</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Tech Lead / Project Manager</td>
+                        <td>1</td>
+                        <td>11</td>
+                        <td>$8.250.000</td>
+                        <td>Coordinación, arquitectura, code review, gestión</td>
+                    </tr>
+                    <tr>
+                        <td>Desarrollador Full Stack</td>
+                        <td>1</td>
+                        <td>11</td>
+                        <td>$5.500.000</td>
+                        <td>Desarrollo frontend y backend, implementación módulos</td>
+                    </tr>
+                    <tr>
+                        <td>Desarrollador Frontend</td>
+                        <td>1</td>
+                        <td>8</td>
+                        <td>$4.000.000</td>
+                        <td>UI/UX, componentes React, integración diseño</td>
+                    </tr>
+                    <tr>
+                        <td>QA Tester (part-time)</td>
+                        <td>1</td>
+                        <td>4</td>
+                        <td>$1.600.000</td>
+                        <td>Testing funcional, pruebas de integración, documentación bugs</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f0f0f0; font-weight: bold;">
+                        <td colspan="3">TOTAL MANO DE OBRA</td>
+                        <td style="color: #cf1b22; font-size: 1.1em;">$19.350.000 COP</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <p style="margin-top: 15px;">
+                <strong>Nota:</strong> Salarios calculados con base en los rangos más bajos del mercado colombiano 2024 
+                para profesionales junior con 0-2 años de experiencia.
+            </p>
+        </section>
+
+        <section>
+            <h2>⚙️ Aspectos Técnicos</h2>
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h3>Frontend</h3>
+                    <ul>
+                        <li>React 18+ con TypeScript</li>
+                        <li>Vite (Build Tool)</li>
+                        <li>TailwindCSS</li>
+                        <li>React Router v6</li>
+                        <li>React Query (TanStack)</li>
+                        <li>Atomic Design</li>
+                    </ul>
+                </div>
+                <div class="tech-card">
+                    <h3>Backend</h3>
+                    <ul>
+                        <li>Node.js + Express</li>
+                        <li>RESTful API</li>
+                        <li>PostgreSQL (Neon)</li>
+                        <li>JWT Authentication</li>
+                        <li>Sharp (Watermarking)</li>
+                        <li>Nodemailer</li>
+                    </ul>
+                </div>
+                <div class="tech-card">
+                    <h3>Infraestructura</h3>
+                    <ul>
+                        <li>Vercel (Deployment)</li>
+                        <li>Neon (Database)</li>
+                        <li>Supabase Storage</li>
+                        <li>Git/GitHub</li>
+                        <li>CI/CD Automático</li>
+                    </ul>
+                </div>
+                <div class="tech-card">
+                    <h3>Funcionalidades</h3>
+                    <ul>
+                        <li>Watermarking automático</li>
+                        <li>Generación PDF (jsPDF)</li>
+                        <li>Firmas digitales</li>
+                        <li>Notificaciones email</li>
+                        <li>Subida de archivos</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>📦 Explicación de Módulos del Sistema</h2>
+            
+            <div class="tech-card" style="margin-bottom: 20px;">
+                <h3>1. Dashboard</h3>
+                <p>Panel principal con tarjetas flotantes animadas que proporciona una vista general del sistema. 
+                Muestra estadísticas en tiempo real de tareas pendientes, sitios registrados y órdenes de servicio. 
+                Incluye acceso rápido a todos los módulos y gráficos de resumen para toma de decisiones.</p>
+            </div>
+
+            <div class="tech-card" style="margin-bottom: 20px;">
+                <h3>2. Sites & Projects</h3>
+                <p>Gestión completa de ubicaciones y proyectos de infraestructura. Permite registrar sitios con 
+                información detallada (ubicación, coordenadas, área a pintar, número de baños, muros), almacenar 
+                planos arquitectónicos, galerías de fotos e historial de intervenciones. Incluye análisis de 
+                demandas recurrentes por sitio.</p>
+            </div>
+
+            <div class="tech-card" style="margin-bottom: 20px;">
+                <h3>3. Tasks (Tareas)</h3>
+                <p>Módulo central para gestión de tareas de mantenimiento. Permite crear, asignar y dar seguimiento 
+                a tareas con diferentes tipos y áreas solicitantes. Incluye timeline interactivo de estados, 
+                notificaciones automáticas basadas en presupuesto (>$10M notifica a Don Pedro, ≤$5M a Felipe), 
+                fotos con watermark automático y firma digital para cierre de tareas.</p>
+            </div>
+
+            <div class="tech-card" style="margin-bottom: 20px;">
+                <h3>4. Service Orders (Órdenes de Servicio)</h3>
+                <p>Gestión de órdenes de servicio con numeración secuencial por sitio. Vincula contratistas, 
+                gestiona fechas de solicitud/inicio/fin, categoriza actividades y maneja autorizaciones basadas 
+                en valores. Genera PDFs automáticos con branding corporativo y permite firma digital. Incluye 
+                gestión completa de contratistas.</p>
+            </div>
+
+            <div class="tech-card" style="margin-bottom: 20px;">
+                <h3>5. Measurements & Evidence (Mediciones y Evidencias)</h3>
+                <p>Documentación de mediciones con captura de longitud, altura y profundidad. Calcula automáticamente 
+                área y volumen. Permite adjuntar fotos con watermark (logo + fecha). Implementa flujo de aprobación 
+                multi-nivel (Edison → Felipe → Claudia Cano) y genera reportes PDF con todas las mediciones y evidencia fotográfica.</p>
+            </div>
+
+                <div class="tech-card" style="margin-bottom: 20px;">
+                <h3>6. Internal Requests (Solicitudes Internas)</h3>
+                <p>Módulo para que departamentos internos soliciten servicios de infraestructura. Permite adjuntar 
+                fotos, mediciones básicas y diseños opcionales. Genera notificaciones automáticas al equipo de 
+                infraestructura para seguimiento y asignación de recursos.</p>
+            </div>
+
+            <div class="tech-card" style="margin-bottom: 20px;">
+                <h3>7. Quotation Comparison (Comparación de Cotizaciones)</h3>
+                <p>Sistema para subir y comparar hasta 3 cotizaciones de proveedores diferentes. Genera tablas 
+                comparativas automáticas con montos, proveedores y documentos. Crea PDFs comparativos y notifica 
+                automáticamente a Pedro Cano para revisión cuando se completa la comparación.</p>
+            </div>
+
+            <div class="tech-card" style="margin-bottom: 20px;">
+                <h3>8. Users & Roles (Usuarios y Roles)</h3>
+                <p>Administración completa de usuarios del sistema con gestión de roles y permisos. Define roles 
+                (Infraestructura, Supervisión, Contratistas, Administrador, Clientes Internos) con permisos específicos. 
+                Controla acceso a módulos según rol y gestiona perfiles de usuario con información de contacto.</p>
+            </div>
+
+            <h3 style="margin-top: 30px;">Características Generales</h3>
+            <ul>
+                <li>Paleta corporativa: #cf1b22 (Rojo) y #50504f (Gris)</li>
+                <li>Glassmorphism y efectos modernos</li>
+                <li>Animaciones fluidas y transiciones suaves</li>
+                <li>Diseño responsive (mobile, tablet, desktop)</li>
+                <li>UX intuitiva con feedback visual</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>📊 Diagrama de Proceso</h2>
+            <div class="diagram">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <div class="flow-box">Inicio<br/>Usuario</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box">Autenticación<br/>& Roles</div>
+                    <div class="flow-arrow">↓</div>
+                    <div style="display: flex; gap: 20px;">
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <div class="flow-box">Dashboard</div>
+                            <div class="flow-arrow">↓</div>
+                            <div class="flow-box">Módulos</div>
+                        </div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div style="display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap; justify-content: center;">
+                        <div class="flow-box">Sites</div>
+                        <div class="flow-box">Tasks</div>
+                        <div class="flow-box">Orders</div>
+                        <div class="flow-box">Measurements</div>
+                        <div class="flow-box">Requests</div>
+                        <div class="flow-box">Quotations</div>
+                    </div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box">Procesamiento<br/>& Notificaciones</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box">Reportes<br/>& PDFs</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>📅 Cronograma de Desarrollo - Diagrama de Gantt</h2>
+            <p style="margin-bottom: 20px; color: #666;">
+                <strong>Período:</strong> 15 de Noviembre 2025 - 30 de Enero 2026 (11 semanas / 77 días)
+            </p>
+            <div class="gantt-container">
+                <div class="gantt-chart">
+                    <div class="gantt-timeline">
+                        <div class="gantt-month">Nov 15-30<br/>(16 días)</div>
+                        <div class="gantt-month">Dic 1-15<br/>(15 días)</div>
+                        <div class="gantt-month">Dic 16-31<br/>(16 días)</div>
+                        <div class="gantt-month">Ene 1-15<br/>(15 días)</div>
+                        <div class="gantt-month">Ene 16-30<br/>(15 días)</div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-label">Fase 1: Backend & Infra<br/>15 Nov - 30 Nov (2 sem)</div>
+                        <div class="gantt-bars">
+                            <div class="gantt-bar phase1" style="width: 20.8%;">Backend</div>
+                            <div style="width: 79.2%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-label">Fase 2: Módulos Frontend<br/>1 Dic - 22 Dic (3 sem)</div>
+                        <div class="gantt-bars">
+                            <div style="width: 20.8%;"></div>
+                            <div class="gantt-bar phase2" style="width: 28.6%;">Frontend</div>
+                            <div style="width: 50.6%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-label">Fase 3: Integraciones<br/>23 Dic - 5 Ene (2 sem)</div>
+                        <div class="gantt-bars">
+                            <div style="width: 49.4%;"></div>
+                            <div class="gantt-bar phase3" style="width: 19.5%;">Integración</div>
+                            <div style="width: 31.1%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-label">Fase 4: Testing & QA<br/>6 Ene - 15 Ene (1.5 sem)</div>
+                        <div class="gantt-bars">
+                            <div style="width: 68.9%;"></div>
+                            <div class="gantt-bar phase4" style="width: 13%;">Testing</div>
+                            <div style="width: 18.1%;"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="gantt-row">
+                        <div class="gantt-label">Fase 5: Deploy & Go-Live<br/>16 Ene - 30 Ene (2 sem)</div>
+                        <div class="gantt-bars">
+                            <div style="width: 81.9%;"></div>
+                            <div class="gantt-bar phase1" style="width: 18.1%;">Deploy</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px;">
+                <h4 style="margin-bottom: 10px;">Leyenda:</h4>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <span><span style="display: inline-block; width: 20px; height: 20px; background: #cf1b22; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span> Fase 1: Backend</span>
+                    <span><span style="display: inline-block; width: 20px; height: 20px; background: #007bff; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span> Fase 2: Frontend</span>
+                    <span><span style="display: inline-block; width: 20px; height: 20px; background: #28a745; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span> Fase 3: Integraciones</span>
+                    <span><span style="display: inline-block; width: 20px; height: 20px; background: #ffc107; border-radius: 4px; vertical-align: middle; margin-right: 5px;"></span> Fase 4: Testing</span>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>📋 Fases Detalladas del Proyecto</h2>
+            
+            <h3>Fase 1: Backend e Infraestructura (15 Nov - 30 Nov)</h3>
+            <ul>
+                <li>Configuración servidor Node.js/Express</li>
+                <li>API RESTful completa</li>
+                <li>Integración Neon Database</li>
+                <li>Sistema de autenticación JWT</li>
+                <li>Endpoints de upload y watermarking</li>
+                <li><strong>Recursos:</strong> Tech Lead + 1 Full Stack (2 personas, 2 semanas)</li>
+                <li><strong>Costo:</strong> $2.750.000 COP</li>
+            </ul>
+
+            <h3>Fase 2: Módulos Frontend (1 Dic - 22 Dic)</h3>
+            <ul>
+                <li>Completar módulos pendientes (Measurements, Requests, Quotations, Users)</li>
+                <li>Integración con API backend</li>
+                <li>Componentes reutilizables</li>
+                <li>Mejoras de UI/UX</li>
+                <li><strong>Recursos:</strong> Tech Lead + 1 Full Stack + 1 Frontend (3 personas, 3 semanas)</li>
+                <li><strong>Costo:</strong> $4.750.000 COP</li>
+            </ul>
+
+            <h3>Fase 3: Integraciones Avanzadas (16 Dic - 31 Dic)</h3>
+            <ul>
+                <li>Sistema de notificaciones email (Nodemailer)</li>
+                <li>Firmas digitales completas</li>
+                <li>Generación de PDFs mejorada</li>
+                <li>Watermarking frontend/backend</li>
+                <li><strong>Recursos:</strong> Tech Lead + 1 Full Stack (2 personas, 2 semanas)</li>
+                <li><strong>Costo:</strong> $2.750.000 COP</li>
+            </ul>
+
+            <h3>Fase 4: Testing y QA (1 Ene - 15 Ene)</h3>
+            <ul>
+                <li>Pruebas funcionales completas</li>
+                <li>Pruebas de integración</li>
+                <li>Corrección de bugs</li>
+                <li>Optimización de performance</li>
+                <li><strong>Recursos:</strong> Tech Lead + QA Tester (part-time) (2 personas, 1.5 semanas)</li>
+                <li><strong>Costo:</strong> $1.400.000 COP</li>
+            </ul>
+
+            <h3>Fase 5: Deploy y Go-Live (16 Ene - 30 Ene)</h3>
+            <ul>
+                <li>Configuración Vercel Pro</li>
+                <li>Migración a producción</li>
+                <li>Capacitación usuarios</li>
+                <li>Documentación final</li>
+                <li><strong>Recursos:</strong> Tech Lead + 1 Full Stack (2 personas, 2 semanas)</li>
+                <li><strong>Costo:</strong> $2.750.000 COP</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>💰 Presupuesto Total del Proyecto</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Concepto</th>
+                        <th>Cantidad</th>
+                        <th>Periodo</th>
+                        <th>Costo Total (COP)</th>
+                        <th>Costo Total (USD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Mano de Obra (Desarrolladores)</td>
+                        <td>3 personas</td>
+                        <td>11 semanas</td>
+                        <td>$19.350.000</td>
+                        <td>$4.735</td>
+                    </tr>
+                    <tr>
+                        <td>Vercel Pro (Licencia período proyecto)</td>
+                        <td>1 licencia</td>
+                        <td>2.5 meses</td>
+                        <td>$392.000</td>
+                        <td>$98</td>
+                    </tr>
+                    <tr>
+                        <td>Neon Database (Plan Launch)</td>
+                        <td>1 cuenta</td>
+                        <td>2.5 meses</td>
+                        <td>$392.000</td>
+                        <td>$98</td>
+                    </tr>
+                    <tr>
+                        <td>Contingencias (10%)</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>$2.013.400</td>
+                        <td>$493</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="background: #cf1b22; color: white; font-weight: bold; font-size: 1.1em;">
+                        <td colspan="3">TOTAL PROYECTO</td>
+                        <td style="font-size: 1.2em;">$22.147.400 COP</td>
+                        <td style="font-size: 1.2em;">$5.424 USD</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </section>
+
+        <section>
+            <div class="summary-box">
+                <h3>🎯 Resumen de Inversión</h3>
+                <ul style="color: white; font-size: 1.1em;">
+                    <li><strong>Duración:</strong> 11 semanas (15 Nov 2025 - 30 Ene 2026)</li>
+                    <li><strong>Equipo:</strong> 3 profesionales (Tech Lead + 1 Full Stack + 1 Frontend + 1 QA part-time)</li>
+                    <li><strong>Inversión Total:</strong> $22.147.400 COP (~$5.424 USD)</li>
+                    <li><strong>Licencias Críticas:</strong> Vercel Pro + Neon Database = $784.000 COP (período proyecto)</li>
+                    <li><strong>ROI Esperado:</strong> Reducción 40% tiempo gestión, mejor trazabilidad, automatización procesos</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2>✅ Entregables del Proyecto</h2>
+            <ul>
+                <li>Sistema web completamente funcional en producción</li>
+                <li>7 módulos operativos (Sites, Tasks, Service Orders, Measurements, Requests, Quotations, Users)</li>
+                <li>Documentación técnica completa</li>
+                <li>Manual de usuario</li>
+                <li>Base de código mantenible y escalable</li>
+                <li>Sistema de deployment automatizado (CI/CD)</li>
+                <li>Capacitación al equipo de infraestructura</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>⚠️ Riesgos y Mitigaciones</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Riesgo</th>
+                        <th>Probabilidad</th>
+                        <th>Impacto</th>
+                        <th>Mitigación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Retrasos en desarrollo</td>
+                        <td>Media</td>
+                        <td>Alto</td>
+                        <td>Buffer de tiempo en cronograma, desarrollo paralelo de módulos</td>
+                    </tr>
+                    <tr>
+                        <td>Cambios en requerimientos</td>
+                        <td>Media</td>
+                        <td>Medio</td>
+                        <td>Revisión semanal con stakeholders, aprobación formal de cambios</td>
+                    </tr>
+                    <tr>
+                        <td>Problemas de integración API</td>
+                        <td>Baja</td>
+                        <td>Medio</td>
+                        <td>Testing continuo, desarrollo de mocks para desarrollo paralelo</td>
+                    </tr>
+                    <tr>
+                        <td>Disponibilidad de recursos</td>
+                        <td>Baja</td>
+                        <td>Alto</td>
+                        <td>Contratos firmados, backup de desarrolladores disponibles</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <div class="footer">
+            <p><strong>Sistema de Gestión de Mantenimiento</strong></p>
+            <p>Presentación para Dirección de Infraestructura | Noviembre 2025</p>
+            <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                <strong>Elaborado por:</strong><br>
+                <span style="font-size: 1.1em; color: #cf1b22;">
+                    Frank Anderson Duran Gonzalez<br>
+                    <span style="font-size: 0.9em; color: #50504f;">Ingeniero de Automatización y Soluciones Digitales</span>
+                </span>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

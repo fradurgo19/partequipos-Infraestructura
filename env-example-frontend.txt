@@ -1,0 +1,6 @@
+# Frontend - Variables de entorno para desarrollo local
+# Copiar este archivo a .env en la raíz del proyecto
+
+VITE_API_URL=http://localhost:3000/api
+VITE_USE_LOCAL_DB=true
+
