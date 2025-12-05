@@ -51,22 +51,47 @@ router.post('/image/watermark', authenticateToken, upload.single('image'), async
     }
 
     const { bucket = 'images', folder = 'watermarked' } = req.body;
+    const LOGO_URL = 'https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png';
 
-    // Create watermark with logo and date
-    const watermark = await sharp({
+    // Download logo
+    let logoBuffer;
+    try {
+      const logoResponse = await fetch(LOGO_URL);
+      logoBuffer = Buffer.from(await logoResponse.arrayBuffer());
+    } catch (error) {
+      console.error('Error downloading logo:', error);
+      // If logo fails, continue without it
+    }
+
+    // Get image metadata
+    const image = sharp(req.file.buffer);
+    const metadata = await image.metadata();
+    const logoSize = Math.floor(metadata.width * 0.1); // 10% of image width
+
+    // Create date text
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Create date watermark
+    const dateWatermark = await sharp({
       create: {
-        width: 400,
-        height: 100,
+        width: 300,
+        height: 40,
         channels: 4,
-        background: { r: 207, g: 27, b: 34, alpha: 0.8 }, // Company red with transparency
+        background: { r: 0, g: 0, b: 0, alpha: 0.5 },
       },
     })
       .composite([
         {
           input: Buffer.from(
-            `<svg width="400" height="100">
-              <text x="200" y="50" font-family="Arial" font-size="20" fill="white" text-anchor="middle" font-weight="bold">MAINTENANCE SYSTEM</text>
-              <text x="200" y="75" font-family="Arial" font-size="14" fill="white" text-anchor="middle">${new Date().toLocaleDateString('es-ES')}</text>
+            `<svg width="300" height="40">
+              <text x="150" y="25" font-family="Arial" font-size="16" fill="white" text-anchor="middle" font-weight="bold">${dateStr}</text>
             </svg>`
           ),
         },
@@ -74,14 +99,34 @@ router.post('/image/watermark', authenticateToken, upload.single('image'), async
       .png()
       .toBuffer();
 
-    // Apply watermark to image
-    const watermarkedImage = await sharp(req.file.buffer)
-      .composite([
-        {
-          input: watermark,
-          gravity: 'southeast',
-        },
-      ])
+    // Apply watermarks to image
+    const composite = [];
+    
+    // Add logo in top right
+    if (logoBuffer) {
+      const resizedLogo = await sharp(logoBuffer)
+        .resize(logoSize, logoSize, { fit: 'contain' })
+        .png()
+        .toBuffer();
+      
+      composite.push({
+        input: resizedLogo,
+        gravity: 'northeast',
+        top: 20,
+        left: 20,
+      });
+    }
+
+    // Add date in bottom right
+    composite.push({
+      input: dateWatermark,
+      gravity: 'southeast',
+      top: 20,
+      left: 20,
+    });
+
+    const watermarkedImage = await image
+      .composite(composite)
       .jpeg({ quality: 90 })
       .toBuffer();
 

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Plus, Download, TrendingDown, TrendingUp } from 'lucide-react';
+import { Plus, Download, TrendingDown, TrendingUp, Mail } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Textarea } from '../atoms/Textarea';
+import { Select } from '../atoms/Select';
 import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
 import { FileUpload } from '../molecules/FileUpload';
@@ -11,6 +12,16 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Quotation } from '../types';
 import { generateQuotationComparisonPDF } from '../services/pdfGenerator';
+
+// Tipos de cotización
+const TIPOS_COTIZACION = [
+  'Materiales',
+  'Mano de Obra',
+  'Servicios',
+  'Equipos',
+  'Suministros',
+  'Otro'
+];
 
 export const Quotations = () => {
   const { profile } = useAuth();
@@ -20,6 +31,9 @@ export const Quotations = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    tipo_cotizacion: '',
+    cantidad: '',
+    formato_contratista: '',
     quotation_1_url: '',
     quotation_1_amount: '',
     quotation_1_provider: '',
@@ -48,13 +62,86 @@ export const Quotations = () => {
     setLoading(false);
   };
 
+  // Función para calcular comparativos
+  const calculateComparatives = (quotation: any) => {
+    const quotations = [
+      {
+        provider: quotation.quotation_1_provider,
+        amount: quotation.quotation_1_amount,
+        url: quotation.quotation_1_url,
+        description: quotation.description,
+      },
+      {
+        provider: quotation.quotation_2_provider,
+        amount: quotation.quotation_2_amount,
+        url: quotation.quotation_2_url,
+        description: quotation.description,
+      },
+      {
+        provider: quotation.quotation_3_provider,
+        amount: quotation.quotation_3_amount,
+        url: quotation.quotation_3_url,
+        description: quotation.description,
+      },
+    ].filter((q) => q.provider && q.amount);
+
+    // Comparativo por monto (menor a mayor)
+    const comparativoPorMonto = [...quotations]
+      .sort((a, b) => (a.amount || 0) - (b.amount || 0))
+      .map((q, index) => ({
+        position: index + 1,
+        provider: q.provider,
+        amount: q.amount,
+        url: q.url,
+      }));
+
+    // Comparativo por valor (valor unitario si hay cantidad)
+    const comparativoPorValor = quotation.cantidad
+      ? [...quotations]
+          .map((q) => ({
+            provider: q.provider,
+            amount: q.amount,
+            unitValue: (q.amount || 0) / quotation.cantidad,
+            url: q.url,
+          }))
+          .sort((a, b) => a.unitValue - b.unitValue)
+          .map((q, index) => ({
+            position: index + 1,
+            provider: q.provider,
+            amount: q.amount,
+            unitValue: q.unitValue,
+            url: q.url,
+          }))
+      : comparativoPorMonto;
+
+    // Comparativo por descripción (alfabético por proveedor)
+    const comparativoPorDescripcion = [...quotations]
+      .sort((a, b) => (a.provider || '').localeCompare(b.provider || ''))
+      .map((q, index) => ({
+        position: index + 1,
+        provider: q.provider,
+        amount: q.amount,
+        description: q.description,
+        url: q.url,
+      }));
+
+    return {
+      comparativo_por_monto: comparativoPorMonto,
+      comparativo_por_valor: comparativoPorValor,
+      comparativo_por_descripcion: comparativoPorDescripcion,
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
 
-    const quotationData = {
+    const quotationData: any = {
       title: formData.title,
       description: formData.description,
+      tipo_cotizacion: formData.tipo_cotizacion || null,
+      cantidad: formData.cantidad ? parseFloat(formData.cantidad) : null,
+      formato_contratista: formData.formato_contratista || null,
       quotation_1_url: formData.quotation_1_url || null,
       quotation_1_amount: formData.quotation_1_amount ? parseFloat(formData.quotation_1_amount) : null,
       quotation_1_provider: formData.quotation_1_provider || null,
@@ -68,38 +155,84 @@ export const Quotations = () => {
       status: 'pending',
     };
 
-    const { error } = await supabase.from('quotations').insert([quotationData]);
+    // Calcular comparativos
+    const comparatives = calculateComparatives(quotationData);
+    quotationData.comparativo_por_monto = comparatives.comparativo_por_monto;
+    quotationData.comparativo_por_valor = comparatives.comparativo_por_valor;
+    quotationData.comparativo_por_descripcion = comparatives.comparativo_por_descripcion;
 
-    if (!error) {
-      // Notify Pedro Cano
-      const { data: pedroCano } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('full_name', '%Pedro Cano%')
-        .limit(1);
+    const { data: insertedQuotation, error } = await supabase
+      .from('quotations')
+      .insert([quotationData])
+      .select()
+      .single();
 
-      if (pedroCano && pedroCano.length > 0) {
-        await supabase.from('notifications').insert([
-          {
-            user_id: pedroCano[0].id,
-            title: 'Quotation Review Required',
-            message: `A new quotation comparison "${quotationData.title}" requires your review`,
-            type: 'quotation',
-            reference_id: quotationData.id,
-          },
-        ]);
-      }
-
-      setShowModal(false);
-      resetForm();
-      loadData();
+    if (error) {
+      console.error('Error creating quotation:', error);
+      alert('Error al crear la cotización');
+      return;
     }
+
+    // Generar PDF comparativo
+    try {
+      const pdfBlob = await generateQuotationComparisonPDF(insertedQuotation);
+      
+      // Subir PDF a Supabase Storage
+      const pdfFileName = `quotations/comparativo-${Date.now()}-${formData.title.replace(/\s+/g, '_')}.pdf`;
+      const { data: pdfUploadData, error: pdfUploadError } = await supabase.storage
+        .from('documents')
+        .upload(pdfFileName, pdfBlob, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+
+      if (pdfUploadError) {
+        console.error('Error uploading PDF:', pdfUploadError);
+      } else {
+        const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(pdfFileName);
+        
+        // Actualizar quotation con URL del PDF
+        await supabase
+          .from('quotations')
+          .update({ pdf_comparativo_url: publicUrl })
+          .eq('id', insertedQuotation.id);
+
+        // Enviar PDF por correo a Felipe Bustamante
+        try {
+          const token = localStorage.getItem('token');
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/notifications/quotation-comparative`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              quotationId: insertedQuotation.id,
+              quotationTitle: formData.title,
+              pdfUrl: publicUrl,
+              comparatives: comparatives,
+            }),
+          });
+        } catch (emailError) {
+          console.error('Error sending email:', emailError);
+        }
+      }
+    } catch (pdfError) {
+      console.error('Error generating PDF:', pdfError);
+    }
+
+    setShowModal(false);
+    resetForm();
+    loadData();
   };
 
   const resetForm = () => {
     setFormData({
       title: '',
       description: '',
+      tipo_cotizacion: '',
+      cantidad: '',
+      formato_contratista: '',
       quotation_1_url: '',
       quotation_1_amount: '',
       quotation_1_provider: '',
@@ -128,6 +261,21 @@ export const Quotations = () => {
     return { min, max, avg, amounts };
   };
 
+  const handleDownloadPDF = async (quotation: Quotation) => {
+    if (quotation.pdf_comparativo_url) {
+      window.open(quotation.pdf_comparativo_url, '_blank');
+    } else {
+      // Generar PDF on-the-fly si no existe
+      const pdfBlob = await generateQuotationComparisonPDF(quotation);
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Comparativo_${quotation.title}_${Date.now()}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const canManage = profile?.role === 'admin' || profile?.role === 'infrastructure' || profile?.role === 'supervision';
 
   if (loading) {
@@ -142,13 +290,13 @@ export const Quotations = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#50504f]">Quotation Comparison</h1>
-          <p className="text-gray-600 mt-1">Compare and review quotations</p>
+          <h1 className="text-3xl font-bold text-[#50504f]">Comparativo de Cotizaciones</h1>
+          <p className="text-gray-600 mt-1">Compare hasta tres cotizaciones de proveedores</p>
         </div>
         {canManage && (
           <Button onClick={() => setShowModal(true)}>
             <Plus className="w-5 h-5 mr-2" />
-            New Comparison
+            Nuevo Comparativo
           </Button>
         )}
       </div>
@@ -164,17 +312,37 @@ export const Quotations = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg text-[#50504f]">{quotation.title}</h3>
-                      <Badge variant={quotation.status}>{quotation.status}</Badge>
+                      <Badge variant={quotation.status === 'approved' ? 'success' : quotation.status === 'reviewed' ? 'in_progress' : 'pending'}>
+                        {quotation.status}
+                      </Badge>
+                      {quotation.tipo_cotizacion && (
+                        <Badge variant="default">{quotation.tipo_cotizacion}</Badge>
+                      )}
                     </div>
                     <p className="text-gray-600 text-sm mb-4">{quotation.description}</p>
+
+                    {quotation.cantidad && (
+                      <p className="text-sm text-gray-500 mb-2">
+                        <strong>Cantidad:</strong> {quotation.cantidad}
+                      </p>
+                    )}
+
+                    {quotation.formato_contratista && (
+                      <p className="text-sm text-gray-500 mb-4">
+                        <strong>Formato de Contratista:</strong> {quotation.formato_contratista}
+                      </p>
+                    )}
 
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 px-3">Provider</th>
-                            <th className="text-right py-2 px-3">Amount</th>
-                            <th className="text-center py-2 px-3">Document</th>
+                          <tr className="border-b bg-gray-50">
+                            <th className="text-left py-2 px-3">Proveedor</th>
+                            <th className="text-right py-2 px-3">Monto</th>
+                            {quotation.cantidad && (
+                              <th className="text-right py-2 px-3">Valor Unit.</th>
+                            )}
+                            <th className="text-center py-2 px-3">PDF</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -182,7 +350,7 @@ export const Quotations = () => {
                             <tr className="border-b">
                               <td className="py-2 px-3">{quotation.quotation_1_provider}</td>
                               <td className="text-right py-2 px-3 font-semibold">
-                                ${quotation.quotation_1_amount?.toLocaleString() || 'N/A'}
+                                ${quotation.quotation_1_amount?.toLocaleString('es-CO') || 'N/A'}
                                 {comparison && quotation.quotation_1_amount === comparison.min && (
                                   <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
                                 )}
@@ -190,6 +358,13 @@ export const Quotations = () => {
                                   <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
                                 )}
                               </td>
+                              {quotation.cantidad && (
+                                <td className="text-right py-2 px-3">
+                                  ${quotation.quotation_1_amount && quotation.cantidad
+                                    ? (quotation.quotation_1_amount / quotation.cantidad).toFixed(2)
+                                    : 'N/A'}
+                                </td>
+                              )}
                               <td className="text-center py-2 px-3">
                                 {quotation.quotation_1_url && (
                                   <a
@@ -198,7 +373,7 @@ export const Quotations = () => {
                                     rel="noopener noreferrer"
                                     className="text-[#cf1b22] hover:underline"
                                   >
-                                    View
+                                    Ver PDF
                                   </a>
                                 )}
                               </td>
@@ -208,7 +383,7 @@ export const Quotations = () => {
                             <tr className="border-b">
                               <td className="py-2 px-3">{quotation.quotation_2_provider}</td>
                               <td className="text-right py-2 px-3 font-semibold">
-                                ${quotation.quotation_2_amount?.toLocaleString() || 'N/A'}
+                                ${quotation.quotation_2_amount?.toLocaleString('es-CO') || 'N/A'}
                                 {comparison && quotation.quotation_2_amount === comparison.min && (
                                   <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
                                 )}
@@ -216,6 +391,13 @@ export const Quotations = () => {
                                   <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
                                 )}
                               </td>
+                              {quotation.cantidad && (
+                                <td className="text-right py-2 px-3">
+                                  ${quotation.quotation_2_amount && quotation.cantidad
+                                    ? (quotation.quotation_2_amount / quotation.cantidad).toFixed(2)
+                                    : 'N/A'}
+                                </td>
+                              )}
                               <td className="text-center py-2 px-3">
                                 {quotation.quotation_2_url && (
                                   <a
@@ -224,7 +406,7 @@ export const Quotations = () => {
                                     rel="noopener noreferrer"
                                     className="text-[#cf1b22] hover:underline"
                                   >
-                                    View
+                                    Ver PDF
                                   </a>
                                 )}
                               </td>
@@ -234,7 +416,7 @@ export const Quotations = () => {
                             <tr>
                               <td className="py-2 px-3">{quotation.quotation_3_provider}</td>
                               <td className="text-right py-2 px-3 font-semibold">
-                                ${quotation.quotation_3_amount?.toLocaleString() || 'N/A'}
+                                ${quotation.quotation_3_amount?.toLocaleString('es-CO') || 'N/A'}
                                 {comparison && quotation.quotation_3_amount === comparison.min && (
                                   <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
                                 )}
@@ -242,6 +424,13 @@ export const Quotations = () => {
                                   <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
                                 )}
                               </td>
+                              {quotation.cantidad && (
+                                <td className="text-right py-2 px-3">
+                                  ${quotation.quotation_3_amount && quotation.cantidad
+                                    ? (quotation.quotation_3_amount / quotation.cantidad).toFixed(2)
+                                    : 'N/A'}
+                                </td>
+                              )}
                               <td className="text-center py-2 px-3">
                                 {quotation.quotation_3_url && (
                                   <a
@@ -250,7 +439,7 @@ export const Quotations = () => {
                                     rel="noopener noreferrer"
                                     className="text-[#cf1b22] hover:underline"
                                   >
-                                    View
+                                    Ver PDF
                                   </a>
                                 )}
                               </td>
@@ -262,22 +451,22 @@ export const Quotations = () => {
 
                     {comparison && (
                       <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm">
-                        <p className="font-medium text-gray-700 mb-1">Comparison Summary:</p>
+                        <p className="font-medium text-gray-700 mb-1">Resumen Comparativo:</p>
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <span className="text-gray-500">Lowest:</span>
+                            <span className="text-gray-500">Menor:</span>
                             <span className="font-semibold text-green-600 ml-2">
-                              ${comparison.min.toLocaleString()}
+                              ${comparison.min.toLocaleString('es-CO')}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Highest:</span>
+                            <span className="text-gray-500">Mayor:</span>
                             <span className="font-semibold text-red-600 ml-2">
-                              ${comparison.max.toLocaleString()}
+                              ${comparison.max.toLocaleString('es-CO')}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-500">Average:</span>
+                            <span className="text-gray-500">Promedio:</span>
                             <span className="font-semibold text-[#50504f] ml-2">
                               ${comparison.avg.toFixed(2)}
                             </span>
@@ -285,16 +474,38 @@ export const Quotations = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* Mostrar comparativos si existen */}
+                    {quotation.comparativo_por_monto && (
+                      <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
+                        <p className="font-medium text-blue-700 mb-2">Comparativo por Monto:</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                          {JSON.parse(JSON.stringify(quotation.comparativo_por_monto)).map((item: any, idx: number) => (
+                            <li key={idx}>
+                              {item.provider}: ${item.amount?.toLocaleString('es-CO')}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
                   </div>
 
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => generateQuotationComparisonPDF(quotation)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    PDF
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleDownloadPDF(quotation)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      PDF Comparativo
+                    </Button>
+                    {quotation.pdf_comparativo_url && (
+                      <Badge variant="success" size="sm">
+                        <Mail className="w-3 h-3 mr-1" />
+                        Enviado a Felipe
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -305,12 +516,12 @@ export const Quotations = () => {
       {quotations.length === 0 && (
         <Card>
           <div className="text-center py-12">
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">No quotations yet</h3>
-            <p className="text-gray-500 mb-4">Create your first quotation comparison</p>
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay cotizaciones</h3>
+            <p className="text-gray-500 mb-4">Crea tu primer comparativo de cotizaciones</p>
             {canManage && (
               <Button onClick={() => setShowModal(true)}>
                 <Plus className="w-5 h-5 mr-2" />
-                New Comparison
+                Nuevo Comparativo
               </Button>
             )}
           </div>
@@ -323,33 +534,64 @@ export const Quotations = () => {
           setShowModal(false);
           resetForm();
         }}
-        title="New Quotation Comparison"
+        title="Nuevo Comparativo de Cotizaciones"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            label="Title"
-            placeholder="Comparison title"
+            label="Título *"
+            placeholder="Título del comparativo"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             fullWidth
             required
           />
 
-          <Textarea
-            label="Description"
-            placeholder="Describe the quotation comparison"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          <Select
+            label="Tipo de Cotización *"
+            value={formData.tipo_cotizacion}
+            onChange={(e) => setFormData({ ...formData, tipo_cotizacion: e.target.value })}
+            options={[
+              { value: '', label: 'Seleccione un tipo' },
+              ...TIPOS_COTIZACION.map((tipo) => ({ value: tipo, label: tipo })),
+            ]}
             fullWidth
             required
           />
 
+          <Input
+            label="Cantidad"
+            type="number"
+            step="0.01"
+            placeholder="0.00"
+            value={formData.cantidad}
+            onChange={(e) => setFormData({ ...formData, cantidad: e.target.value })}
+            fullWidth
+          />
+
+          <Input
+            label="Formato de Contratista"
+            placeholder="Ej: Formato estándar, Formato personalizado..."
+            value={formData.formato_contratista}
+            onChange={(e) => setFormData({ ...formData, formato_contratista: e.target.value })}
+            fullWidth
+          />
+
+          <Textarea
+            label="Descripción *"
+            placeholder="Describe las cotizaciones a comparar"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            fullWidth
+            required
+            rows={3}
+          />
+
           {[1, 2, 3].map((num) => (
             <div key={num} className="border-t pt-4 space-y-3">
-              <h4 className="font-medium text-gray-700">Quotation {num}</h4>
+              <h4 className="font-medium text-gray-700">Cotización {num}</h4>
               <Input
-                label="Provider Name"
-                placeholder={`Provider ${num} name`}
+                label="Nombre del Proveedor"
+                placeholder={`Proveedor ${num}`}
                 value={formData[`quotation_${num}_provider` as keyof typeof formData] as string}
                 onChange={(e) =>
                   setFormData({
@@ -360,7 +602,7 @@ export const Quotations = () => {
                 fullWidth
               />
               <Input
-                label="Amount"
+                label="Monto (COP)"
                 type="number"
                 step="0.01"
                 placeholder="0.00"
@@ -373,29 +615,34 @@ export const Quotations = () => {
                 }
                 fullWidth
               />
-              <FileUpload
-                bucket="general"
-                folder="quotations"
-                multiple={false}
-                accept="application/pdf,image/*"
-                onUploadComplete={(urls) => {
-                  setFormData({
-                    ...formData,
-                    [`quotation_${num}_url`]: urls[0] || '',
-                  } as any);
-                }}
-                existingFiles={
-                  formData[`quotation_${num}_url` as keyof typeof formData]
-                    ? [formData[`quotation_${num}_url` as keyof typeof formData] as string]
-                    : []
-                }
-                onRemove={() => {
-                  setFormData({
-                    ...formData,
-                    [`quotation_${num}_url`]: '',
-                  } as any);
-                }}
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  PDF de Cotización {num}
+                </label>
+                <FileUpload
+                  bucket="documents"
+                  folder="quotations"
+                  multiple={false}
+                  accept="application/pdf"
+                  onUploadComplete={(urls) => {
+                    setFormData({
+                      ...formData,
+                      [`quotation_${num}_url`]: urls[0] || '',
+                    } as any);
+                  }}
+                  existingFiles={
+                    formData[`quotation_${num}_url` as keyof typeof formData]
+                      ? [formData[`quotation_${num}_url` as keyof typeof formData] as string]
+                      : []
+                  }
+                  onRemove={() => {
+                    setFormData({
+                      ...formData,
+                      [`quotation_${num}_url`]: '',
+                    } as any);
+                  }}
+                />
+              </div>
             </div>
           ))}
 
@@ -409,10 +656,10 @@ export const Quotations = () => {
                 resetForm();
               }}
             >
-              Cancel
+              Cancelar
             </Button>
             <Button type="submit" fullWidth>
-              Create Comparison
+              Generar Comparativo
             </Button>
           </div>
         </form>
@@ -420,4 +667,3 @@ export const Quotations = () => {
     </div>
   );
 };
-

@@ -29,6 +29,7 @@ export interface Site {
   blueprint_urls?: string[];
   network_info?: any;
   site_history?: any;
+  cut_pdf_urls?: string[];
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -47,6 +48,8 @@ export interface Task {
   task_type: string;
   requesting_area: string;
   site_id?: string;
+  project_name?: string;
+  requester_name?: string;
   requester_id: string;
   assignee_id?: string;
   status: TaskStatus;
@@ -57,6 +60,15 @@ export interface Task {
   approved_at?: string;
   started_at?: string;
   completed_at?: string;
+  request_date?: string;
+  start_date?: string;
+  service_order_date?: string;
+  budget_approval_date?: string;
+  delivery_date?: string;
+  completion_date?: string;
+  initial_photo_url?: string;
+  completion_photo_url?: string;
+  service_order_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -66,17 +78,26 @@ export interface ServiceOrder {
   order_number: string;
   site_id: string;
   contractor_id: string;
+  task_id?: string;
+  requester_id?: string;
+  executor_id?: string;
   activity_type: string;
+  activities?: string[];
   description: string;
   request_date: string;
   start_date?: string;
   end_date?: string;
+  oco_date?: string;
   budget_amount: number;
+  actual_amount?: number;
   status: ServiceOrderStatus;
   attachment_urls?: string[];
   signature_url?: string;
   authorized_by?: string;
   authorized_at?: string;
+  purchase_order_id?: string;
+  response_time_hours?: number;
+  execution_time_hours?: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -86,12 +107,28 @@ export interface Measurement {
   id: string;
   title: string;
   site_id?: string;
+  task_id?: string;
   length?: number;
   height?: number;
   depth?: number;
+  width?: number;
+  measurement_unit?: 'm' | 'm²' | 'm³';
   calculated_area?: number;
   calculated_volume?: number;
   photo_urls?: string[];
+  photo_height_url?: string;
+  photo_length_url?: string;
+  photo_width_url?: string;
+  photo_general_url?: string;
+  activities?: string;
+  globales?: string;
+  admin_hours?: number;
+  observations?: string;
+  how_to_do?: string;
+  cut_value?: number;
+  edison_signature_url?: string;
+  pdf_url?: string;
+  submitted_at?: string;
   status: 'pending' | 'approved_edison' | 'approved_felipe' | 'approved_claudia';
   approved_by_edison?: string;
   approved_by_felipe?: string;
@@ -102,6 +139,8 @@ export interface Measurement {
   created_by: string;
   created_at: string;
   updated_at: string;
+  site?: Site;
+  task?: Task;
 }
 
 export interface InternalRequest {
@@ -109,21 +148,32 @@ export interface InternalRequest {
   title: string;
   description: string;
   department: string;
+  site_id?: string;
+  request_date?: string;
   photo_urls?: string[];
   measurement_length?: number;
   measurement_height?: number;
+  measurement_depth?: number;
   design_urls?: string[];
   status: TaskStatus;
   assigned_to?: string;
+  requester_id?: string;
+  task_id?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
+  site?: Site;
+  task?: Task;
+  requester?: User;
 }
 
 export interface Quotation {
   id: string;
   title: string;
   description: string;
+  tipo_cotizacion?: string;
+  cantidad?: number;
+  formato_contratista?: string;
   quotation_1_url?: string;
   quotation_2_url?: string;
   quotation_3_url?: string;
@@ -133,6 +183,10 @@ export interface Quotation {
   quotation_1_provider?: string;
   quotation_2_provider?: string;
   quotation_3_provider?: string;
+  pdf_comparativo_url?: string;
+  comparativo_por_monto?: any;
+  comparativo_por_valor?: any;
+  comparativo_por_descripcion?: any;
   status: 'pending' | 'reviewed' | 'approved';
   reviewed_by?: string;
   reviewed_at?: string;

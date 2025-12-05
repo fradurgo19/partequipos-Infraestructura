@@ -16,6 +16,7 @@ import internalRequestsRoutes from './routes/internalRequests.js';
 import quotationsRoutes from './routes/quotations.js';
 import usersRoutes from './routes/users.js';
 import uploadRoutes from './routes/upload.js';
+import notificationsRoutes from './routes/notifications.js';
 
 dotenv.config();
 
@@ -100,6 +101,7 @@ app.use('/api/internal-requests', internalRequestsRoutes);
 app.use('/api/quotations', quotationsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

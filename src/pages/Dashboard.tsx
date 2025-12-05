@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Users,
   Clock,
+  FileCheck,
 } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { useAuth } from '../context/AuthContext';
@@ -149,19 +150,6 @@ export const Dashboard = () => {
         path: '/service-orders',
       },
       {
-        id: 'measurements',
-        title: 'Measurements & Evidence',
-        icon: Ruler,
-        description: 'Document measurements with photos',
-        stat: stats.pendingMeasurements,
-        statLabel: 'Pending Approval',
-        gradient: 'from-purple-500 to-purple-600',
-        iconBg: 'bg-purple-100',
-        iconColor: 'text-purple-600',
-        animation: 'float-card',
-        path: '/measurements',
-      },
-      {
         id: 'internal-requests',
         title: 'Internal Requests',
         icon: Send,
@@ -188,6 +176,19 @@ export const Dashboard = () => {
         path: '/quotations',
       },
       {
+        id: 'contract-tracking',
+        title: 'Contract Tracking',
+        icon: FileCheck,
+        description: 'Measurements and deadline compliance',
+        stat: stats.pendingMeasurements,
+        statLabel: 'Pending Measurements',
+        gradient: 'from-cyan-500 to-cyan-600',
+        iconBg: 'bg-cyan-100',
+        iconColor: 'text-cyan-600',
+        animation: 'float-card',
+        path: '/contract-tracking',
+      },
+      {
         id: 'users',
         title: 'Users & Roles',
         icon: Users,
@@ -203,7 +204,7 @@ export const Dashboard = () => {
     ];
 
     if (profile?.role === 'internal_client') {
-      return allCards.filter((c) => ['tasks', 'internal-requests'].includes(c.id));
+      return allCards.filter((c) => ['internal-requests'].includes(c.id));
     }
 
     if (profile?.role === 'contractor') {

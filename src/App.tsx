@@ -11,6 +11,7 @@ import { Measurements } from './pages/Measurements';
 import { InternalRequests } from './pages/InternalRequests';
 import { Quotations } from './pages/Quotations';
 import { Users } from './pages/Users';
+import { ContractTracking } from './pages/ContractTracking';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
             <Route path="/measurements" element={<Measurements />} />
             <Route path="/internal-requests" element={<InternalRequests />} />
             <Route path="/quotations" element={<Quotations />} />
+            <Route path="/contract-tracking" element={<ContractTracking />} />
             <Route path="/users" element={<Users />} />
           </Route>
         </Route>
