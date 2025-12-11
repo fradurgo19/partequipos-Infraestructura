@@ -7,6 +7,9 @@ import { Dashboard } from './pages/Dashboard';
 import { Sites } from './pages/Sites';
 import { Tasks } from './pages/Tasks';
 import { ServiceOrders } from './pages/ServiceOrders';
+import { PurchaseOrders } from './pages/PurchaseOrders';
+import { Contractors } from './pages/Contractors';
+import { Contracts } from './pages/Contracts';
 import { Measurements } from './pages/Measurements';
 import { InternalRequests } from './pages/InternalRequests';
 import { Quotations } from './pages/Quotations';
@@ -25,6 +28,9 @@ function App() {
             <Route path="/sites" element={<Sites />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/service-orders" element={<ServiceOrders />} />
+            <Route path="/purchase-orders" element={<PurchaseOrders />} />
+            <Route path="/contractors" element={<Contractors />} />
+            <Route path="/contracts" element={<Contracts />} />
             <Route path="/measurements" element={<Measurements />} />
             <Route path="/internal-requests" element={<InternalRequests />} />
             <Route path="/quotations" element={<Quotations />} />

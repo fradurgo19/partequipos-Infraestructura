@@ -310,7 +310,7 @@ router.post('/quotation-comparative', authenticateToken, async (req, res) => {
     if (comparatives) {
       if (comparatives.comparativo_por_monto && comparatives.comparativo_por_monto.length > 0) {
         comparativesHTML += '<div style="margin: 20px 0;"><h3 style="color: #cf1b22;">Comparativo por Monto:</h3><ol>';
-        comparatives.comparativo_por_monto.forEach((item: any, index: number) => {
+        comparatives.comparativo_por_monto.forEach((item, index) => {
           comparativesHTML += `<li><strong>${item.provider}:</strong> $${item.amount?.toLocaleString('es-CO') || 'N/A'}</li>`;
         });
         comparativesHTML += '</ol></div>';
@@ -318,7 +318,7 @@ router.post('/quotation-comparative', authenticateToken, async (req, res) => {
 
       if (comparatives.comparativo_por_valor && comparatives.comparativo_por_valor.length > 0) {
         comparativesHTML += '<div style="margin: 20px 0;"><h3 style="color: #cf1b22;">Comparativo por Valor:</h3><ol>';
-        comparatives.comparativo_por_valor.forEach((item: any, index: number) => {
+        comparatives.comparativo_por_valor.forEach((item, index) => {
           const unitValue = item.unitValue ? item.unitValue.toFixed(2) : 'N/A';
           comparativesHTML += `<li><strong>${item.provider}:</strong> $${unitValue} por unidad</li>`;
         });
@@ -327,7 +327,7 @@ router.post('/quotation-comparative', authenticateToken, async (req, res) => {
 
       if (comparatives.comparativo_por_descripcion && comparatives.comparativo_por_descripcion.length > 0) {
         comparativesHTML += '<div style="margin: 20px 0;"><h3 style="color: #cf1b22;">Comparativo por Descripción:</h3><ol>';
-        comparatives.comparativo_por_descripcion.forEach((item: any, index: number) => {
+        comparatives.comparativo_por_descripcion.forEach((item, index) => {
           comparativesHTML += `<li><strong>${item.provider}</strong></li>`;
         });
         comparativesHTML += '</ol></div>';

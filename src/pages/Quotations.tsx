@@ -287,16 +287,16 @@ export const Quotations = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#50504f]">Comparativo de Cotizaciones</h1>
-          <p className="text-gray-600 mt-1">Compare hasta tres cotizaciones de proveedores</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Comparativo de Cotizaciones</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Compare hasta tres cotizaciones de proveedores</p>
         </div>
         {canManage && (
-          <Button onClick={() => setShowModal(true)}>
-            <Plus className="w-5 h-5 mr-2" />
-            Nuevo Comparativo
+          <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Nuevo Comparativo</span>
           </Button>
         )}
       </div>
@@ -333,120 +333,138 @@ export const Quotations = () => {
                       </p>
                     )}
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-gray-50">
-                            <th className="text-left py-2 px-3">Proveedor</th>
-                            <th className="text-right py-2 px-3">Monto</th>
-                            {quotation.cantidad && (
-                              <th className="text-right py-2 px-3">Valor Unit.</th>
-                            )}
-                            <th className="text-center py-2 px-3">PDF</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {quotation.quotation_1_provider && (
-                            <tr className="border-b">
-                              <td className="py-2 px-3">{quotation.quotation_1_provider}</td>
-                              <td className="text-right py-2 px-3 font-semibold">
-                                ${quotation.quotation_1_amount?.toLocaleString('es-CO') || 'N/A'}
-                                {comparison && quotation.quotation_1_amount === comparison.min && (
-                                  <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
+                    <div className="overflow-x-auto -mx-4 sm:mx-0">
+                      <div className="inline-block min-w-full align-middle">
+                        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                          <table className="min-w-full divide-y divide-gray-300 text-sm">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th scope="col" className="py-3 pl-4 pr-3 text-left text-xs sm:text-sm font-semibold text-gray-900 sm:pl-6 whitespace-nowrap">
+                                  Proveedor
+                                </th>
+                                <th scope="col" className="px-3 py-3 text-right text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
+                                  Monto
+                                </th>
+                                {quotation.cantidad && (
+                                  <th scope="col" className="px-3 py-3 text-right text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
+                                    Valor Unit.
+                                  </th>
                                 )}
-                                {comparison && quotation.quotation_1_amount === comparison.max && (
-                                  <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
-                                )}
-                              </td>
-                              {quotation.cantidad && (
-                                <td className="text-right py-2 px-3">
-                                  ${quotation.quotation_1_amount && quotation.cantidad
-                                    ? (quotation.quotation_1_amount / quotation.cantidad).toFixed(2)
-                                    : 'N/A'}
-                                </td>
+                                <th scope="col" className="px-3 py-3 text-center text-xs sm:text-sm font-semibold text-gray-900 sm:pr-6 whitespace-nowrap">
+                                  PDF
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 bg-white">
+                              {quotation.quotation_1_provider && (
+                                <tr className="hover:bg-gray-50">
+                                  <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-900 sm:pl-6">
+                                    {quotation.quotation_1_provider}
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-3 text-sm text-right font-semibold text-gray-900">
+                                    ${quotation.quotation_1_amount?.toLocaleString('es-CO') || 'N/A'}
+                                    {comparison && quotation.quotation_1_amount === comparison.min && (
+                                      <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
+                                    )}
+                                    {comparison && quotation.quotation_1_amount === comparison.max && (
+                                      <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
+                                    )}
+                                  </td>
+                                  {quotation.cantidad && (
+                                    <td className="whitespace-nowrap px-3 py-3 text-sm text-right text-gray-900">
+                                      ${quotation.quotation_1_amount && quotation.cantidad
+                                        ? (quotation.quotation_1_amount / quotation.cantidad).toFixed(2)
+                                        : 'N/A'}
+                                    </td>
+                                  )}
+                                  <td className="whitespace-nowrap px-3 py-3 text-sm text-center text-gray-900 sm:pr-6">
+                                    {quotation.quotation_1_url && (
+                                      <a
+                                        href={quotation.quotation_1_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#cf1b22] hover:underline text-xs sm:text-sm"
+                                      >
+                                        Ver PDF
+                                      </a>
+                                    )}
+                                  </td>
+                                </tr>
                               )}
-                              <td className="text-center py-2 px-3">
-                                {quotation.quotation_1_url && (
-                                  <a
-                                    href={quotation.quotation_1_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#cf1b22] hover:underline"
-                                  >
-                                    Ver PDF
-                                  </a>
-                                )}
-                              </td>
-                            </tr>
-                          )}
-                          {quotation.quotation_2_provider && (
-                            <tr className="border-b">
-                              <td className="py-2 px-3">{quotation.quotation_2_provider}</td>
-                              <td className="text-right py-2 px-3 font-semibold">
-                                ${quotation.quotation_2_amount?.toLocaleString('es-CO') || 'N/A'}
-                                {comparison && quotation.quotation_2_amount === comparison.min && (
-                                  <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
-                                )}
-                                {comparison && quotation.quotation_2_amount === comparison.max && (
-                                  <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
-                                )}
-                              </td>
-                              {quotation.cantidad && (
-                                <td className="text-right py-2 px-3">
-                                  ${quotation.quotation_2_amount && quotation.cantidad
-                                    ? (quotation.quotation_2_amount / quotation.cantidad).toFixed(2)
-                                    : 'N/A'}
-                                </td>
+                              {quotation.quotation_2_provider && (
+                                <tr className="hover:bg-gray-50">
+                                  <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-900 sm:pl-6">
+                                    {quotation.quotation_2_provider}
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-3 text-sm text-right font-semibold text-gray-900">
+                                    ${quotation.quotation_2_amount?.toLocaleString('es-CO') || 'N/A'}
+                                    {comparison && quotation.quotation_2_amount === comparison.min && (
+                                      <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
+                                    )}
+                                    {comparison && quotation.quotation_2_amount === comparison.max && (
+                                      <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
+                                    )}
+                                  </td>
+                                  {quotation.cantidad && (
+                                    <td className="whitespace-nowrap px-3 py-3 text-sm text-right text-gray-900">
+                                      ${quotation.quotation_2_amount && quotation.cantidad
+                                        ? (quotation.quotation_2_amount / quotation.cantidad).toFixed(2)
+                                        : 'N/A'}
+                                    </td>
+                                  )}
+                                  <td className="whitespace-nowrap px-3 py-3 text-sm text-center text-gray-900 sm:pr-6">
+                                    {quotation.quotation_2_url && (
+                                      <a
+                                        href={quotation.quotation_2_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#cf1b22] hover:underline text-xs sm:text-sm"
+                                      >
+                                        Ver PDF
+                                      </a>
+                                    )}
+                                  </td>
+                                </tr>
                               )}
-                              <td className="text-center py-2 px-3">
-                                {quotation.quotation_2_url && (
-                                  <a
-                                    href={quotation.quotation_2_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#cf1b22] hover:underline"
-                                  >
-                                    Ver PDF
-                                  </a>
-                                )}
-                              </td>
-                            </tr>
-                          )}
-                          {quotation.quotation_3_provider && (
-                            <tr>
-                              <td className="py-2 px-3">{quotation.quotation_3_provider}</td>
-                              <td className="text-right py-2 px-3 font-semibold">
-                                ${quotation.quotation_3_amount?.toLocaleString('es-CO') || 'N/A'}
-                                {comparison && quotation.quotation_3_amount === comparison.min && (
-                                  <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
-                                )}
-                                {comparison && quotation.quotation_3_amount === comparison.max && (
-                                  <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
-                                )}
-                              </td>
-                              {quotation.cantidad && (
-                                <td className="text-right py-2 px-3">
-                                  ${quotation.quotation_3_amount && quotation.cantidad
-                                    ? (quotation.quotation_3_amount / quotation.cantidad).toFixed(2)
-                                    : 'N/A'}
-                                </td>
+                              {quotation.quotation_3_provider && (
+                                <tr className="hover:bg-gray-50">
+                                  <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-gray-900 sm:pl-6">
+                                    {quotation.quotation_3_provider}
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-3 text-sm text-right font-semibold text-gray-900">
+                                    ${quotation.quotation_3_amount?.toLocaleString('es-CO') || 'N/A'}
+                                    {comparison && quotation.quotation_3_amount === comparison.min && (
+                                      <TrendingDown className="w-4 h-4 inline-block ml-1 text-green-500" />
+                                    )}
+                                    {comparison && quotation.quotation_3_amount === comparison.max && (
+                                      <TrendingUp className="w-4 h-4 inline-block ml-1 text-red-500" />
+                                    )}
+                                  </td>
+                                  {quotation.cantidad && (
+                                    <td className="whitespace-nowrap px-3 py-3 text-sm text-right text-gray-900">
+                                      ${quotation.quotation_3_amount && quotation.cantidad
+                                        ? (quotation.quotation_3_amount / quotation.cantidad).toFixed(2)
+                                        : 'N/A'}
+                                    </td>
+                                  )}
+                                  <td className="whitespace-nowrap px-3 py-3 text-sm text-center text-gray-900 sm:pr-6">
+                                    {quotation.quotation_3_url && (
+                                      <a
+                                        href={quotation.quotation_3_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#cf1b22] hover:underline text-xs sm:text-sm"
+                                      >
+                                        Ver PDF
+                                      </a>
+                                    )}
+                                  </td>
+                                </tr>
                               )}
-                              <td className="text-center py-2 px-3">
-                                {quotation.quotation_3_url && (
-                                  <a
-                                    href={quotation.quotation_3_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#cf1b22] hover:underline"
-                                  >
-                                    Ver PDF
-                                  </a>
-                                )}
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
 
                     {comparison && (

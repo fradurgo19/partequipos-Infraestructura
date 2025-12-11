@@ -12,6 +12,8 @@ import {
   Users,
   Clock,
   FileCheck,
+  ShoppingCart,
+  Building2,
 } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { useAuth } from '../context/AuthContext';
@@ -150,6 +152,45 @@ export const Dashboard = () => {
         path: '/service-orders',
       },
       {
+        id: 'purchase-orders',
+        title: 'Purchase Orders',
+        icon: ShoppingCart,
+        description: 'Manage purchase orders with format',
+        stat: 0,
+        statLabel: 'Total Orders',
+        gradient: 'from-purple-500 to-purple-600',
+        iconBg: 'bg-purple-100',
+        iconColor: 'text-purple-600',
+        animation: 'float-card',
+        path: '/purchase-orders',
+      },
+      {
+        id: 'contractors',
+        title: 'Contractors',
+        icon: Building2,
+        description: 'Manage contractors database',
+        stat: 0,
+        statLabel: 'Total Contractors',
+        gradient: 'from-amber-500 to-amber-600',
+        iconBg: 'bg-amber-100',
+        iconColor: 'text-amber-600',
+        animation: 'float-card-reverse',
+        path: '/contractors',
+      },
+      {
+        id: 'contracts',
+        title: 'Contracts',
+        icon: FileCheck,
+        description: 'Manage labor and supply contracts',
+        stat: 0,
+        statLabel: 'Total Contracts',
+        gradient: 'from-emerald-500 to-emerald-600',
+        iconBg: 'bg-emerald-100',
+        iconColor: 'text-emerald-600',
+        animation: 'float-card-slow',
+        path: '/contracts',
+      },
+      {
         id: 'internal-requests',
         title: 'Internal Requests',
         icon: Send,
@@ -225,45 +266,41 @@ export const Dashboard = () => {
     <div className="min-h-screen relative overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-gray-50 -z-10"></div>
-      
-      {/* Animated background shapes */}
-      <div className="absolute top-20 right-10 w-72 h-72 bg-[#cf1b22] opacity-5 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-20 left-10 w-96 h-96 bg-[#50504f] opacity-5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
 
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-[#50504f] mb-2">
-              Welcome, <span className="text-[#cf1b22]">{profile?.full_name}</span>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#50504f] mb-1 sm:mb-2">
+              Welcome, <span className="text-[#cf1b22] break-words">{profile?.full_name}</span>
             </h1>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-sm sm:text-base md:text-lg">
               Manage your maintenance operations with ease
             </p>
           </div>
         </div>
 
         {/* Indicadores Principales - Fila 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6">
           <Card className="glass-card hover-lift border-l-4 border-[#cf1b22]">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Presupuesto Total</p>
-                <p className="text-3xl font-bold text-[#cf1b22] mt-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-medium">Presupuesto Total</p>
+                <p className="text-2xl sm:text-3xl font-bold text-[#cf1b22] mt-1 sm:mt-2 truncate">
                   ${(stats.totalBudget / 1000000).toFixed(1)}M
                 </p>
                 <p className="text-xs text-gray-500 mt-1">COP</p>
               </div>
-              <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-7 h-7 text-[#cf1b22]" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-100 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 ml-2">
+                <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-[#cf1b22]" />
               </div>
             </div>
           </Card>
 
           <Card className="glass-card hover-lift border-l-4 border-green-500">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Presupuesto Ejecutado</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-medium">Presupuesto Ejecutado</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-1 sm:mt-2 truncate">
                   ${(stats.budgetUsed / 1000000).toFixed(1)}M
                 </p>
                 <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
@@ -278,75 +315,75 @@ export const Dashboard = () => {
 
           <Card className="glass-card hover-lift border-l-4 border-blue-500">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Tiempo Respuesta Promedio</p>
-                <p className="text-3xl font-bold text-blue-600 mt-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-medium">Tiempo Respuesta Promedio</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-1 sm:mt-2">
                   {stats.avgResponseTime.toFixed(1)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">días</p>
               </div>
-              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center shadow-lg">
-                <Clock className="w-7 h-7 text-blue-600" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 ml-2">
+                <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
               </div>
             </div>
           </Card>
 
           <Card className="glass-card hover-lift border-l-4 border-purple-500">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Tiempo Ejecución Promedio</p>
-                <p className="text-3xl font-bold text-purple-600 mt-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-medium">Tiempo Ejecución Promedio</p>
+                <p className="text-2xl sm:text-3xl font-bold text-purple-600 mt-1 sm:mt-2">
                   {stats.avgExecutionTime.toFixed(1)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">días</p>
               </div>
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-7 h-7 text-purple-600" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-100 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 ml-2">
+                <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-purple-600" />
               </div>
             </div>
           </Card>
         </div>
 
         {/* Indicadores Secundarios - Fila 2 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8 md:mb-12">
           <Card className="glass-card hover-lift">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Tareas Pendientes</p>
-                <p className="text-4xl font-bold text-[#cf1b22] mt-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-medium">Tareas Pendientes</p>
+                <p className="text-3xl sm:text-4xl font-bold text-[#cf1b22] mt-1 sm:mt-2">
                   {stats.pendingTasks}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center shadow-lg">
-                <AlertCircle className="w-7 h-7 text-[#cf1b22]" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-100 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 ml-2">
+                <AlertCircle className="w-6 h-6 sm:w-7 sm:h-7 text-[#cf1b22]" />
               </div>
             </div>
           </Card>
 
           <Card className="glass-card hover-lift">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Total Sedes</p>
-                <p className="text-4xl font-bold text-[#50504f] mt-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-medium">Total Sedes</p>
+                <p className="text-3xl sm:text-4xl font-bold text-[#50504f] mt-1 sm:mt-2">
                   {stats.totalSites}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center shadow-lg">
-                <MapPin className="w-7 h-7 text-green-600" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-green-100 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 ml-2">
+                <MapPin className="w-6 h-6 sm:w-7 sm:h-7 text-green-600" />
               </div>
             </div>
           </Card>
 
           <Card className="glass-card hover-lift">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Total Tareas</p>
-                <p className="text-4xl font-bold text-[#50504f] mt-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-medium">Total Tareas</p>
+                <p className="text-3xl sm:text-4xl font-bold text-[#50504f] mt-1 sm:mt-2">
                   {stats.totalTasks}
                 </p>
               </div>
-              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-7 h-7 text-blue-600" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-100 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 ml-2">
+                <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
               </div>
             </div>
           </Card>
@@ -354,14 +391,14 @@ export const Dashboard = () => {
 
         {/* Floating Module Cards */}
         <div>
-          <h2 className="text-3xl font-bold text-[#50504f] mb-8 flex items-center gap-3">
-            <span className="h-1 w-16 bg-gradient-to-r from-[#cf1b22] to-[#50504f] rounded-full"></span>
-            Module Access
-            <span className="h-1 w-16 bg-gradient-to-l from-[#cf1b22] to-[#50504f] rounded-full"></span>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#50504f] mb-4 sm:mb-6 md:mb-8 flex items-center gap-2 sm:gap-3 flex-wrap">
+            <span className="h-1 w-8 sm:w-12 md:w-16 bg-gradient-to-r from-[#cf1b22] to-[#50504f] rounded-full"></span>
+            <span className="whitespace-nowrap">Module Access</span>
+            <span className="h-1 w-8 sm:w-12 md:w-16 bg-gradient-to-l from-[#cf1b22] to-[#50504f] rounded-full"></span>
           </h2>
           
           {/* Grid de tarjetas - 4 por fila */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
             {moduleCards.map((card, index) => {
               const Icon = card.icon;
               return (
@@ -376,26 +413,26 @@ export const Dashboard = () => {
                     <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500 rounded-2xl`}></div>
                     
                     <div className="relative z-10">
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className={`w-14 h-14 ${card.iconBg} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                          <Icon className={`w-7 h-7 ${card.iconColor}`} />
+                      <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+                        <div className={`w-12 h-12 sm:w-14 sm:h-14 ${card.iconBg} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0`}>
+                          <Icon className={`w-6 h-6 sm:w-7 sm:h-7 ${card.iconColor}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-lg text-[#50504f] mb-1 group-hover:text-[#cf1b22] transition-colors">
+                          <h3 className="font-bold text-base sm:text-lg text-[#50504f] mb-1 group-hover:text-[#cf1b22] transition-colors break-words">
                             {card.title}
                           </h3>
                         </div>
                       </div>
 
-                      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                      <p className="text-gray-600 text-xs sm:text-sm leading-relaxed mb-3 sm:mb-4 line-clamp-2">
                         {card.description}
                       </p>
 
-                      <div className="pt-4 border-t border-gray-200">
+                      <div className="pt-3 sm:pt-4 border-t border-gray-200">
                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
                           {card.statLabel}
                         </p>
-                        <p className="text-2xl font-bold text-[#50504f]">
+                        <p className="text-xl sm:text-2xl font-bold text-[#50504f]">
                           {card.stat}
                         </p>
                       </div>

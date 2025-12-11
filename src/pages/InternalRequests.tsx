@@ -322,63 +322,63 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#50504f]">Solicitudes Internas</h1>
-          <p className="text-gray-600 mt-1">Solicitudes de clientes internos - Maquinaria, Repuestos y Bienes inmuebles</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Solicitudes Internas</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Solicitudes de clientes internos - Maquinaria, Repuestos y Bienes inmuebles</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus className="w-5 h-5 mr-2" />
-          Nueva Solicitud
+        <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+          <span className="text-sm sm:text-base">Nueva Solicitud</span>
         </Button>
       </div>
 
       {/* Indicadores */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Total Solicitudes</p>
-              <p className="text-3xl font-bold text-blue-600 mt-1">{indicators.totalRequests}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-600 text-xs sm:text-sm font-medium">Total Solicitudes</p>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-1">{indicators.totalRequests}</p>
             </div>
-            <TrendingUp className="w-8 h-8 text-blue-500" />
+            <TrendingUp className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500 flex-shrink-0 ml-2" />
           </div>
         </Card>
 
         <Card className="border-l-4 border-green-500">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Inversión Total</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-600 text-xs sm:text-sm font-medium">Inversión Total</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-1 truncate">
                 ${(indicators.totalInvestment / 1000000).toFixed(1)}M
               </p>
             </div>
-            <DollarSign className="w-8 h-8 text-green-500" />
+            <DollarSign className="w-7 h-7 sm:w-8 sm:h-8 text-green-500 flex-shrink-0 ml-2" />
           </div>
         </Card>
 
         <Card className="border-l-4 border-purple-500">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Sedes con Solicitudes</p>
-              <p className="text-3xl font-bold text-purple-600 mt-1">{indicators.requestsBySite.length}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-600 text-xs sm:text-sm font-medium">Sedes con Solicitudes</p>
+              <p className="text-2xl sm:text-3xl font-bold text-purple-600 mt-1">{indicators.requestsBySite.length}</p>
             </div>
-            <MapPin className="w-8 h-8 text-purple-500" />
+            <MapPin className="w-7 h-7 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0 ml-2" />
           </div>
         </Card>
 
         <Card className="border-l-4 border-orange-500">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Promedio por Sede</p>
-              <p className="text-3xl font-bold text-orange-600 mt-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-600 text-xs sm:text-sm font-medium">Promedio por Sede</p>
+              <p className="text-2xl sm:text-3xl font-bold text-orange-600 mt-1">
                 {indicators.requestsBySite.length > 0
                   ? (indicators.totalRequests / indicators.requestsBySite.length).toFixed(1)
                   : '0'}
               </p>
             </div>
-            <Calendar className="w-8 h-8 text-orange-500" />
+            <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-orange-500 flex-shrink-0 ml-2" />
           </div>
         </Card>
       </div>
@@ -386,33 +386,47 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
       {/* Tabla de Solicitudes por Sede */}
       {indicators.requestsBySite.length > 0 && (
         <Card>
-          <h3 className="text-lg font-semibold text-[#50504f] mb-4">Solicitudes por Sede</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4 text-sm font-medium text-gray-700">Sede</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-700">Cantidad</th>
-                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-700">Inversión</th>
-                </tr>
-              </thead>
-              <tbody>
-                {indicators.requestsBySite.map((item, index) => {
-                  const investment = indicators.investmentBySite.find((inv) => inv.site_name === item.site_name);
-                  return (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="py-2 px-4 text-sm text-[#50504f]">{item.site_name}</td>
-                      <td className="py-2 px-4 text-sm text-right font-medium">{item.count}</td>
-                      <td className="py-2 px-4 text-sm text-right">
-                        {investment
-                          ? `$${investment.amount.toLocaleString('es-CO')}`
-                          : '-'}
-                      </td>
+          <h3 className="text-base sm:text-lg font-semibold text-[#50504f] mb-3 sm:mb-4">Solicitudes por Sede</h3>
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="py-3 pl-4 pr-3 text-left text-xs sm:text-sm font-semibold text-gray-900 sm:pl-6 whitespace-nowrap">
+                        Sede
+                      </th>
+                      <th scope="col" className="px-3 py-3 text-right text-xs sm:text-sm font-semibold text-gray-900 whitespace-nowrap">
+                        Cantidad
+                      </th>
+                      <th scope="col" className="px-3 py-3 text-right text-xs sm:text-sm font-semibold text-gray-900 sm:pr-6 whitespace-nowrap">
+                        Inversión
+                      </th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {indicators.requestsBySite.map((item, index) => {
+                      const investment = indicators.investmentBySite.find((inv) => inv.site_name === item.site_name);
+                      return (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-[#50504f] sm:pl-6">
+                            {item.site_name}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-sm text-right font-medium text-gray-900">
+                            {item.count}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-sm text-right text-gray-900 sm:pr-6">
+                            {investment
+                              ? `$${investment.amount.toLocaleString('es-CO')}`
+                              : '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </Card>
       )}

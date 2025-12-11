@@ -17,6 +17,9 @@ import quotationsRoutes from './routes/quotations.js';
 import usersRoutes from './routes/users.js';
 import uploadRoutes from './routes/upload.js';
 import notificationsRoutes from './routes/notifications.js';
+import purchaseOrdersRoutes from './routes/purchaseOrders.js';
+import contractorsRoutes from './routes/contractors.js';
+import contractsRoutes from './routes/contracts.js';
 
 dotenv.config();
 
@@ -102,6 +105,9 @@ app.use('/api/quotations', quotationsRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/purchase-orders', purchaseOrdersRoutes);
+app.use('/api/contractors', contractorsRoutes);
+app.use('/api/contracts', contractsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

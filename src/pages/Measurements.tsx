@@ -354,15 +354,15 @@ export const Measurements = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#50504f]">Cortes de Obra</h1>
-          <p className="text-gray-600 mt-1">Registro de cortes con medidas y evidencias fotográficas</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Cortes de Obra</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Registro de cortes con medidas y evidencias fotográficas</p>
         </div>
-        <Button onClick={() => setShowModal(true)}>
-          <Plus className="w-5 h-5 mr-2" />
-          Nuevo Corte
+        <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+          <span className="text-sm sm:text-base">Nuevo Corte</span>
         </Button>
       </div>
 

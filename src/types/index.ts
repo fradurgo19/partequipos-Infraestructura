@@ -203,6 +203,16 @@ export interface Contractor {
   phone: string;
   specialty: string[];
   rating?: number;
+  nit?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  website?: string;
+  tax_id?: string;
+  bank_account?: string;
+  bank_name?: string;
+  notes?: string;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -247,8 +257,26 @@ export interface PurchaseOrder {
   status: 'draft' | 'pending_approval' | 'approved' | 'completed' | 'cancelled';
   created_by: string;
   prepared_by?: string;
+  quotation_attachment_url?: string;
+  invoice_attachment_url?: string;
+  pdf_url?: string;
+  area_code?: string;
+  prepared_by_name?: string;
+  authorized_by_name?: string;
+  prepared_signature_url?: string;
+  employee_signature_url?: string;
+  prepared_date?: string;
+  employee_signature_date?: string;
+  tax_type?: string;
+  other_taxes?: number;
+  company_nit?: string;
+  company_phone?: string;
+  erpg_number?: string;
+  service_order_id?: string;
   created_at: string;
   updated_at: string;
+  site?: Site;
+  service_order?: ServiceOrder;
 }
 
 export interface Contract {
@@ -268,6 +296,39 @@ export interface Contract {
   legal_reviewed_by?: string;
   legal_reviewed_at?: string;
   site_id?: string;
+  activity_type?: string;
+  cost_center?: string;
+  internal_client_type?: string;
+  contract_document_url?: string;
+  legal_review_notes?: string;
+  budget_control?: {
+    total_budget: number;
+    spent: number;
+    remaining: number;
+    items: Array<{ description: string; amount: number }>;
+  };
+  project_name?: string;
+  payment_schedule?: any;
+  deliverables?: any;
+  warranty_period?: number;
+  warranty_terms?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  contractor?: Contractor;
+  site?: Site;
+}
+
+export interface ContractAddendum {
+  id: string;
+  contract_id: string;
+  addendum_number: number;
+  description: string;
+  additional_amount: number;
+  additional_activities?: any;
+  approved_by?: string;
+  approved_at?: string;
+  document_url?: string;
   created_by: string;
   created_at: string;
   updated_at: string;

@@ -199,22 +199,22 @@ export const Sites = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#50504f]">Sites & Projects</h1>
-          <p className="text-gray-600 mt-1">Manage locations and project details</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Sites & Projects</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage locations and project details</p>
         </div>
         {canManage && (
-          <Button onClick={() => setShowModal(true)}>
-            <Plus className="w-5 h-5 mr-2" />
-            Add Site
+          <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Add Site</span>
           </Button>
         )}
       </div>
 
-      {/* Grid de Sedes - 4 por fila */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Grid de Sedes - Responsive */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
         {sites.map((site: any) => (
           <Card key={site.id} className="hover:shadow-xl transition-all duration-300 border-l-4 border-[#cf1b22]">
             <div className="space-y-4">

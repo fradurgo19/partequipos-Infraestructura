@@ -587,3 +587,189 @@ export const generateCutPDF = async (cutData: any): Promise<Blob> => {
   return doc.output('blob');
 };
 
+// Generar PDF de Orden de Compra según formato PARTEQUIPOS
+export const generatePurchaseOrderPDF = async (orderData: any): Promise<Blob> => {
+  const doc = new jsPDF();
+  const primaryColor = [207, 27, 34]; // #cf1b22
+  const secondaryColor = [80, 80, 79]; // #50504f
+
+  let yPos = 15;
+
+  // Encabezado de la empresa
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...primaryColor);
+  doc.text('PARTEQUIPOS MAQUINARIA S.A.S', 15, yPos);
+  yPos += 6;
+  
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(`NIT: ${orderData.company_nit || '830.116.807-7'}`, 15, yPos);
+  yPos += 5;
+  doc.text(`ERPG ${orderData.erpg_number || '542'}`, 15, yPos);
+  yPos += 5;
+  doc.text(`Tel: ${orderData.company_phone || '4485878 - 4926260'}`, 15, yPos);
+  yPos += 8;
+
+  // Título
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...primaryColor);
+  doc.text('ORDEN DE COMPRA', 15, yPos);
+  yPos += 10;
+
+  // Información principal en dos columnas
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  
+  // Columna izquierda
+  doc.text(`Fecha: ${new Date(orderData.order_date || Date.now()).toLocaleDateString('es-CO')}`, 15, yPos);
+  doc.text(`Emitido para: ${orderData.issued_to || ''}`, 15, yPos + 5);
+  doc.text(`NIT ${orderData.issued_to_nit || ''}`, 15, yPos + 10);
+  doc.text(`Cod Área: ${orderData.area_code || ''}`, 15, yPos + 15);
+  doc.text(`Elaboró: ${orderData.prepared_by_name || ''}`, 15, yPos + 20);
+  
+  // Columna derecha
+  doc.text(`Autorizado por: ${orderData.authorized_by_name || ''}`, 120, yPos);
+  doc.text(`No. Cotización: ${orderData.quotation_number || ''}`, 120, yPos + 5);
+  doc.text(`PRECIO: $${(orderData.total || 0).toLocaleString('es-CO')}`, 120, yPos + 10);
+  
+  yPos += 30;
+
+  // Comentarios (antes de la tabla)
+  if (orderData.comments) {
+    doc.text('Comentarios:', 15, yPos);
+    yPos += 5;
+    const commentsLines = doc.splitTextToSize(orderData.comments, 180);
+    doc.text(commentsLines, 15, yPos);
+    yPos += commentsLines.length * 5 + 5;
+  }
+
+  // Tabla de items con encabezados
+  yPos += 5;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('DESCRIPCIÓN', 15, yPos);
+  doc.text('PROYECTO', 100, yPos);
+  doc.text('CONTROL DE PRESUPUESTO', 150, yPos);
+  yPos += 7;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  
+  // Dibujar líneas de la tabla
+  const tableStartY = yPos - 2;
+  const tableEndY = yPos;
+  
+  if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
+    orderData.items.forEach((item: any, index: number) => {
+      const itemPrice = parseFloat(item.price?.toString().replace(/[^0-9.-]+/g, '') || '0') * parseFloat(item.quantity || '1');
+      
+      // Descripción del item
+      const descriptionText = item.description || orderData.activity_type || 'N/A';
+      const descLines = doc.splitTextToSize(descriptionText, 80);
+      doc.text(descLines, 15, yPos);
+      const descHeight = descLines.length * 5;
+      
+      // Proyecto: prioridad project_code, luego comments, luego cost_center + activity_type
+      let projectDisplay = '';
+      if (orderData.project_code) {
+        projectDisplay = orderData.project_code;
+      } else if (orderData.comments && orderData.comments.includes('PROYECTO')) {
+        projectDisplay = orderData.comments;
+      } else if (orderData.cost_center && orderData.activity_type) {
+        projectDisplay = `${orderData.cost_center} - ${orderData.activity_type}`;
+      } else if (orderData.activity_type) {
+        projectDisplay = orderData.activity_type;
+      }
+      const projectLines = doc.splitTextToSize(projectDisplay, 40);
+      doc.text(projectLines, 100, yPos);
+      
+      // Control de presupuesto (precio)
+      doc.text(`$${itemPrice.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 150, yPos);
+      
+      // Ajustar yPos según la altura máxima de las columnas
+      yPos += Math.max(descHeight, projectLines.length * 5, 6);
+    });
+  } else {
+    // Si no hay items, mostrar actividad general
+    const descriptionText = orderData.activity_type || 'N/A';
+    const descLines = doc.splitTextToSize(descriptionText, 80);
+    doc.text(descLines, 15, yPos);
+    
+    // Proyecto: prioridad project_code, luego comments, luego cost_center + activity_type
+    let projectDisplay = '';
+    if (orderData.project_code) {
+      projectDisplay = orderData.project_code;
+    } else if (orderData.comments && orderData.comments.includes('PROYECTO')) {
+      projectDisplay = orderData.comments;
+    } else if (orderData.cost_center && orderData.activity_type) {
+      projectDisplay = `${orderData.cost_center} - ${orderData.activity_type}`;
+    } else if (orderData.activity_type) {
+      projectDisplay = orderData.activity_type;
+    }
+    const projectLines = doc.splitTextToSize(projectDisplay, 40);
+    doc.text(projectLines, 100, yPos);
+    
+    const total = parseFloat(orderData.total?.toString().replace(/[^0-9.-]+/g, '') || '0') || 0;
+    doc.text(`$${total.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 150, yPos);
+    
+    yPos += Math.max(descLines.length * 5, projectLines.length * 5, 6);
+  }
+
+  yPos += 5;
+
+  // Totales - alineados a la derecha
+  const totalsX = 150;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Subtotal', totalsX, yPos);
+  const subtotal = parseFloat(orderData.subtotal?.toString().replace(/[^0-9.-]+/g, '') || '0') || 
+                   (orderData.items && Array.isArray(orderData.items) 
+                     ? orderData.items.reduce((sum: number, item: any) => {
+                         const price = parseFloat(item.price?.toString().replace(/[^0-9.-]+/g, '') || '0');
+                         const qty = parseFloat(item.quantity || '1');
+                         return sum + (price * qty);
+                       }, 0)
+                     : 0);
+  doc.text(`$${subtotal.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 180, yPos);
+  yPos += 6;
+
+  doc.setFont('helvetica', 'normal');
+  doc.text('Impuestos', totalsX, yPos);
+  doc.text(`${orderData.tax_type || 'Impuesto ventas'}`, 160, yPos);
+  yPos += 6;
+  doc.text('Otros', totalsX, yPos);
+  const otherTaxes = parseFloat(orderData.other_taxes?.toString().replace(/[^0-9.-]+/g, '') || '0') || 0;
+  doc.text(`$${otherTaxes.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 180, yPos);
+  yPos += 8;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...primaryColor);
+  doc.text('Total', totalsX, yPos);
+  const total = parseFloat(orderData.total?.toString().replace(/[^0-9.-]+/g, '') || '0') || (subtotal + otherTaxes);
+  doc.text(`$${total.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 180, yPos);
+  yPos += 15;
+
+  // Firmas
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text('Firma de quien elaboró', 15, yPos);
+  doc.text(orderData.prepared_date ? new Date(orderData.prepared_date).toLocaleDateString('es-CO') : '', 15, yPos + 5);
+  
+  doc.text('Firma del empleado', 120, yPos);
+  doc.text(orderData.employee_signature_date ? new Date(orderData.employee_signature_date).toLocaleDateString('es-CO') : '', 120, yPos + 5);
+  
+  yPos += 15;
+
+  // Nota final
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('El número de la orden de compra debe aparecer en todas las facturas y correspondencia.', 15, yPos, { maxWidth: 180 });
+
+  return doc.output('blob');
+};
+
