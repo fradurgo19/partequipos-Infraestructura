@@ -76,7 +76,7 @@ export const Contractors = () => {
 
     const contractorData = {
       ...formData,
-      rating: formData.rating ? parseFloat(formData.rating) : null,
+      rating: formData.rating ? Number.parseFloat(formData.rating) : null,
       is_active: formData.is_active,
     };
 
@@ -126,7 +126,7 @@ export const Contractors = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('¿Estás seguro de eliminar este contratista?')) {
+    if (globalThis.confirm('¿Estás seguro de eliminar este contratista?')) {
       const { error } = await supabase.from('contractors').delete().eq('id', id);
 
       if (!error) {
@@ -257,8 +257,8 @@ export const Contractors = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-600">Calificación:</span>
                     <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={i < contractor.rating! ? 'text-yellow-400' : 'text-gray-300'}>
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <span key={`${contractor.id}-star-${i}`} className={i < contractor.rating! ? 'text-yellow-400' : 'text-gray-300'}>
                           ★
                         </span>
                       ))}
@@ -269,8 +269,8 @@ export const Contractors = () => {
 
               {contractor.specialty && contractor.specialty.length > 0 && (
                 <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-200">
-                  {contractor.specialty.map((spec, idx) => (
-                    <Badge key={idx} variant="default" size="sm">
+                  {contractor.specialty.map((spec) => (
+                    <Badge key={spec} variant="default" size="sm">
                       {spec}
                     </Badge>
                   ))}
@@ -402,8 +402,8 @@ export const Contractors = () => {
           </div>
 
           {/* Especialidades */}
-          <div>
-            <label className="block text-sm font-medium text-[#50504f] mb-2">Especialidades</label>
+          <fieldset className="block">
+            <legend className="text-sm font-medium text-[#50504f] mb-2">Especialidades</legend>
             <div className="flex flex-wrap gap-2">
               {SPECIALTIES.map((spec) => (
                 <button
@@ -420,7 +420,7 @@ export const Contractors = () => {
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <Textarea
             label="Notas"

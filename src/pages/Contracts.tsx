@@ -11,6 +11,8 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Contract, Contractor, Site, ContractAddendum } from '../types';
 
+type ContractType = 'labor' | 'supply' | 'mixed';
+
 const CONTRACT_TYPES = [
   { value: 'labor', label: 'Mano de Obra' },
   { value: 'supply', label: 'Suministro' },
@@ -48,7 +50,7 @@ export const Contracts = () => {
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [formData, setFormData] = useState({
     contractor_id: '',
-    contract_type: 'labor' as 'labor' | 'supply' | 'mixed',
+    contract_type: 'labor' as ContractType,
     description: '',
     total_amount: '',
     start_date: new Date().toISOString().split('T')[0],
@@ -61,7 +63,7 @@ export const Contracts = () => {
     warranty_period: '',
     warranty_terms: '',
     site_id: '',
-    activities: [] as Array<{ description: string; amount: string }>,
+    activities: [] as Array<{ id: string; description: string; amount: string }>,
     deliverables: [] as string[],
     payment_schedule: [] as Array<{ date: string; amount: string; description: string }>,
   });
@@ -75,6 +77,25 @@ export const Contracts = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const getFallbackContractNumber = async (contractType: ContractType): Promise<string> => {
+    let prefix = 'CON-MIX-';
+    if (contractType === 'labor') prefix = 'CON-MO-';
+    else if (contractType === 'supply') prefix = 'CON-SUM-';
+    const year = new Date().getFullYear();
+    const { data: lastContract } = await supabase
+      .from('contracts')
+      .select('contract_number')
+      .like('contract_number', `${prefix}${year}%`)
+      .order('contract_number', { ascending: false })
+      .limit(1)
+      .single();
+    if (lastContract?.contract_number) {
+      const lastNum = Number.parseInt(lastContract.contract_number.slice(-4), 10) || 0;
+      return `${prefix}${year}${String(lastNum + 1).padStart(4, '0')}`;
+    }
+    return `${prefix}${year}0001`;
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -133,31 +154,14 @@ export const Contracts = () => {
     }
     
     if (!contractNumber) {
-      // Fallback: generar número manualmente
-      const prefix = formData.contract_type === 'labor' ? 'CON-MO-' :
-                     formData.contract_type === 'supply' ? 'CON-SUM-' : 'CON-MIX-';
-      const year = new Date().getFullYear();
-      const { data: lastContract } = await supabase
-        .from('contracts')
-        .select('contract_number')
-        .like('contract_number', `${prefix}${year}%`)
-        .order('contract_number', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (lastContract?.contract_number) {
-        const lastNum = parseInt(lastContract.contract_number.slice(-4)) || 0;
-        contractNumber = `${prefix}${year}${String(lastNum + 1).padStart(4, '0')}`;
-      } else {
-        contractNumber = `${prefix}${year}0001`;
-      }
+      contractNumber = await getFallbackContractNumber(formData.contract_type);
     }
 
     const activities = formData.activities
       .filter(a => a.description && a.amount)
       .map(a => ({
         description: a.description,
-        amount: parseFloat(a.amount) || 0,
+        amount: Number.parseFloat(a.amount) || 0,
       }));
 
     const contractData = {
@@ -165,7 +169,7 @@ export const Contracts = () => {
       contractor_id: formData.contractor_id,
       contract_type: formData.contract_type,
       description: formData.description,
-      total_amount: parseFloat(formData.total_amount) || 0,
+      total_amount: Number.parseFloat(formData.total_amount) || 0,
       start_date: formData.start_date,
       end_date: formData.end_date || null,
       activity_type: formData.activity_type || null,
@@ -173,17 +177,17 @@ export const Contracts = () => {
       internal_client_type: formData.internal_client_type || null,
       project_name: formData.project_name || null,
       payment_terms: formData.payment_terms || null,
-      warranty_period: formData.warranty_period ? parseInt(formData.warranty_period) : null,
+      warranty_period: formData.warranty_period ? Number.parseInt(formData.warranty_period, 10) : null,
       warranty_terms: formData.warranty_terms || null,
       site_id: formData.site_id || null,
       activities: activities.length > 0 ? activities : null,
       deliverables: formData.deliverables.length > 0 ? formData.deliverables : null,
       payment_schedule: formData.payment_schedule.length > 0 ? formData.payment_schedule.map(p => ({
         date: p.date,
-        amount: parseFloat(p.amount) || 0,
+        amount: Number.parseFloat(p.amount) || 0,
         description: p.description,
       })) : null,
-      budget_control,
+      budget_control: null,
       status: 'draft',
       legal_review_status: 'pending',
       created_by: profile.id,
@@ -221,14 +225,14 @@ export const Contracts = () => {
       .filter(a => a.description && a.amount)
       .map(a => ({
         description: a.description,
-        amount: parseFloat(a.amount) || 0,
+        amount: Number.parseFloat(a.amount) || 0,
       }));
 
     const addendumDataToSave = {
       contract_id: selectedContract.id,
       addendum_number: nextNumber,
       description: addendumData.description,
-      additional_amount: parseFloat(addendumData.additional_amount) || 0,
+      additional_amount: Number.parseFloat(addendumData.additional_amount) || 0,
       additional_activities: additionalActivities.length > 0 ? additionalActivities : null,
       created_by: profile.id,
     };
@@ -263,10 +267,11 @@ export const Contracts = () => {
       warranty_period: contract.warranty_period?.toString() || '',
       warranty_terms: contract.warranty_terms || '',
       site_id: contract.site_id || '',
-      activities: contract.budget_control?.items?.map(item => ({
+      activities: (contract.budget_control?.items ?? []).map((item, i) => ({
+        id: `act-edit-${contract.id}-${i}`,
         description: item.description,
         amount: item.amount.toString(),
-      })) || [],
+      })),
       deliverables: contract.deliverables || [],
       payment_schedule: contract.payment_schedule || [],
     });
@@ -299,22 +304,22 @@ export const Contracts = () => {
   const addActivity = () => {
     setFormData(prev => ({
       ...prev,
-      activities: [...prev.activities, { description: '', amount: '' }],
+      activities: [...prev.activities, { id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', amount: '' }],
     }));
   };
 
-  const removeActivity = (index: number) => {
+  const removeActivity = (activityId: string) => {
     setFormData(prev => ({
       ...prev,
-      activities: prev.activities.filter((_, i) => i !== index),
+      activities: prev.activities.filter((a) => a.id !== activityId),
     }));
   };
 
-  const updateActivity = (index: number, field: string, value: string) => {
+  const updateActivity = (activityId: string, field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      activities: prev.activities.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
+      activities: prev.activities.map((item) =>
+        item.id === activityId ? { ...item, [field]: value } : item
       ),
     }));
   };
@@ -359,11 +364,12 @@ export const Contracts = () => {
                     <h3 className="font-semibold text-lg text-[#50504f]">
                       {contract.contract_number}
                     </h3>
-                    <Badge variant={
-                      contract.status === 'active' ? 'success' :
-                      contract.status === 'completed' ? 'default' :
-                      contract.status === 'cancelled' ? 'danger' : 'pending'
-                    }>
+                    <Badge variant={(() => {
+                      if (contract.status === 'active') return 'success';
+                      if (contract.status === 'completed') return 'default';
+                      if (contract.status === 'cancelled') return 'danger';
+                      return 'pending';
+                    })()}>
                       {contract.status}
                     </Badge>
                     <Badge variant="default" size="sm">
@@ -652,21 +658,21 @@ export const Contracts = () => {
           />
 
           {/* Actividades */}
-          <div>
+          <fieldset>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-[#50504f]">Actividades del Contrato</label>
+              <legend className="block text-sm font-medium text-[#50504f]">Actividades del Contrato</legend>
               <Button type="button" variant="ghost" size="sm" onClick={addActivity}>
                 <Plus className="w-4 h-4 mr-1" />
                 Agregar
               </Button>
             </div>
-            {formData.activities.map((activity, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+            {formData.activities.map((activity) => (
+              <div key={activity.id} className="grid grid-cols-12 gap-2 mb-2">
                 <div className="col-span-12 sm:col-span-8">
                   <Input
                     placeholder="Descripción de la actividad"
                     value={activity.description}
-                    onChange={(e) => updateActivity(index, 'description', e.target.value)}
+                    onChange={(e) => updateActivity(activity.id, 'description', e.target.value)}
                     fullWidth
                   />
                 </div>
@@ -675,7 +681,7 @@ export const Contracts = () => {
                     type="number"
                     placeholder="Monto"
                     value={activity.amount}
-                    onChange={(e) => updateActivity(index, 'amount', e.target.value)}
+                    onChange={(e) => updateActivity(activity.id, 'amount', e.target.value)}
                     fullWidth
                   />
                 </div>
@@ -684,7 +690,7 @@ export const Contracts = () => {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeActivity(index)}
+                    onClick={() => removeActivity(activity.id)}
                     className="w-full"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -692,7 +698,7 @@ export const Contracts = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </fieldset>
 
           <div className="flex justify-end gap-3 pt-4">
             <Button

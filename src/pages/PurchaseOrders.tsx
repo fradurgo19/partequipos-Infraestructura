@@ -25,7 +25,7 @@ export const PurchaseOrders = () => {
   const { profile } = useAuth();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
-  const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>([]);
+  const [serviceOrders, setServiceOrders] = useState<Array<Pick<ServiceOrder, 'id' | 'order_number' | 'site_id'>>>([]);
   const [users, setUsers] = useState<Array<{ id: string; full_name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -39,7 +39,7 @@ export const PurchaseOrders = () => {
     project_code: '',
     cost_center: '',
     comments: '',
-    items: [{ description: '', price: '', quantity: '1' }] as Array<{ description: string; price: string; quantity: string }>,
+    items: [{ id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', price: '', quantity: '1' }] as Array<{ id: string; description: string; price: string; quantity: string }>,
     subtotal: '',
     taxes: '',
     tax_type: 'Impuesto ventas',
@@ -85,7 +85,7 @@ export const PurchaseOrders = () => {
       setSites(sitesResult.data);
     }
     if (!serviceOrdersResult.error && serviceOrdersResult.data) {
-      setServiceOrders(serviceOrdersResult.data);
+      setServiceOrders(serviceOrdersResult.data as Array<Pick<ServiceOrder, 'id' | 'order_number' | 'site_id'>>);
     }
     if (!usersResult.error && usersResult.data) {
       setUsers(usersResult.data);
@@ -96,12 +96,12 @@ export const PurchaseOrders = () => {
   const calculateTotals = useCallback(() => {
     const items = formData.items.filter(item => item.description && item.price);
     const subtotal = items.reduce((sum, item) => {
-      const price = parseFloat(item.price) || 0;
-      const quantity = parseFloat(item.quantity) || 1;
+      const price = Number.parseFloat(item.price) || 0;
+      const quantity = Number.parseFloat(item.quantity) || 1;
       return sum + (price * quantity);
     }, 0);
-    const taxes = parseFloat(formData.taxes) || 0;
-    const otherTaxes = parseFloat(formData.other_taxes) || 0;
+    const taxes = Number.parseFloat(formData.taxes) || 0;
+    const otherTaxes = Number.parseFloat(formData.other_taxes) || 0;
     const total = subtotal + taxes + otherTaxes;
     setFormData(prev => ({
       ...prev,
@@ -139,7 +139,7 @@ export const PurchaseOrders = () => {
         .single();
       
       if (lastOrder?.order_number) {
-        const lastNum = parseInt(lastOrder.order_number.slice(-5)) || 0;
+        const lastNum = Number.parseInt(lastOrder.order_number.slice(-5), 10) || 0;
         orderNumber = `${year}${String(lastNum + 1).padStart(5, '0')}`;
       } else {
         orderNumber = `${year}00001`;
@@ -150,8 +150,8 @@ export const PurchaseOrders = () => {
       .filter(item => item.description && item.price)
       .map(item => ({
         description: item.description,
-        price: parseFloat(item.price) || 0,
-        quantity: parseFloat(item.quantity) || 1,
+        price: Number.parseFloat(item.price) || 0,
+        quantity: Number.parseFloat(item.quantity) || 1,
       }));
 
     const orderData = {
@@ -166,11 +166,11 @@ export const PurchaseOrders = () => {
       cost_center: formData.cost_center,
       comments: formData.comments,
       items,
-      subtotal: parseFloat(formData.subtotal) || 0,
-      taxes: parseFloat(formData.taxes) || 0,
+      subtotal: Number.parseFloat(formData.subtotal) || 0,
+      taxes: Number.parseFloat(formData.taxes) || 0,
       tax_type: formData.tax_type,
-      other_taxes: parseFloat(formData.other_taxes) || 0,
-      total: parseFloat(formData.total) || 0,
+      other_taxes: Number.parseFloat(formData.other_taxes) || 0,
+      total: Number.parseFloat(formData.total) || 0,
       authorized_by: formData.authorized_by || null,
       authorized_by_name: formData.authorized_by_name,
       prepared_by: profile.id,
@@ -241,7 +241,7 @@ export const PurchaseOrders = () => {
       project_code: '',
       cost_center: '',
       comments: '',
-      items: [{ description: '', price: '', quantity: '1' }],
+      items: [{ id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', price: '', quantity: '1' }],
       subtotal: '',
       taxes: '',
       tax_type: 'Impuesto ventas',
@@ -278,22 +278,22 @@ export const PurchaseOrders = () => {
   const addItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { description: '', price: '', quantity: '1' }],
+      items: [...prev.items, { id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, description: '', price: '', quantity: '1' }],
     }));
   };
 
-  const removeItem = (index: number) => {
+  const removeItem = (itemId: string) => {
     setFormData(prev => ({
       ...prev,
-      items: prev.items.filter((_, i) => i !== index),
+      items: prev.items.filter((item) => item.id !== itemId),
     }));
   };
 
-  const updateItem = (index: number, field: string, value: string) => {
+  const updateItem = (itemId: string, field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      items: prev.items.map((item, i) => 
-        i === index ? { ...item, [field]: value } : item
+      items: prev.items.map((item) =>
+        item.id === itemId ? { ...item, [field]: value } : item
       ),
     }));
   };
@@ -334,7 +334,11 @@ export const PurchaseOrders = () => {
                     <h3 className="font-semibold text-lg text-[#50504f]">
                       OC #{order.order_number}
                     </h3>
-                    <Badge variant={order.status === 'approved' ? 'success' : order.status === 'pending_approval' ? 'in_progress' : 'pending'}>
+                    <Badge variant={(() => {
+                        if (order.status === 'approved') return 'success';
+                        if (order.status === 'pending_approval') return 'in_progress';
+                        return 'pending';
+                      })()}>
                       {order.status}
                     </Badge>
                   </div>
@@ -503,21 +507,21 @@ export const PurchaseOrders = () => {
           />
 
           {/* Items */}
-          <div>
+          <fieldset className="block">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-[#50504f]">Items</label>
+              <legend className="text-sm font-medium text-[#50504f]">Items</legend>
               <Button type="button" variant="ghost" size="sm" onClick={addItem}>
                 <Plus className="w-4 h-4 mr-1" />
                 Agregar Item
               </Button>
             </div>
-            {formData.items.map((item, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+            {formData.items.map((item) => (
+              <div key={item.id} className="grid grid-cols-12 gap-2 mb-2">
                 <div className="col-span-12 sm:col-span-5">
                   <Input
                     placeholder="Descripción"
                     value={item.description}
-                    onChange={(e) => updateItem(index, 'description', e.target.value)}
+                    onChange={(e) => updateItem(item.id, 'description', e.target.value)}
                     fullWidth
                   />
                 </div>
@@ -526,7 +530,7 @@ export const PurchaseOrders = () => {
                     type="number"
                     placeholder="Precio"
                     value={item.price}
-                    onChange={(e) => updateItem(index, 'price', e.target.value)}
+                    onChange={(e) => updateItem(item.id, 'price', e.target.value)}
                     fullWidth
                   />
                 </div>
@@ -535,7 +539,7 @@ export const PurchaseOrders = () => {
                     type="number"
                     placeholder="Cantidad"
                     value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                    onChange={(e) => updateItem(item.id, 'quantity', e.target.value)}
                     fullWidth
                   />
                 </div>
@@ -545,7 +549,7 @@ export const PurchaseOrders = () => {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeItem(index)}
+                      onClick={() => removeItem(item.id)}
                       className="w-full"
                     >
                       <X className="w-4 h-4" />
@@ -554,7 +558,7 @@ export const PurchaseOrders = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </fieldset>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
@@ -639,18 +643,24 @@ export const PurchaseOrders = () => {
 
           {/* Adjuntos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FileUpload
-              label="Cotización Adjunta"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onUpload={(url) => setFormData({ ...formData, quotation_attachment_url: url })}
-              currentFile={formData.quotation_attachment_url}
-            />
-            <FileUpload
-              label="Factura Adjunta"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onUpload={(url) => setFormData({ ...formData, invoice_attachment_url: url })}
-              currentFile={formData.invoice_attachment_url}
-            />
+            <fieldset>
+              <legend className="block text-sm font-medium text-[#50504f] mb-2">Cotización Adjunta</legend>
+              <FileUpload
+                accept=".pdf,.jpg,.jpeg,.png"
+                onUploadComplete={(urls: string[]) => setFormData((prev) => ({ ...prev, quotation_attachment_url: urls[0] ?? '' }))}
+                existingFiles={formData.quotation_attachment_url ? [formData.quotation_attachment_url] : []}
+                onRemove={() => setFormData((prev) => ({ ...prev, quotation_attachment_url: '' }))}
+              />
+            </fieldset>
+            <fieldset>
+              <legend className="block text-sm font-medium text-[#50504f] mb-2">Factura Adjunta</legend>
+              <FileUpload
+                accept=".pdf,.jpg,.jpeg,.png"
+                onUploadComplete={(urls: string[]) => setFormData((prev) => ({ ...prev, invoice_attachment_url: urls[0] ?? '' }))}
+                existingFiles={formData.invoice_attachment_url ? [formData.invoice_attachment_url] : []}
+                onRemove={() => setFormData((prev) => ({ ...prev, invoice_attachment_url: '' }))}
+              />
+            </fieldset>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

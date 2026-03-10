@@ -101,7 +101,7 @@ export const Quotations = () => {
           .map((q) => ({
             provider: q.provider,
             amount: q.amount,
-            unitValue: (q.amount || 0) / quotation.cantidad,
+            unitValue: (q.amount || 0) / (quotation.cantidad ?? 1),
             url: q.url,
           }))
           .sort((a, b) => a.unitValue - b.unitValue)
@@ -140,23 +140,23 @@ export const Quotations = () => {
       title: formData.title,
       description: formData.description,
       tipo_cotizacion: formData.tipo_cotizacion || null,
-      cantidad: formData.cantidad ? parseFloat(formData.cantidad) : null,
+      cantidad: formData.cantidad ? Number.parseFloat(formData.cantidad) : null,
       formato_contratista: formData.formato_contratista || null,
       quotation_1_url: formData.quotation_1_url || null,
-      quotation_1_amount: formData.quotation_1_amount ? parseFloat(formData.quotation_1_amount) : null,
+      quotation_1_amount: formData.quotation_1_amount ? Number.parseFloat(formData.quotation_1_amount) : null,
       quotation_1_provider: formData.quotation_1_provider || null,
       quotation_2_url: formData.quotation_2_url || null,
-      quotation_2_amount: formData.quotation_2_amount ? parseFloat(formData.quotation_2_amount) : null,
+      quotation_2_amount: formData.quotation_2_amount ? Number.parseFloat(formData.quotation_2_amount) : null,
       quotation_2_provider: formData.quotation_2_provider || null,
       quotation_3_url: formData.quotation_3_url || null,
-      quotation_3_amount: formData.quotation_3_amount ? parseFloat(formData.quotation_3_amount) : null,
+      quotation_3_amount: formData.quotation_3_amount ? Number.parseFloat(formData.quotation_3_amount) : null,
       quotation_3_provider: formData.quotation_3_provider || null,
       created_by: profile.id,
       status: 'pending',
     };
 
     // Calcular comparativos
-    const comparatives = calculateComparatives(quotationData);
+    const comparatives = calculateComparatives(quotationData as unknown as Quotation);
     quotationData.comparativo_por_monto = comparatives.comparativo_por_monto;
     quotationData.comparativo_por_valor = comparatives.comparativo_por_valor;
     quotationData.comparativo_por_descripcion = comparatives.comparativo_por_descripcion;
@@ -250,7 +250,7 @@ export const Quotations = () => {
       quotation.quotation_1_amount,
       quotation.quotation_2_amount,
       quotation.quotation_3_amount,
-    ].filter((a) => a !== null && a !== undefined) as number[];
+    ].filter((a): a is number => a !== null && a !== undefined);
 
     if (amounts.length === 0) return null;
 
@@ -312,7 +312,11 @@ export const Quotations = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg text-[#50504f]">{quotation.title}</h3>
-                      <Badge variant={quotation.status === 'approved' ? 'success' : quotation.status === 'reviewed' ? 'in_progress' : 'pending'}>
+                      <Badge variant={(() => {
+                        if (quotation.status === 'approved') return 'success';
+                        if (quotation.status === 'reviewed') return 'in_progress';
+                        return 'pending';
+                      })()}>
                         {quotation.status}
                       </Badge>
                       {quotation.tipo_cotizacion && (
@@ -498,8 +502,8 @@ export const Quotations = () => {
                       <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
                         <p className="font-medium text-blue-700 mb-2">Comparativo por Monto:</p>
                         <ol className="list-decimal list-inside space-y-1">
-                          {JSON.parse(JSON.stringify(quotation.comparativo_por_monto)).map((item: { provider?: string; amount?: number }, idx: number) => (
-                            <li key={idx}>
+                          {structuredClone(quotation.comparativo_por_monto).map((item: { provider?: string; amount?: number }) => (
+                            <li key={`${quotation.id}-${item.provider ?? ''}-${item.amount ?? ''}`}>
                               {item.provider}: ${item.amount?.toLocaleString('es-CO')}
                             </li>
                           ))}
@@ -610,12 +614,12 @@ export const Quotations = () => {
               <Input
                 label="Nombre del Proveedor"
                 placeholder={`Proveedor ${num}`}
-                value={formData[`quotation_${num}_provider` as keyof typeof formData] as string}
+                value={formData[`quotation_${num}_provider` as keyof typeof formData]}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     [`quotation_${num}_provider`]: e.target.value,
-                  } as typeof formData)
+                  })
                 }
                 fullWidth
               />
@@ -624,19 +628,19 @@ export const Quotations = () => {
                 type="number"
                 step="0.01"
                 placeholder="0.00"
-                value={formData[`quotation_${num}_amount` as keyof typeof formData] as string}
+                value={formData[`quotation_${num}_amount` as keyof typeof formData]}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     [`quotation_${num}_amount`]: e.target.value,
-                  } as typeof formData)
+                  })
                 }
                 fullWidth
               />
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-2">
                   PDF de Cotización {num}
-                </label>
+                </legend>
                 <FileUpload
                   bucket="documents"
                   folder="quotations"
@@ -646,21 +650,21 @@ export const Quotations = () => {
                     setFormData({
                       ...formData,
                       [`quotation_${num}_url`]: urls[0] || '',
-                    } as typeof formData);
+                    });
                   }}
                   existingFiles={
                     formData[`quotation_${num}_url` as keyof typeof formData]
-                      ? [formData[`quotation_${num}_url` as keyof typeof formData] as string]
+                      ? [formData[`quotation_${num}_url` as keyof typeof formData]]
                       : []
                   }
                   onRemove={() => {
                     setFormData({
                       ...formData,
                       [`quotation_${num}_url`]: '',
-                    } as typeof formData);
+                    });
                   }}
                 />
-              </div>
+              </fieldset>
             </div>
           ))}
 
