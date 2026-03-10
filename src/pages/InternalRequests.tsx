@@ -217,7 +217,7 @@ export const InternalRequests = () => {
         const emails = infrastructureTeam.map((member: { email: string; full_name: string }) => member.email).join(', ');
 
         const token = localStorage.getItem('token');
-        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/notifications/email`, {
+        await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/notifications/email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -267,7 +267,7 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
 
                 <div style="margin: 20px 0;">
                   <h3>Descripción:</h3>
-                  <p>${formData.description.replace(/\n/g, '<br>')}</p>
+                  <p>${formData.description.replaceAll(/\n/g, '<br>')}</p>
                 </div>
 
                 ${(() => {

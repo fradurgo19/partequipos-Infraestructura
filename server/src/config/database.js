@@ -46,7 +46,6 @@ export const query = async (text, params) => {
 // Función para obtener un cliente del pool (para transacciones)
 export const getClient = async () => {
   const client = await pool.connect();
-  const query = client.query.bind(client);
   const release = client.release.bind(client);
 
   // Monitorear el timeout de la conexión

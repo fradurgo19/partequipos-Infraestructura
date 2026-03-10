@@ -165,7 +165,7 @@ export const Tasks = () => {
       if (budget > 0) {
         try {
           const token = localStorage.getItem('token');
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/notifications/task-budget`, {
+          await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/notifications/task-budget`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

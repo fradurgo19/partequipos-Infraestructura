@@ -124,9 +124,8 @@ export const PurchaseOrders = () => {
       const { data: orderNumberData } = await supabase.rpc('generate_purchase_order_number');
       orderNumber = orderNumberData || '';
     } catch {
-      console.log('RPC function not available, using fallback');
+      // RPC no disponible; se usa fallback
     }
-
     if (!orderNumber) {
       // Fallback: generar número manualmente
       const year = new Date().getFullYear();

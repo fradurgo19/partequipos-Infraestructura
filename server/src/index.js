@@ -28,21 +28,15 @@ const PORT = process.env.PORT || 3000;
 const USE_LOCAL_DB = process.env.USE_LOCAL_DB === 'true';
 
 // Initialize database connection
-let db = null;
-let supabase = null;
-
 if (USE_LOCAL_DB) {
-  // Usar PostgreSQL local
   console.log('📦 Usando PostgreSQL local');
-  db = pool;
 } else {
-  // Usar Supabase
   console.log('☁️  Usando Supabase');
-  supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
 }
+const db = USE_LOCAL_DB ? pool : null;
+const supabase = USE_LOCAL_DB
+  ? null
+  : createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 // Exportar para uso en otros módulos
 export { db, supabase };
@@ -77,7 +71,7 @@ app.get('/health', async (req, res) => {
         db_time: result.rows[0].now,
       });
     } else {
-      const { data, error } = await supabase.from('profiles').select('id').limit(1).maybeSingle();
+      const { error } = await supabase.from('profiles').select('id').limit(1).maybeSingle();
       if (error) throw error;
       res.json({
         status: 'ok',
@@ -125,9 +119,15 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📦 Database: ${USE_LOCAL_DB ? 'PostgreSQL Local' : 'Supabase'}`);
-});
+// En Vercel no se hace listen; el app se exporta para serverless-http
+const isVercel = process.env.VERCEL === '1';
+if (!isVercel) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📦 Database: ${USE_LOCAL_DB ? 'PostgreSQL Local' : 'Supabase'}`);
+  });
+}
+
+export default app;
 

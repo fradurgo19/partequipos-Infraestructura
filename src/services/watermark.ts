@@ -5,7 +5,7 @@ export const addWatermarkToImage = async (imageFile: File): Promise<string> => {
     formData.append('image', imageFile);
 
     const token = localStorage.getItem('token');
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/upload/image/watermark`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/upload/image/watermark`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

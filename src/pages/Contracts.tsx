@@ -150,9 +150,8 @@ export const Contracts = () => {
       });
       contractNumber = contractNumberData || '';
     } catch {
-      console.log('RPC function not available, using fallback');
+      // RPC no disponible; se usa fallback
     }
-    
     if (!contractNumber) {
       contractNumber = await getFallbackContractNumber(formData.contract_type);
     }

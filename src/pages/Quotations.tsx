@@ -178,7 +178,7 @@ export const Quotations = () => {
       const pdfBlob = await generateQuotationComparisonPDF(insertedQuotation);
       
       // Subir PDF a Supabase Storage
-      const pdfFileName = `quotations/comparativo-${Date.now()}-${formData.title.replace(/\s+/g, '_')}.pdf`;
+      const pdfFileName = `quotations/comparativo-${Date.now()}-${formData.title.replaceAll(/\s+/g, '_')}.pdf`;
       const { error: pdfUploadError } = await supabase.storage
         .from('documents')
         .upload(pdfFileName, pdfBlob, {
@@ -200,7 +200,7 @@ export const Quotations = () => {
         // Enviar PDF por correo a Felipe Bustamante
         try {
           const token = localStorage.getItem('token');
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/notifications/quotation-comparative`, {
+          await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/notifications/quotation-comparative`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

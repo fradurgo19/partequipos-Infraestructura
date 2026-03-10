@@ -243,6 +243,18 @@ export const ContractTracking = () => {
               contracts.map((contract) => {
                 const compliance = getComplianceStatus(contract);
                 const compliancePercentage = getCompliancePercentage(contract.id);
+                let complianceBadgeVariant: 'danger' | 'pending' | 'success' | 'default' = 'default';
+                if (compliance.status === 'overdue') complianceBadgeVariant = 'danger';
+                else if (compliance.status === 'warning') complianceBadgeVariant = 'pending';
+                else if (compliance.status === 'completed') complianceBadgeVariant = 'success';
+
+                let progressBarColorClass = 'bg-red-500';
+                if (compliancePercentage >= 80) progressBarColorClass = 'bg-green-500';
+                else if (compliancePercentage >= 50) progressBarColorClass = 'bg-orange-500';
+
+                let complianceTextClass = 'text-green-600';
+                if (compliance.status === 'overdue') complianceTextClass = 'text-red-600';
+                else if (compliance.status === 'warning') complianceTextClass = 'text-orange-600';
 
                 return (
                   <Card key={contract.id} hover>
@@ -256,17 +268,7 @@ export const ContractTracking = () => {
                             <Badge variant={contract.status === 'active' ? 'in_progress' : 'completed'}>
                               {contract.status}
                             </Badge>
-                            <Badge
-                              variant={
-                                compliance.status === 'overdue'
-                                  ? 'danger'
-                                  : compliance.status === 'warning'
-                                  ? 'pending'
-                                  : compliance.status === 'completed'
-                                  ? 'success'
-                                  : 'default'
-                              }
-                            >
+                            <Badge variant={complianceBadgeVariant}>
                               {compliance.label}
                             </Badge>
                           </div>
@@ -309,13 +311,7 @@ export const ContractTracking = () => {
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div
-                                className={`h-2 rounded-full transition-all ${
-                                  compliancePercentage >= 80
-                                    ? 'bg-green-500'
-                                    : compliancePercentage >= 50
-                                    ? 'bg-orange-500'
-                                    : 'bg-red-500'
-                                }`}
+                                className={`h-2 rounded-full transition-all ${progressBarColorClass}`}
                                 style={{ width: `${compliancePercentage}%` }}
                               ></div>
                             </div>
@@ -323,15 +319,7 @@ export const ContractTracking = () => {
 
                           {compliance.days !== null && (
                             <div className="mt-3">
-                              <p
-                                className={`text-sm font-medium ${
-                                  compliance.status === 'overdue'
-                                    ? 'text-red-600'
-                                    : compliance.status === 'warning'
-                                    ? 'text-orange-600'
-                                    : 'text-green-600'
-                                }`}
-                              >
+                              <p className={`text-sm font-medium ${complianceTextClass}`}>
                                 {compliance.status === 'overdue' && (
                                   <span className="flex items-center gap-2">
                                     <AlertTriangle className="w-4 h-4" />

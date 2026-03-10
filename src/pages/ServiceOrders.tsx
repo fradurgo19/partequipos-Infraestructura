@@ -171,12 +171,11 @@ export const ServiceOrders = () => {
         return data;
       }
     } catch {
-      console.log('RPC function not available, using fallback');
+      // RPC no disponible; se usa fallback
     }
-
     // Fallback: generar número manualmente
     const site = sites.find(s => s.id === siteId);
-    const siteCode = site ? site.name.substring(0, 3).toUpperCase().replace(/\s+/g, '') : 'SED';
+    const siteCode = site ? site.name.substring(0, 3).toUpperCase().replaceAll(/\s+/g, '') : 'SED';
     
     // Obtener el último número de orden para esta sede
     const { data: lastOrder } = await supabase

@@ -176,7 +176,7 @@ export const Measurements = () => {
       const pdfBlob = await generateCutPDF(cutWithRelations);
       
       // Subir PDF a Supabase Storage
-      const pdfFileName = `cortes/${Date.now()}-${formData.title.replace(/\s+/g, '_')}.pdf`;
+      const pdfFileName = `cortes/${Date.now()}-${formData.title.replaceAll(/\s+/g, '_')}.pdf`;
       const { error: pdfUploadError } = await supabase.storage
         .from('documents')
         .upload(pdfFileName, pdfBlob, {
@@ -216,7 +216,7 @@ export const Measurements = () => {
     try {
       const photos = [photoUrls.height, photoUrls.length, photoUrls.width, photoUrls.general].filter(Boolean);
       const token = localStorage.getItem('token');
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/notifications/cut-approval`, {
+      await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/notifications/cut-approval`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -273,7 +273,7 @@ export const Measurements = () => {
       if (level === 'edison' && data) {
         try {
           const token = localStorage.getItem('token');
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/notifications/cut-edison-approved`, {
+          await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/notifications/cut-edison-approved`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
