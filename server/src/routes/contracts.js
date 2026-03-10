@@ -66,8 +66,44 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create contract
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    let contractNumber = req.body.contract_number;
+
+    if (!contractNumber) {
+      const contractType = req.body.contract_type || 'labor';
+      try {
+        const { data: rpcData } = await supabase.rpc('generate_contract_number', {
+          contract_type_param: contractType,
+        });
+        contractNumber = rpcData || '';
+      } catch {
+        contractNumber = '';
+      }
+      if (!contractNumber) {
+        let prefix = 'CON-MIX-';
+        if (contractType === 'labor') prefix = 'CON-MO-';
+        else if (contractType === 'supply') prefix = 'CON-SUM-';
+        const year = new Date().getFullYear();
+        const { data: lastContract } = await supabase
+          .from('contracts')
+          .select('contract_number')
+          .like('contract_number', `${prefix}${year}%`)
+          .order('contract_number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const nextNum = lastContract?.contract_number
+          ? Number.parseInt(String(lastContract.contract_number).slice(-4), 10) + 1
+          : 1;
+        contractNumber = `${prefix}${year}${String(nextNum).padStart(4, '0')}`;
+      }
+    }
+
+    const today = new Date().toISOString().split('T')[0];
     const contractData = {
       ...req.body,
+      contract_number: contractNumber,
+      total_amount: req.body.total_amount ?? 0,
+      start_date: req.body.start_date ?? today,
+      end_date: req.body.end_date ?? null,
       created_by: req.profile.id,
       status: req.body.status || 'draft',
       legal_review_status: 'pending',
@@ -79,6 +115,25 @@ router.post('/', authenticateToken, async (req, res) => {
       .select()
       .single();
 
+    if (error?.code === '23505' && error?.message?.includes('contract_number')) {
+      // Duplicate key: obtener de nuevo el último número y reintentar una vez
+      const prefix = (req.body.contract_type || 'labor') === 'supply' ? 'CON-SUM-' : (req.body.contract_type || 'labor') === 'mixed' ? 'CON-MIX-' : 'CON-MO-';
+      const year = new Date().getFullYear();
+      const { data: lastContract } = await supabase
+        .from('contracts')
+        .select('contract_number')
+        .ilike('contract_number', `${prefix}${year}%`)
+        .order('contract_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextNum = lastContract?.contract_number
+        ? Number.parseInt(String(lastContract.contract_number).slice(-4), 10) + 1
+        : 1;
+      contractData.contract_number = `${prefix}${year}${String(nextNum).padStart(4, '0')}`;
+      const retry = await supabase.from('contracts').insert([contractData]).select().single();
+      if (retry.error) throw retry.error;
+      return res.status(201).json(retry.data);
+    }
     if (error) throw error;
     res.status(201).json(data);
   } catch (error) {

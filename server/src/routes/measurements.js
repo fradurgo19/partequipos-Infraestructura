@@ -23,27 +23,16 @@ router.get('/', authenticateToken, async (req, res) => {
 // Create measurement
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { length, height, depth } = req.body;
-
-    // Calculate area and volume if dimensions provided
-    let calculated_area = null;
-    let calculated_volume = null;
-
-    if (length && height) {
-      calculated_area = length * height;
-    }
-
-    if (length && height && depth) {
-      calculated_volume = length * height * depth;
-    }
+    const { length, height, depth, ...restBody } = req.body;
 
     const measurementData = {
-      ...req.body,
-      calculated_area,
-      calculated_volume,
-      created_by: req.profile.id,
+      ...restBody,
+      length: length ?? null,
+      height: height ?? null,
       status: 'pending',
     };
+    if (depth != null) measurementData.depth = depth;
+    if (req.body.created_by != null) measurementData.created_by = req.body.created_by;
 
     const { data, error } = await supabase
       .from('measurements')
@@ -52,7 +41,13 @@ router.post('/', authenticateToken, async (req, res) => {
       .single();
 
     if (error) throw error;
-    res.status(201).json(data);
+
+    const area = length != null && height != null ? Number(length) * Number(height) : null;
+    const volume = length != null && height != null && depth != null
+      ? Number(length) * Number(height) * Number(depth)
+      : null;
+
+    res.status(201).json({ ...data, calculated_area: area, calculated_volume: volume });
   } catch (error) {
     console.error('Create measurement error:', error);
     res.status(500).json({ error: error.message });
@@ -70,15 +65,15 @@ router.post('/:id/approve', authenticateToken, async (req, res) => {
     if (approvalLevel === 'edison') {
       updateData.approved_by_edison = req.profile.id;
       updateData.approved_at_edison = new Date().toISOString();
-      updateData.status = 'approved_edison';
+      updateData.status = newStatus;
     } else if (approvalLevel === 'felipe') {
       updateData.approved_by_felipe = req.profile.id;
       updateData.approved_at_felipe = new Date().toISOString();
-      updateData.status = 'approved_felipe';
+      updateData.status = newStatus;
     } else if (approvalLevel === 'claudia') {
       updateData.approved_by_claudia = req.profile.id;
       updateData.approved_at_claudia = new Date().toISOString();
-      updateData.status = 'approved_claudia';
+      updateData.status = newStatus;
     }
 
     const { data, error } = await supabase

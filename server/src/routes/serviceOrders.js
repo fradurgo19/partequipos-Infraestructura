@@ -61,7 +61,7 @@ router.post('/', authenticateToken, requireRole('admin', 'infrastructure', 'supe
       .limit(1);
 
     const nextOrderNumber = existingOrders && existingOrders.length > 0
-      ? (parseInt(existingOrders[0].order_number) + 1).toString().padStart(4, '0')
+      ? (Number.parseInt(existingOrders[0].order_number, 10) + 1).toString().padStart(4, '0')
       : '0001';
 
     const orderData = {
@@ -71,14 +71,13 @@ router.post('/', authenticateToken, requireRole('admin', 'infrastructure', 'supe
       status: req.body.status || 'draft',
     };
 
-    const { data, error } = await supabase
-      .from('service_orders')
-      .insert([orderData])
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.status(201).json(data);
+    // RPC con SECURITY DEFINER evita RLS (ejecutar supabase/policies-rls-fixes.sql en Supabase)
+    const { data: rpcData, error: rpcError } = await supabase.rpc('insert_service_order', {
+      payload: orderData,
+    });
+    if (rpcError) throw rpcError;
+    if (rpcData && rpcData.length > 0) return res.status(201).json(rpcData[0]);
+    throw new Error('insert_service_order returned no row');
   } catch (error) {
     console.error('Create service order error:', error);
     res.status(500).json({ error: error.message });

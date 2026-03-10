@@ -52,7 +52,7 @@ router.post('/task-budget', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'budget and taskTitle are required' });
     }
 
-    const budgetNum = parseFloat(budget);
+    const budgetNum = Number.parseFloat(budget);
     let recipients = [];
 
     if (budgetNum > 10000000) {
@@ -123,7 +123,7 @@ router.post('/cut-approval', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'cutId and cutTitle are required' });
     }
 
-    const cutValueNum = parseFloat(cutValue || 0);
+    const cutValueNum = Number.parseFloat(String(cutValue || 0));
     
     // Siempre enviar a Edison primero
     const edisonEmail = 'infraestructura@partequipos.com';
@@ -210,7 +210,7 @@ router.post('/cut-edison-approved', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'cutId and cutTitle are required' });
     }
 
-    const cutValueNum = parseFloat(cutValue || 0);
+    const cutValueNum = Number.parseFloat(String(cutValue || 0));
     const recipients = [];
 
     // Siempre notificar a Felipe

@@ -264,7 +264,7 @@ async function run() {
       const contractsRes = await request('POST', '/api/contracts', token, {
         site_id: siteIdForContract,
         contractor_id: contractorIdForContract,
-        contract_type: 'service',
+        contract_type: 'labor',
         activity_type: 'maintenance',
         description: 'Contrato prueba Supabase',
       });

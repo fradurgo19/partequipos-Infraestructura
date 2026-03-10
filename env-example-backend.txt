@@ -23,3 +23,15 @@ JWT_SECRET=mi_secreto_super_seguro_para_desarrollo_local_12345
 LOG_LEVEL=debug
 DEBUG=true
 
+# --- Pruebas API → Supabase (npm run test:supabase) ---
+# Usuario de prueba que debe existir en Supabase Auth.
+# No uses USE_LOCAL_DB=true si quieres ejecutar estas pruebas.
+TEST_EMAIL=un_usuario_valido@tudominio.com
+TEST_PASSWORD=tu_contraseña
+
+# Opcional: URL del API para el script de pruebas (default http://localhost:3000)
+# API_URL=http://localhost:3000
+
+# --- Supabase (cuando no usas DB local) ---
+# SUPABASE_URL=https://tu-proyecto.supabase.co
+# SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
