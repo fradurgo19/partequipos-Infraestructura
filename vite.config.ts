@@ -16,7 +16,6 @@ export default defineConfig({
           if (id.includes('react-router')) return 'router';
           if (id.includes('@supabase')) return 'supabase';
           if (id.includes('axios') || id.includes('jspdf') || id.includes('html2canvas') || id.includes('dompurify')) return 'libs';
-          return 'vendor';
         },
       },
     },
