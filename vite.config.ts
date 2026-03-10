@@ -15,10 +15,13 @@ export default defineConfig({
           if (id.includes('react-dom') || id.includes('/react/')) return 'react-vendor';
           if (id.includes('react-router')) return 'router';
           if (id.includes('@supabase')) return 'supabase';
-          if (id.includes('axios') || id.includes('jspdf') || id.includes('html2canvas') || id.includes('dompurify')) return 'libs';
+          if (id.includes('jspdf')) return 'jspdf';
+          if (id.includes('html2canvas')) return 'html2canvas';
+          if (id.includes('dompurify')) return 'dompurify';
+          if (id.includes('axios')) return 'axios';
         },
       },
     },
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 550,
   },
 });
