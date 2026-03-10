@@ -37,16 +37,16 @@ export const Login = () => {
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-[#50504f] mb-2">
-            Maintenance Management
+            Gestión de Mantenimiento
           </h1>
-          <p className="text-gray-600">Sign in to your account</p>
+          <p className="text-gray-600">Inicia sesión en tu cuenta</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             type="email"
-            label="Email"
-            placeholder="your.email@company.com"
+            label="Correo electrónico"
+            placeholder="tu.correo@empresa.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             fullWidth
@@ -55,8 +55,8 @@ export const Login = () => {
 
           <Input
             type="password"
-            label="Password"
-            placeholder="Enter your password"
+            label="Contraseña"
+            placeholder="Ingresa tu contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             fullWidth
@@ -70,12 +70,12 @@ export const Login = () => {
           )}
 
           <Button type="submit" fullWidth disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </Button>
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>Contact your administrator for account access</p>
+          <p>Contacta al administrador para acceso a la cuenta</p>
         </div>
       </Card>
     </div>

@@ -31,7 +31,7 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
 
   const getAvailableModules = () => {
     const allModules = [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      { id: 'dashboard', label: 'Panel', icon: LayoutDashboard, path: '/dashboard' },
       { id: 'sites', label: 'Sedes y Proyectos', icon: MapPin, path: '/sites' },
       { id: 'tasks', label: 'Tareas', icon: ClipboardList, path: '/tasks' },
       { id: 'service-orders', label: 'Órdenes de Servicio', icon: FileText, path: '/service-orders' },

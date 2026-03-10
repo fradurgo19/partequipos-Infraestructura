@@ -299,12 +299,12 @@ export const Tasks = () => {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Tasks</h1>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">Track maintenance tasks and workflows</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Tareas</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Seguimiento de tareas de mantenimiento y flujos de trabajo</p>
         </div>
         <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-          <span className="text-sm sm:text-base">Create Task</span>
+          <span className="text-sm sm:text-base">Crear tarea</span>
         </Button>
       </div>
 
@@ -315,7 +315,7 @@ export const Tasks = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search tasks..."
+                placeholder="Buscar tareas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#cf1b22]"
@@ -328,11 +328,11 @@ export const Tasks = () => {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               options={[
-                { value: 'all', label: 'All Status' },
-                { value: 'pending', label: 'Pending' },
-                { value: 'in_progress', label: 'In Progress' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'cancelled', label: 'Cancelled' },
+                { value: 'all', label: 'Todos los estados' },
+                { value: 'pending', label: 'Pendiente' },
+                { value: 'in_progress', label: 'En progreso' },
+                { value: 'completed', label: 'Completado' },
+                { value: 'cancelled', label: 'Cancelada' },
               ]}
             />
           </div>
@@ -359,7 +359,7 @@ export const Tasks = () => {
                       <p className="font-medium text-[#50504f]">{task.task_type}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Requesting Area</p>
+                      <p className="text-gray-500 text-xs">Área solicitante</p>
                       <p className="font-medium text-[#50504f]">{task.requesting_area}</p>
                     </div>
                     <div>
@@ -387,7 +387,7 @@ export const Tasks = () => {
                   {task.budget_amount && (
                     <div className="mt-3 inline-block bg-green-50 px-3 py-1 rounded-full">
                       <span className="text-sm font-semibold text-green-700">
-                        Budget: ${task.budget_amount.toLocaleString()}
+                        Presupuesto: ${task.budget_amount.toLocaleString()}
                       </span>
                     </div>
                   )}
@@ -430,7 +430,7 @@ export const Tasks = () => {
               </div>
 
               <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t">
-                <span>Created {new Date(task.created_at).toLocaleDateString()}</span>
+                <span>Creado {new Date(task.created_at).toLocaleDateString()}</span>
                 <StatusIndicator status={task.status} showLabel={false} />
               </div>
             </div>
@@ -441,11 +441,11 @@ export const Tasks = () => {
       {filteredTasks.length === 0 && (
         <Card>
           <div className="text-center py-12">
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">No tasks found</h3>
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay tareas</h3>
             <p className="text-gray-500 mb-4">
               {searchTerm || filterStatus !== 'all'
-                ? 'Try adjusting your filters'
-                : 'Create your first task to get started'}
+                ? 'Prueba ajustando los filtros'
+                : 'Crea tu primera tarea para comenzar'}
             </p>
           </div>
         </Card>

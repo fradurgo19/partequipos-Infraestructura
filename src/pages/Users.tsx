@@ -48,24 +48,24 @@ export const Users = () => {
     }
   };
 
-  const getRoleBadge = (role: UserRole) => {
-    const colors: Record<UserRole, string> = {
-      admin: 'bg-purple-500',
-      infrastructure: 'bg-blue-500',
-      supervision: 'bg-green-500',
-      contractor: 'bg-orange-500',
-      internal_client: 'bg-gray-500',
+  const getRoleVariant = (role: UserRole): 'danger' | 'in_progress' | 'success' | 'pending' | 'default' => {
+    const map: Record<UserRole, 'danger' | 'in_progress' | 'success' | 'pending' | 'default'> = {
+      admin: 'danger',
+      infrastructure: 'in_progress',
+      supervision: 'success',
+      contractor: 'pending',
+      internal_client: 'default',
     };
-    return colors[role] || 'bg-gray-500';
+    return map[role] ?? 'default';
   };
 
   const getRoleLabel = (role: UserRole) => {
     const labels: Record<UserRole, string> = {
-      admin: 'Administrator',
-      infrastructure: 'Infrastructure',
-      supervision: 'Supervision',
-      contractor: 'Contractor',
-      internal_client: 'Internal Client',
+      admin: 'Administrador',
+      infrastructure: 'Infraestructura',
+      supervision: 'Supervisión',
+      contractor: 'Contratista',
+      internal_client: 'Cliente interno',
     };
     return labels[role] || role;
   };
@@ -74,8 +74,8 @@ export const Users = () => {
     return (
       <Card>
         <div className="text-center py-12">
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">Access Denied</h3>
-          <p className="text-gray-500">You need administrator privileges to access this module</p>
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">Acceso denegado</h3>
+          <p className="text-gray-500">Necesitas privilegios de administrador para acceder a este módulo</p>
         </div>
       </Card>
     );
@@ -93,8 +93,8 @@ export const Users = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#50504f]">Users & Roles</h1>
-          <p className="text-gray-600 mt-1">Manage users and role assignments</p>
+          <h1 className="text-3xl font-bold text-[#50504f]">Usuarios y roles</h1>
+          <p className="text-gray-600 mt-1">Gestionar usuarios y asignación de roles</p>
         </div>
       </div>
 
@@ -115,7 +115,7 @@ export const Users = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Badge className={getRoleBadge(user.role)}>{getRoleLabel(user.role)}</Badge>
+                <Badge variant={getRoleVariant(user.role)}>{getRoleLabel(user.role)}</Badge>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -126,7 +126,7 @@ export const Users = () => {
                   }}
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  Edit Role
+                  Editar rol
                 </Button>
               </div>
             </div>
@@ -140,7 +140,7 @@ export const Users = () => {
           setShowModal(false);
           setEditingUser(null);
         }}
-        title="Edit User Role"
+        title="Editar rol de usuario"
       >
         <div className="space-y-4">
           {editingUser && (
@@ -150,7 +150,7 @@ export const Users = () => {
                   <strong>User:</strong> {editingUser.full_name}
                 </p>
                 <p className="text-sm text-gray-600 mb-4">
-                  <strong>Email:</strong> {editingUser.email}
+                  <strong>Correo:</strong> {editingUser.email}
                 </p>
               </div>
 
@@ -159,11 +159,11 @@ export const Users = () => {
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as UserRole)}
                 options={[
-                  { value: 'admin', label: 'Administrator' },
-                  { value: 'infrastructure', label: 'Infrastructure' },
-                  { value: 'supervision', label: 'Supervision' },
-                  { value: 'contractor', label: 'Contractor' },
-                  { value: 'internal_client', label: 'Internal Client' },
+                  { value: 'admin', label: 'Administrador' },
+                  { value: 'infrastructure', label: 'Infraestructura' },
+                  { value: 'supervision', label: 'Supervisión' },
+                  { value: 'contractor', label: 'Contratista' },
+                  { value: 'internal_client', label: 'Cliente interno' },
                 ]}
                 fullWidth
               />
@@ -178,10 +178,10 @@ export const Users = () => {
                     setEditingUser(null);
                   }}
                 >
-                  Cancel
+                  Cancelar
                 </Button>
                 <Button fullWidth onClick={handleRoleUpdate}>
-                  Update Role
+                  Actualizar rol
                 </Button>
               </div>
             </>

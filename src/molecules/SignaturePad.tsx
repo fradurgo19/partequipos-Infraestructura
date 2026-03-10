@@ -113,7 +113,7 @@ export const SignaturePad = ({ onSave, onClose }: SignaturePadProps) => {
             Cancel
           </Button>
           <Button onClick={handleSave} fullWidth>
-            Save Signature
+            Guardar firma
           </Button>
         </div>
       </div>

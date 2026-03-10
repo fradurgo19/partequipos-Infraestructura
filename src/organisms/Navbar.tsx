@@ -36,7 +36,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
               size="sm"
               onClick={onMenuClick}
               className="lg:hidden p-2"
-              aria-label="Toggle menu"
+              aria-label="Abrir menú"
             >
               <Menu className="w-5 h-5 text-[#50504f]" />
             </Button>
@@ -49,7 +49,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                 className="hidden sm:flex items-center gap-2"
               >
                 <Home className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden md:inline">Dashboard</span>
+                <span className="hidden md:inline">Panel</span>
               </Button>
             )}
             
@@ -61,8 +61,8 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                 <span className="text-white text-lg sm:text-xl font-bold">M</span>
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-base sm:text-lg font-bold text-[#50504f] leading-tight">Maintenance</h1>
-                <p className="text-xs text-gray-500 leading-tight">Management System</p>
+                <h1 className="text-base sm:text-lg font-bold text-[#50504f] leading-tight">Mantenimiento</h1>
+                <p className="text-xs text-gray-500 leading-tight">Sistema de Gestión</p>
               </div>
             </div>
           </div>
@@ -70,7 +70,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
           <div className="flex items-center gap-2 sm:gap-4">
             <button 
               className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              aria-label="Notifications"
+              aria-label="Notificaciones"
             >
               <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-[#cf1b22] rounded-full"></span>
@@ -80,7 +80,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
               <button
                 onClick={() => setShowProfile(!showProfile)}
                 className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                aria-label="User menu"
+                aria-label="Menú de usuario"
               >
                 <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                   <User className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
@@ -111,7 +111,7 @@ export const Navbar = ({ onMenuClick }: NavbarProps) => {
                       className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
                       <LogOut className="w-4 h-4" />
-                      Sign Out
+                      Cerrar sesión
                     </button>
                   </div>
                 </>

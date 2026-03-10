@@ -7,10 +7,10 @@ interface StatusIndicatorProps {
 
 export const StatusIndicator = ({ status, showLabel = true }: StatusIndicatorProps) => {
   const statusConfig = {
-    pending: { icon: '🔴', label: 'Pending', color: 'text-yellow-600' },
-    in_progress: { icon: '🟠', label: 'In Progress', color: 'text-blue-600' },
-    completed: { icon: '🟢', label: 'Completed', color: 'text-green-600' },
-    cancelled: { icon: '⚫', label: 'Cancelled', color: 'text-gray-600' },
+    pending: { icon: '🔴', label: 'Pendiente', color: 'text-yellow-600' },
+    in_progress: { icon: '🟠', label: 'En progreso', color: 'text-blue-600' },
+    completed: { icon: '🟢', label: 'Completado', color: 'text-green-600' },
+    cancelled: { icon: '⚫', label: 'Cancelada', color: 'text-gray-600' },
   };
 
   const config = statusConfig[status];

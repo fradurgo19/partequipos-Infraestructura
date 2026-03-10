@@ -270,10 +270,10 @@ export const Dashboard = () => {
         <div className="flex items-center justify-between mb-4 sm:mb-6 md:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#50504f] mb-1 sm:mb-2">
-              Welcome, <span className="text-[#cf1b22] break-words">{profile?.full_name}</span>
+              Bienvenido, <span className="text-[#cf1b22] break-words">{profile?.full_name}</span>
             </h1>
             <p className="text-gray-600 text-sm sm:text-base md:text-lg">
-              Manage your maintenance operations with ease
+              Gestiona tus operaciones de mantenimiento con facilidad
             </p>
           </div>
         </div>

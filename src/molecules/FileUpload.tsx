@@ -60,7 +60,7 @@ export const FileUpload = ({
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Error uploading files');
+      alert('Error al subir archivos');
     } finally {
       setUploading(false);
       if (fileInputRef.current) {

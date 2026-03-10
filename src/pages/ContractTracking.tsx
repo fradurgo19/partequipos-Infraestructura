@@ -139,8 +139,8 @@ export const ContractTracking = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#50504f]">CONTRACT TRACKING</h1>
-          <p className="text-gray-600 mt-1">Measurements and deadline compliance</p>
+          <h1 className="text-3xl font-bold text-[#50504f]">Seguimiento de contratos</h1>
+          <p className="text-gray-600 mt-1">Mediciones y cumplimiento de plazos</p>
         </div>
       </div>
 
@@ -156,7 +156,7 @@ export const ContractTracking = () => {
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
           >
             <Ruler className="w-5 h-5" />
-            Measurements
+            Mediciones
           </button>
           <button
             onClick={() => setActiveTab('deadlines')}
@@ -167,7 +167,7 @@ export const ContractTracking = () => {
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
           >
             <Calendar className="w-5 h-5" />
-            Deadline Compliance
+            Cumplimiento de plazos
           </button>
         </nav>
       </div>
@@ -186,7 +186,7 @@ export const ContractTracking = () => {
             <Card className="border-l-4 border-green-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">On Time</p>
+                  <p className="text-gray-600 text-sm font-medium">Al día</p>
                   <p className="text-2xl font-bold text-green-600 mt-1">
                     {contracts.filter((c) => getComplianceStatus(c).status === 'on_time').length}
                   </p>
@@ -198,7 +198,7 @@ export const ContractTracking = () => {
             <Card className="border-l-4 border-orange-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">Warning</p>
+                  <p className="text-gray-600 text-sm font-medium">Advertencia</p>
                   <p className="text-2xl font-bold text-orange-600 mt-1">
                     {contracts.filter((c) => getComplianceStatus(c).status === 'warning').length}
                   </p>
@@ -210,7 +210,7 @@ export const ContractTracking = () => {
             <Card className="border-l-4 border-red-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">Overdue</p>
+                  <p className="text-gray-600 text-sm font-medium">Vencido</p>
                   <p className="text-2xl font-bold text-red-600 mt-1">
                     {contracts.filter((c) => getComplianceStatus(c).status === 'overdue').length}
                   </p>
@@ -222,7 +222,7 @@ export const ContractTracking = () => {
             <Card className="border-l-4 border-gray-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 text-sm font-medium">Total Contracts</p>
+                  <p className="text-gray-600 text-sm font-medium">Total contratos</p>
                   <p className="text-2xl font-bold text-gray-600 mt-1">{contracts.length}</p>
                 </div>
                 <FileCheck className="w-8 h-8 text-gray-500" />
@@ -235,8 +235,8 @@ export const ContractTracking = () => {
             {contracts.length === 0 ? (
               <Card>
                 <div className="text-center py-12">
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">No contracts found</h3>
-                  <p className="text-gray-500">Create contracts to track deadline compliance</p>
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay contratos</h3>
+                  <p className="text-gray-500">Crea contratos para hacer seguimiento al cumplimiento de plazos</p>
                 </div>
               </Card>
             ) : (
@@ -277,36 +277,36 @@ export const ContractTracking = () => {
 
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
-                              <p className="text-gray-500 text-xs">Contractor</p>
+                              <p className="text-gray-500 text-xs">Contratista</p>
                               <p className="font-medium text-[#50504f]">
                                 {contract.contractor?.company_name || 'N/A'}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-500 text-xs">Site</p>
+                              <p className="text-gray-500 text-xs">Sede</p>
                               <p className="font-medium text-[#50504f]">
                                 {contract.site?.name || 'N/A'}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-500 text-xs">Start Date</p>
+                              <p className="text-gray-500 text-xs">Fecha inicio</p>
                               <p className="font-medium text-[#50504f]">
                                 {new Date(contract.start_date).toLocaleDateString('es-ES')}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-500 text-xs">End Date</p>
+                              <p className="text-gray-500 text-xs">Fecha fin</p>
                               <p className="font-medium text-[#50504f]">
                                 {contract.end_date
                                   ? new Date(contract.end_date).toLocaleDateString('es-ES')
-                                  : 'No deadline'}
+                                  : 'Sin fecha límite'}
                               </p>
                             </div>
                           </div>
 
                           <div className="mt-4">
                             <div className="flex items-center justify-between mb-1">
-                              <p className="text-xs font-medium text-gray-600">Compliance Rate</p>
+                              <p className="text-xs font-medium text-gray-600">Cumplimiento</p>
                               <p className="text-xs font-bold text-[#50504f]">{compliancePercentage}%</p>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -323,19 +323,19 @@ export const ContractTracking = () => {
                                 {compliance.status === 'overdue' && (
                                   <span className="flex items-center gap-2">
                                     <AlertTriangle className="w-4 h-4" />
-                                    Contract expired {compliance.days} days ago
+                                    Contrato vencido hace {compliance.days} días
                                   </span>
                                 )}
                                 {compliance.status === 'warning' && (
                                   <span className="flex items-center gap-2">
                                     <Clock className="w-4 h-4" />
-                                    Contract expires in {compliance.days} days
+                                    El contrato vence en {compliance.days} días
                                   </span>
                                 )}
                                 {compliance.status === 'on_time' && (
                                   <span className="flex items-center gap-2">
                                     <CheckCircle className="w-4 h-4" />
-                                    Contract on track - {compliance.days} days remaining
+                                    Contrato al día — {compliance.days} días restantes
                                   </span>
                                 )}
                               </p>
