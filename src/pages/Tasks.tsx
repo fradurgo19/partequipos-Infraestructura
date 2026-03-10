@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Filter, Search, Camera, Clock, CheckCircle, AlertCircle, FileText, Calendar } from 'lucide-react';
+import { Plus, Filter, Search, Camera, Clock, CheckCircle, FileText, Calendar } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -31,13 +31,6 @@ const REQUESTING_AREAS = [
   'Maquinaria',
   'Repuestos',
   'Bienes inmuebles'
-];
-
-// Equipo de infraestructura
-const INFRASTRUCTURE_TEAM = [
-  { name: 'EDISON VALENCIA', email: 'infraestructura@partequipos.com', role: 'infrastructure' },
-  { name: 'ELOISA BLANDON', email: 'infraestructura2@partequipos.com', role: 'infrastructure' },
-  { name: 'ANDRES FELIPE BUSTAMANTE CESPEDES', email: 'fbustamante@partequipos.com', role: 'infrastructure' }
 ];
 
 export const Tasks = () => {
@@ -129,29 +122,6 @@ export const Tasks = () => {
     }
   };
 
-  const sendNotificationEmail = async (to: string, subject: string, message: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/notifications/email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          to,
-          subject,
-          message,
-        }),
-      });
-      const data = await response.json();
-      return response.ok && data.success;
-    } catch (error) {
-      console.error('Error enviando email:', error);
-      return false;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -169,7 +139,7 @@ export const Tasks = () => {
       requester_name: formData.requester_name,
       assignee_id: infrastructureUser?.id || null,
       responsible_id: formData.responsible_id || null,
-      budget_amount: formData.budget_amount ? parseFloat(formData.budget_amount) : null,
+      budget_amount: formData.budget_amount ? Number.parseFloat(formData.budget_amount) : null,
       requester_id: profile.id,
       status: 'pending' as TaskStatus,
       request_date: new Date().toISOString().split('T')[0],
@@ -190,7 +160,7 @@ export const Tasks = () => {
       ]);
 
       // Notificaciones según presupuesto usando endpoint del backend
-      const budget = parseFloat(formData.budget_amount || '0');
+      const budget = Number.parseFloat(formData.budget_amount || '0');
       
       if (budget > 0) {
         try {
@@ -223,7 +193,7 @@ export const Tasks = () => {
     if (!profile) return;
 
     const task = tasks.find(t => t.id === taskId);
-    const updateData: any = { status: newStatus };
+    const updateData: Record<string, string> = { status: newStatus };
 
     if (newStatus === 'in_progress' && !task?.start_date) {
       updateData.start_date = new Date().toISOString().split('T')[0];
@@ -238,10 +208,13 @@ export const Tasks = () => {
     const { error } = await supabase.from('tasks').update(updateData).eq('id', taskId);
 
     if (!error) {
+      let eventType = 'updated';
+      if (newStatus === 'completed') eventType = 'completed';
+      else if (newStatus === 'in_progress') eventType = 'started';
       await supabase.from('task_timeline').insert([
         {
           task_id: taskId,
-          event_type: newStatus === 'completed' ? 'completed' : newStatus === 'in_progress' ? 'started' : 'updated',
+          event_type: eventType,
           description: `Estado cambiado a ${newStatus}`,
           user_id: profile.id,
         },
@@ -270,7 +243,7 @@ export const Tasks = () => {
   const handleUpdateTimeline = async (taskId: string, eventType: string, dateField: string, photoUrl?: string) => {
     if (!profile) return;
 
-    const updateData: any = { [dateField]: new Date().toISOString().split('T')[0] };
+    const updateData: Record<string, string> = { [dateField]: new Date().toISOString().split('T')[0] };
     if (photoUrl) {
       if (dateField === 'start_date') {
         updateData.initial_photo_url = photoUrl;
@@ -283,7 +256,7 @@ export const Tasks = () => {
 
     if (!error) {
       // Guardar en timeline con foto si existe
-      const timelineData: any = {
+      const timelineData: Record<string, string | undefined> = {
         task_id: taskId,
         event_type: eventType,
         description: `${eventType} registrado por ${profile.full_name}`,
@@ -392,7 +365,7 @@ export const Tasks = () => {
                     <div>
                       <p className="text-gray-500 text-xs">Solicitante</p>
                       <p className="font-medium text-[#50504f]">
-                        {(task as any).requester_name || (task as any).requester?.full_name || 'N/A'}
+                        {task.requester_name || (task as Task & { requester?: { full_name: string } }).requester?.full_name || 'N/A'}
                       </p>
                     </div>
                     <div>
@@ -401,11 +374,11 @@ export const Tasks = () => {
                         Infraestructura
                       </p>
                     </div>
-                    {(task as any).project_name && (
+                    {task.project_name && (
                       <div>
                         <p className="text-gray-500 text-xs">Proyecto</p>
                         <p className="font-medium text-[#50504f]">
-                          {(task as any).project_name}
+                          {task.project_name}
                         </p>
                       </div>
                     )}
@@ -485,7 +458,7 @@ export const Tasks = () => {
           resetForm();
         }}
         title="Crear Nueva Tarea"
-        size="large"
+        size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -562,13 +535,15 @@ export const Tasks = () => {
               required
             />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="task-assignee-display" className="block text-sm font-medium text-gray-700 mb-1">
                 Asignado a
               </label>
               <input
+                id="task-assignee-display"
                 type="text"
                 value="Infraestructura"
                 disabled
+                readOnly
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
               />
             </div>
@@ -602,16 +577,18 @@ export const Tasks = () => {
           />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="task-photo-upload" className="block text-sm font-medium text-gray-700 mb-2">
               Fotos con Marca de Agua
             </label>
             <div className="flex gap-2 mb-2">
               <input
+                id="task-photo-upload"
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handlePhotoChange}
                 className="hidden"
+                aria-label="Fotos con marca de agua"
               />
               <Button
                 type="button"
@@ -625,11 +602,11 @@ export const Tasks = () => {
             </div>
             {formData.photo_urls.length > 0 && (
               <div className="grid grid-cols-3 gap-2 mt-2">
-                {formData.photo_urls.map((url, index) => (
-                  <div key={index} className="relative">
+                {formData.photo_urls.map((url) => (
+                  <div key={url} className="relative">
                     <img
                       src={url}
-                      alt={`Foto ${index + 1}`}
+                      alt=""
                       className="w-full h-24 object-cover rounded border"
                     />
                     <button
@@ -637,7 +614,7 @@ export const Tasks = () => {
                       onClick={() => {
                         setFormData({
                           ...formData,
-                          photo_urls: formData.photo_urls.filter((_, i) => i !== index),
+                          photo_urls: formData.photo_urls.filter((u) => u !== url),
                         });
                       }}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
@@ -677,7 +654,7 @@ export const Tasks = () => {
           setSelectedTask(null);
         }}
         title={`Línea de Tiempo - ${selectedTask?.title || ''}`}
-        size="large"
+        size="xl"
       >
         {selectedTask && (
           <TimelineView task={selectedTask} onUpdate={handleUpdateTimeline} />
@@ -694,7 +671,7 @@ interface TimelineViewProps {
 }
 
 const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
-  const { profile } = useAuth();
+  useAuth();
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeDateField, setActiveDateField] = useState<string | null>(null);
@@ -748,8 +725,8 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
 
       if (data) {
         const photos: Record<string, string> = {};
-        data.forEach((event: any) => {
-          if (event.photo_url) {
+        data.forEach((event: { event_type?: string; photo_url?: string }) => {
+          if (event.photo_url && event.event_type !== undefined) {
             photos[event.event_type] = event.photo_url;
           }
         });
@@ -763,7 +740,7 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
     {
       key: 'request_date',
       label: 'Fecha de Solicitud',
-      date: (task as any).request_date,
+      date: task.request_date,
       photo: timelinePhotos['created'],
       icon: FileText,
       color: 'blue',
@@ -774,8 +751,8 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
     {
       key: 'start_date',
       label: 'Fecha de Inicio',
-      date: (task as any).start_date,
-      photo: (task as any).initial_photo_url || timelinePhotos['started'],
+      date: task.start_date,
+      photo: task.initial_photo_url || timelinePhotos['started'],
       icon: Calendar,
       color: 'green',
       canUpdate: true,
@@ -785,7 +762,7 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
     {
       key: 'service_order_date',
       label: 'Fecha de Orden de Servicio',
-      date: (task as any).service_order_date,
+      date: task.service_order_date,
       photo: timelinePhotos['service_order'],
       icon: FileText,
       color: 'orange',
@@ -796,7 +773,7 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
     {
       key: 'budget_approval_date',
       label: 'Fecha de Aprobación de Presupuesto',
-      date: (task as any).budget_approval_date,
+      date: task.budget_approval_date,
       photo: timelinePhotos['budget_approved'],
       icon: CheckCircle,
       color: 'purple',
@@ -807,7 +784,7 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
     {
       key: 'delivery_date',
       label: 'Fecha de Entrega',
-      date: (task as any).delivery_date,
+      date: task.delivery_date,
       photo: timelinePhotos['delivered'],
       icon: Calendar,
       color: 'yellow',
@@ -818,8 +795,8 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
     {
       key: 'completion_date',
       label: 'Fecha de Finalización',
-      date: (task as any).completion_date,
-      photo: (task as any).completion_photo_url || timelinePhotos['completed'],
+      date: task.completion_date,
+      photo: task.completion_photo_url || timelinePhotos['completed'],
       icon: CheckCircle,
       color: 'green',
       canUpdate: true,
@@ -827,14 +804,6 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
       eventType: 'completed',
     },
   ];
-
-  // Determinar el estado general de la tarea para los colores
-  const getTaskStatusColor = () => {
-    const status = task.status;
-    if (status === 'completed') return 'green';
-    if (status === 'in_progress') return 'orange';
-    return 'red'; // pending o cancelled
-  };
 
   const getStatusColor = (event: typeof timelineEvents[0]) => {
     if (event.date) {
@@ -877,17 +846,18 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
               )}
 
               {/* Icono */}
+              {(() => {
+                let iconCircleClass = 'bg-gray-200 border-gray-300 text-gray-500';
+                if (isComplete) iconCircleClass = 'bg-green-500 border-green-500 text-white';
+                else if (isPending) iconCircleClass = 'bg-red-500 border-red-500 text-white';
+                return (
               <div
-                className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                  isComplete
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : isPending
-                    ? 'bg-red-500 border-red-500 text-white'
-                    : 'bg-gray-200 border-gray-300 text-gray-500'
-                }`}
+                className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 ${iconCircleClass}`}
               >
                 <Icon className="w-5 h-5" />
               </div>
+                );
+              })()}
 
               {/* Contenido */}
               <div className={`flex-1 p-4 rounded-lg border-2 ${getStatusColor(event)}`}>
@@ -941,9 +911,11 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
                             disabled={uploadingPhoto}
                           >
                             <Camera className="w-4 h-4 mr-1" />
-                            {uploadingPhoto && activeDateField === event.key
-                              ? 'Procesando...'
-                              : event.photo ? 'Cambiar Foto' : 'Tomar/Adjuntar Foto'}
+                            {(() => {
+                              if (uploadingPhoto && activeDateField === event.key) return 'Procesando...';
+                              if (event.photo) return 'Cambiar Foto';
+                              return 'Tomar/Adjuntar Foto';
+                            })()}
                           </Button>
                         )}
                       </div>

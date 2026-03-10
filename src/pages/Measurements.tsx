@@ -9,7 +9,9 @@ import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Measurement, Task, Site } from '../types';
+import { Measurement, Site } from '../types';
+
+type TaskOption = { id: string; title: string; site_id: string };
 import { addWatermarkToImage } from '../services/watermark';
 import { generateCutPDF } from '../services/pdfGenerator';
 
@@ -19,7 +21,7 @@ export const Measurements = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [sites, setSites] = useState<Site[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskOption[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     site_id: '',
@@ -63,13 +65,13 @@ export const Measurements = () => {
     ]);
 
     if (!measurementsResult.error && measurementsResult.data) {
-      setMeasurements(measurementsResult.data as any);
+      setMeasurements(measurementsResult.data as Measurement[]);
     }
     if (!sitesResult.error && sitesResult.data) {
       setSites(sitesResult.data);
     }
     if (!tasksResult.error && tasksResult.data) {
-      setTasks(tasksResult.data);
+      setTasks(tasksResult.data as TaskOption[]);
     }
     setLoading(false);
   };
@@ -94,10 +96,10 @@ export const Measurements = () => {
     e.preventDefault();
     if (!profile) return;
 
-    const length = formData.length ? parseFloat(formData.length) : null;
-    const height = formData.height ? parseFloat(formData.height) : null;
-    const width = formData.width ? parseFloat(formData.width) : null;
-    const depth = formData.depth ? parseFloat(formData.depth) : null;
+    const length = formData.length ? Number.parseFloat(formData.length) : null;
+    const height = formData.height ? Number.parseFloat(formData.height) : null;
+    const width = formData.width ? Number.parseFloat(formData.width) : null;
+    const depth = formData.depth ? Number.parseFloat(formData.depth) : null;
 
     let calculated_area = null;
     let calculated_volume = null;
@@ -124,7 +126,7 @@ export const Measurements = () => {
       }
     }
 
-    const measurementData: any = {
+    const measurementData: Record<string, string | number | string[] | null> = {
       title: formData.title,
       site_id: formData.site_id || null,
       task_id: formData.task_id || null,
@@ -137,10 +139,10 @@ export const Measurements = () => {
       calculated_volume,
       activities: formData.activities || null,
       globales: formData.globales || null,
-      admin_hours: formData.admin_hours ? parseFloat(formData.admin_hours) : null,
+      admin_hours: formData.admin_hours ? Number.parseFloat(formData.admin_hours) : null,
       observations: formData.observations || null,
       how_to_do: formData.how_to_do || null,
-      cut_value: formData.cut_value ? parseFloat(formData.cut_value) : null,
+      cut_value: formData.cut_value ? Number.parseFloat(formData.cut_value) : null,
       photo_height_url: photoUrls.height || null,
       photo_length_url: photoUrls.length || null,
       photo_width_url: photoUrls.width || null,
@@ -175,7 +177,7 @@ export const Measurements = () => {
       
       // Subir PDF a Supabase Storage
       const pdfFileName = `cortes/${Date.now()}-${formData.title.replace(/\s+/g, '_')}.pdf`;
-      const { data: pdfUploadData, error: pdfUploadError } = await supabase.storage
+      const { error: pdfUploadError } = await supabase.storage
         .from('documents')
         .upload(pdfFileName, pdfBlob, {
           contentType: 'application/pdf',
@@ -241,8 +243,7 @@ export const Measurements = () => {
   const handleApprove = async (id: string, level: 'edison' | 'felipe' | 'claudia') => {
     if (!profile) return;
 
-    const updateData: any = {};
-    const newStatus = `approved_${level}`;
+    const updateData: Record<string, string> = {};
 
     if (level === 'edison') {
       updateData.approved_by_edison = profile.id;
@@ -367,14 +368,14 @@ export const Measurements = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {measurements.map((measurement: any) => (
+        {measurements.map((measurement: Measurement) => (
           <Card key={measurement.id} hover>
             <div className="space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="font-semibold text-lg text-[#50504f]">{measurement.title}</h3>
-                    <Badge variant={measurement.status}>{measurement.status.replace('_', ' ')}</Badge>
+                    <Badge variant={measurement.status === 'pending' ? 'pending' : 'success'}>{measurement.status.replace('_', ' ')}</Badge>
                     {measurement.measurement_unit && (
                       <Badge variant="default">{measurement.measurement_unit}</Badge>
                     )}
@@ -429,17 +430,17 @@ export const Measurements = () => {
                   )}
 
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    {measurement.approved_by_edison && (
+                    {measurement.approved_by_edison && measurement.approved_at_edison && (
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
                         ✓ Edison: {new Date(measurement.approved_at_edison).toLocaleDateString()}
                       </span>
                     )}
-                    {measurement.approved_by_felipe && (
+                    {measurement.approved_by_felipe && measurement.approved_at_felipe && (
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
                         ✓ Felipe: {new Date(measurement.approved_at_felipe).toLocaleDateString()}
                       </span>
                     )}
-                    {measurement.approved_by_claudia && (
+                    {measurement.approved_by_claudia && measurement.approved_at_claudia && (
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
                         ✓ Claudia: {new Date(measurement.approved_at_claudia).toLocaleDateString()}
                       </span>
@@ -666,11 +667,12 @@ export const Measurements = () => {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="photo-height" className="block text-sm font-medium text-gray-700 mb-2">
                 Foto de Altura (con marca de agua)
               </label>
               <div className="flex items-center gap-4">
                 <input
+                  id="photo-height"
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
@@ -678,13 +680,10 @@ export const Measurements = () => {
                     if (file) handlePhotoUpload(file, 'height');
                   }}
                   className="hidden"
-                  id="photo-height"
                 />
-                <label htmlFor="photo-height">
-                  <Button type="button" variant="secondary" as="span">
-                    <Camera className="w-4 h-4 mr-2" />
-                    Subir Foto
-                  </Button>
+                <label htmlFor="photo-height" className="inline-flex items-center px-4 py-2 text-base font-medium rounded-lg bg-[#50504f] text-white hover:bg-[#3a3a39] cursor-pointer transition-colors">
+                  <Camera className="w-4 h-4 mr-2" />
+                  Subir Foto
                 </label>
                 {photoUrls.height && (
                   <div className="flex items-center gap-2">
@@ -703,11 +702,12 @@ export const Measurements = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="photo-length" className="block text-sm font-medium text-gray-700 mb-2">
                 Foto de Longitud (con marca de agua)
               </label>
               <div className="flex items-center gap-4">
                 <input
+                  id="photo-length"
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
@@ -715,13 +715,10 @@ export const Measurements = () => {
                     if (file) handlePhotoUpload(file, 'length');
                   }}
                   className="hidden"
-                  id="photo-length"
                 />
-                <label htmlFor="photo-length">
-                  <Button type="button" variant="secondary" as="span">
-                    <Camera className="w-4 h-4 mr-2" />
-                    Subir Foto
-                  </Button>
+                <label htmlFor="photo-length" className="inline-flex items-center px-4 py-2 text-base font-medium rounded-lg bg-[#50504f] text-white hover:bg-[#3a3a39] cursor-pointer transition-colors">
+                  <Camera className="w-4 h-4 mr-2" />
+                  Subir Foto
                 </label>
                 {photoUrls.length && (
                   <div className="flex items-center gap-2">
@@ -741,11 +738,12 @@ export const Measurements = () => {
 
             {(formData.measurement_unit === 'm²' || formData.measurement_unit === 'm³') && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="photo-width" className="block text-sm font-medium text-gray-700 mb-2">
                   Foto de Ancho (con marca de agua)
                 </label>
                 <div className="flex items-center gap-4">
                   <input
+                    id="photo-width"
                     type="file"
                     accept="image/*"
                     onChange={(e) => {
@@ -753,13 +751,10 @@ export const Measurements = () => {
                       if (file) handlePhotoUpload(file, 'width');
                     }}
                     className="hidden"
-                    id="photo-width"
                   />
-                  <label htmlFor="photo-width">
-                    <Button type="button" variant="secondary" as="span">
-                      <Camera className="w-4 h-4 mr-2" />
-                      Subir Foto
-                    </Button>
+                  <label htmlFor="photo-width" className="inline-flex items-center px-4 py-2 text-base font-medium rounded-lg bg-[#50504f] text-white hover:bg-[#3a3a39] cursor-pointer transition-colors">
+                    <Camera className="w-4 h-4 mr-2" />
+                    Subir Foto
                   </label>
                   {photoUrls.width && (
                     <div className="flex items-center gap-2">
@@ -779,11 +774,12 @@ export const Measurements = () => {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="photo-general" className="block text-sm font-medium text-gray-700 mb-2">
                 Foto General (con marca de agua)
               </label>
               <div className="flex items-center gap-4">
                 <input
+                  id="photo-general"
                   type="file"
                   accept="image/*"
                   onChange={(e) => {
@@ -791,13 +787,10 @@ export const Measurements = () => {
                     if (file) handlePhotoUpload(file, 'general');
                   }}
                   className="hidden"
-                  id="photo-general"
                 />
-                <label htmlFor="photo-general">
-                  <Button type="button" variant="secondary" as="span">
-                    <Camera className="w-4 h-4 mr-2" />
-                    Subir Foto
-                  </Button>
+                <label htmlFor="photo-general" className="inline-flex items-center px-4 py-2 text-base font-medium rounded-lg bg-[#50504f] text-white hover:bg-[#3a3a39] cursor-pointer transition-colors">
+                  <Camera className="w-4 h-4 mr-2" />
+                  Subir Foto
                 </label>
                 {photoUrls.general && (
                   <div className="flex items-center gap-2">

@@ -65,31 +65,33 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Health check
+// Health check (verificación real de conexión a BD)
 app.get('/health', async (req, res) => {
   try {
     if (USE_LOCAL_DB) {
-      // Test conexión a PostgreSQL
       const result = await pool.query('SELECT NOW()');
-      res.json({ 
-        status: 'ok', 
+      res.json({
+        status: 'ok',
         database: 'PostgreSQL local',
         timestamp: new Date().toISOString(),
-        db_time: result.rows[0].now
+        db_time: result.rows[0].now,
       });
     } else {
-      // Test conexión a Supabase
-      res.json({ 
-        status: 'ok', 
+      const { data, error } = await supabase.from('profiles').select('id').limit(1).maybeSingle();
+      if (error) throw error;
+      res.json({
+        status: 'ok',
         database: 'Supabase',
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString(),
+        supabase_connected: true,
+        tables_accessible: true,
       });
     }
   } catch (error) {
-    res.status(500).json({ 
-      status: 'error', 
+    res.status(500).json({
+      status: 'error',
       message: error.message,
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
     });
   }
 });

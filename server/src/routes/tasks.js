@@ -23,8 +23,9 @@ router.get('/', authenticateToken, async (req, res) => {
       query = query.eq('status', status);
     }
 
-    if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+    if (search && typeof search === 'string') {
+      const sanitized = String(search).slice(0, 200).replace(/[%_]/g, ' ');
+      query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
     }
 
     const { data, error } = await query;

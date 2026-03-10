@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Download, FileText, Upload, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Download, X } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -26,7 +26,7 @@ export const PurchaseOrders = () => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<Array<{ id: string; full_name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -79,7 +79,7 @@ export const PurchaseOrders = () => {
     ]);
 
     if (!ordersResult.error && ordersResult.data) {
-      setOrders(ordersResult.data as any);
+      setOrders(ordersResult.data as PurchaseOrder[]);
     }
     if (!sitesResult.error && sitesResult.data) {
       setSites(sitesResult.data);
@@ -93,28 +93,26 @@ export const PurchaseOrders = () => {
     setLoading(false);
   };
 
-  const calculateTotals = () => {
+  const calculateTotals = useCallback(() => {
     const items = formData.items.filter(item => item.description && item.price);
     const subtotal = items.reduce((sum, item) => {
       const price = parseFloat(item.price) || 0;
       const quantity = parseFloat(item.quantity) || 1;
       return sum + (price * quantity);
     }, 0);
-    
     const taxes = parseFloat(formData.taxes) || 0;
     const otherTaxes = parseFloat(formData.other_taxes) || 0;
     const total = subtotal + taxes + otherTaxes;
-
     setFormData(prev => ({
       ...prev,
       subtotal: subtotal.toFixed(2),
       total: total.toFixed(2),
     }));
-  };
+  }, [formData.items, formData.taxes, formData.other_taxes]);
 
   useEffect(() => {
     calculateTotals();
-  }, [formData.items, formData.taxes, formData.other_taxes]);
+  }, [calculateTotals]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,10 +123,10 @@ export const PurchaseOrders = () => {
     try {
       const { data: orderNumberData } = await supabase.rpc('generate_purchase_order_number');
       orderNumber = orderNumberData || '';
-    } catch (error) {
+    } catch {
       console.log('RPC function not available, using fallback');
     }
-    
+
     if (!orderNumber) {
       // Fallback: generar número manualmente
       const year = new Date().getFullYear();
@@ -327,7 +325,7 @@ export const PurchaseOrders = () => {
 
       {/* Lista de órdenes */}
       <div className="grid grid-cols-1 gap-4">
-        {orders.map((order: any) => (
+        {orders.map((order: PurchaseOrder) => (
           <Card key={order.id} hover>
             <div className="space-y-4">
               <div className="flex items-start justify-between">

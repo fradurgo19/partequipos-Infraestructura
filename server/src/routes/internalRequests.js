@@ -50,7 +50,7 @@ router.post('/', authenticateToken, async (req, res) => {
       .select('id')
       .eq('role', 'infrastructure');
 
-    if (infrastructureTeam) {
+    if (Array.isArray(infrastructureTeam) && infrastructureTeam.length > 0) {
       const notifications = infrastructureTeam.map((member) => ({
         user_id: member.id,
         title: 'New Internal Request',

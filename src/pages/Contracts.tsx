@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Download, FileText, Edit, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, CheckCircle } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -92,9 +92,8 @@ export const Contracts = () => {
     ]);
 
     if (!contractsResult.error && contractsResult.data) {
-      setContracts(contractsResult.data as any);
-      
-      // Cargar addendums para cada contrato
+      setContracts(contractsResult.data as Contract[]);
+
       const addendumsMap: Record<string, ContractAddendum[]> = {};
       for (const contract of contractsResult.data) {
         const { data: addendumsData } = await supabase
@@ -102,9 +101,9 @@ export const Contracts = () => {
           .select('*')
           .eq('contract_id', contract.id)
           .order('addendum_number', { ascending: true });
-        
+
         if (addendumsData) {
-          addendumsMap[contract.id] = addendumsData as any;
+          addendumsMap[contract.id] = addendumsData as ContractAddendum[];
         }
       }
       setAddendums(addendumsMap);
@@ -129,7 +128,7 @@ export const Contracts = () => {
         contract_type_param: formData.contract_type,
       });
       contractNumber = contractNumberData || '';
-    } catch (error) {
+    } catch {
       console.log('RPC function not available, using fallback');
     }
     
@@ -160,13 +159,6 @@ export const Contracts = () => {
         description: a.description,
         amount: parseFloat(a.amount) || 0,
       }));
-
-    const budgetControl = {
-      total_budget: parseFloat(formData.total_amount) || 0,
-      spent: 0,
-      remaining: parseFloat(formData.total_amount) || 0,
-      items: activities,
-    };
 
     const contractData = {
       contract_number: contractNumber,
@@ -358,7 +350,7 @@ export const Contracts = () => {
 
       {/* Lista de contratos */}
       <div className="grid grid-cols-1 gap-4">
-        {contracts.map((contract: any) => (
+        {contracts.map((contract: Contract) => (
           <Card key={contract.id} hover>
             <div className="space-y-4">
               <div className="flex items-start justify-between">
@@ -544,7 +536,7 @@ export const Contracts = () => {
             <Select
               label="Tipo de Contrato"
               value={formData.contract_type}
-              onChange={(e) => setFormData({ ...formData, contract_type: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, contract_type: e.target.value as 'labor' | 'supply' | 'mixed' })}
               options={CONTRACT_TYPES}
               required
               fullWidth

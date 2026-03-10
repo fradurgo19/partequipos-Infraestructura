@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, TrendingUp, MapPin, DollarSign, Calendar, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, TrendingUp, MapPin, DollarSign, Calendar } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -31,9 +31,15 @@ interface Indicators {
   totalInvestment: number;
 }
 
+type InternalRequestWithRelations = InternalRequest & {
+  site?: { id?: string; name: string; location?: string };
+  task?: { id?: string; title: string; status?: string; budget_amount?: number };
+  requester?: { id?: string; full_name: string };
+};
+
 export const InternalRequests = () => {
   const { profile } = useAuth();
-  const [requests, setRequests] = useState<InternalRequest[]>([]);
+  const [requests, setRequests] = useState<InternalRequestWithRelations[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -56,11 +62,7 @@ export const InternalRequests = () => {
     design_urls: [] as string[],
   });
 
-  useEffect(() => {
-    loadData();
-  }, [profile]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     const [requestsResult, sitesResult] = await Promise.all([
       supabase
@@ -71,24 +73,25 @@ export const InternalRequests = () => {
     ]);
 
     if (!requestsResult.error && requestsResult.data) {
-      const requestsData = requestsResult.data as any;
+      const requestsData = requestsResult.data as InternalRequestWithRelations[];
       setRequests(requestsData);
-
-      // Calcular indicadores
       calculateIndicators(requestsData);
     }
     if (!sitesResult.error && sitesResult.data) {
       setSites(sitesResult.data);
     }
     setLoading(false);
-  };
+  }, []);
 
-  const calculateIndicators = (requestsData: any[]) => {
-    // Solicitudes por sede
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const calculateIndicators = (requestsData: InternalRequestWithRelations[]) => {
     const requestsBySiteMap = new Map<string, number>();
     const investmentBySiteMap = new Map<string, number>();
 
-    requestsData.forEach((request: any) => {
+    requestsData.forEach((request: InternalRequestWithRelations) => {
       if (request.site?.name) {
         const siteName = request.site.name;
         requestsBySiteMap.set(siteName, (requestsBySiteMap.get(siteName) || 0) + 1);
@@ -129,16 +132,16 @@ export const InternalRequests = () => {
 
     const requestDate = formData.request_date || new Date().toISOString().split('T')[0];
 
-    const requestData: any = {
+    const requestData: Record<string, unknown> = {
       title: formData.title,
       description: formData.description,
       department: formData.department,
       site_id: formData.site_id || null,
       request_date: requestDate,
       photo_urls: formData.photo_urls,
-      measurement_length: formData.measurement_length ? parseFloat(formData.measurement_length) : null,
-      measurement_height: formData.measurement_height ? parseFloat(formData.measurement_height) : null,
-      measurement_depth: formData.measurement_depth ? parseFloat(formData.measurement_depth) : null,
+      measurement_length: formData.measurement_length ? Number.parseFloat(formData.measurement_length) : null,
+      measurement_height: formData.measurement_height ? Number.parseFloat(formData.measurement_height) : null,
+      measurement_depth: formData.measurement_depth ? Number.parseFloat(formData.measurement_depth) : null,
       design_urls: formData.design_urls,
       created_by: profile.id,
       status: 'pending',
@@ -161,8 +164,7 @@ export const InternalRequests = () => {
       return;
     }
 
-    // Crear tarea automáticamente para infraestructura
-    const taskData: any = {
+    const taskData: Record<string, unknown> = {
       title: `Solicitud: ${formData.title}`,
       description: `Solicitud interna de ${formData.department}:\n\n${formData.description}`,
       task_type: 'Mantenimiento General',
@@ -212,8 +214,7 @@ export const InternalRequests = () => {
         .eq('role', 'infrastructure');
 
       if (infrastructureTeam && infrastructureTeam.length > 0) {
-        const emails = infrastructureTeam.map((member: any) => member.email).join(', ');
-        const names = infrastructureTeam.map((member: any) => member.full_name).join(', ');
+        const emails = infrastructureTeam.map((member: { email: string; full_name: string }) => member.email).join(', ');
 
         const token = localStorage.getItem('token');
         await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/notifications/email`, {
@@ -235,12 +236,15 @@ Solicitante: ${profile.full_name}
 Descripción:
 ${formData.description}
 
-${formData.measurement_length || formData.measurement_height || formData.measurement_depth
-  ? `Medidas:
-${formData.measurement_length ? `- Longitud: ${formData.measurement_length}m` : ''}
-${formData.measurement_height ? `- Altura: ${formData.measurement_height}m` : ''}
-${formData.measurement_depth ? `- Profundidad: ${formData.measurement_depth}m` : ''}`
-  : ''}
+${(() => {
+  const hasMeasures = formData.measurement_length || formData.measurement_height || formData.measurement_depth;
+  if (!hasMeasures) return '';
+  const parts = [];
+  if (formData.measurement_length) parts.push(`- Longitud: ${formData.measurement_length}m`);
+  if (formData.measurement_height) parts.push(`- Altura: ${formData.measurement_height}m`);
+  if (formData.measurement_depth) parts.push(`- Profundidad: ${formData.measurement_depth}m`);
+  return `Medidas:\n${parts.join('\n')}`;
+})()}
 
 Se ha generado automáticamente una tarea en el sistema para su seguimiento.
 
@@ -266,16 +270,15 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
                   <p>${formData.description.replace(/\n/g, '<br>')}</p>
                 </div>
 
-                ${formData.measurement_length || formData.measurement_height || formData.measurement_depth
-                  ? `<div style="margin: 20px 0;">
-                      <h3>Medidas:</h3>
-                      <ul>
-                        ${formData.measurement_length ? `<li>Longitud: ${formData.measurement_length}m</li>` : ''}
-                        ${formData.measurement_height ? `<li>Altura: ${formData.measurement_height}m</li>` : ''}
-                        ${formData.measurement_depth ? `<li>Profundidad: ${formData.measurement_depth}m</li>` : ''}
-                      </ul>
-                    </div>`
-                  : ''}
+                ${(() => {
+                  const hasMeasuresHtml = formData.measurement_length || formData.measurement_height || formData.measurement_depth;
+                  if (!hasMeasuresHtml) return '';
+                  const items = [];
+                  if (formData.measurement_length) items.push(`<li>Longitud: ${formData.measurement_length}m</li>`);
+                  if (formData.measurement_height) items.push(`<li>Altura: ${formData.measurement_height}m</li>`);
+                  if (formData.measurement_depth) items.push(`<li>Profundidad: ${formData.measurement_depth}m</li>`);
+                  return `<div style="margin: 20px 0;"><h3>Medidas:</h3><ul>${items.join('')}</ul></div>`;
+                })()}
 
                 <p style="background-color: #e3f2fd; padding: 10px; border-left: 4px solid #2196f3;">
                   <strong>Nota:</strong> Se ha generado automáticamente una tarea en el sistema para su seguimiento.
@@ -405,10 +408,10 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {indicators.requestsBySite.map((item, index) => {
+                    {indicators.requestsBySite.map((item) => {
                       const investment = indicators.investmentBySite.find((inv) => inv.site_name === item.site_name);
                       return (
-                        <tr key={index} className="hover:bg-gray-50">
+                        <tr key={item.site_name} className="hover:bg-gray-50">
                           <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm text-[#50504f] sm:pl-6">
                             {item.site_name}
                           </td>
@@ -433,7 +436,7 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
 
       {/* Lista de Solicitudes */}
       <div className="grid grid-cols-1 gap-4">
-        {requests.map((request: any) => (
+        {requests.map((request: InternalRequestWithRelations) => (
           <Card key={request.id} hover>
             <div className="space-y-4">
               <div className="flex items-start justify-between">
@@ -497,11 +500,11 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
 
                   {request.photo_urls && request.photo_urls.length > 0 && (
                     <div className="grid grid-cols-4 gap-2 mt-3">
-                      {request.photo_urls.slice(0, 4).map((url: string, idx: number) => (
+                      {request.photo_urls.slice(0, 4).map((url: string) => (
                         <img
-                          key={idx}
+                          key={url}
                           src={url}
-                          alt={`Photo ${idx + 1}`}
+                          alt=""
                           className="w-full h-20 object-cover rounded"
                         />
                       ))}
@@ -627,8 +630,8 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Fotos</label>
+          <fieldset className="border-0 p-0 m-0">
+            <legend className="block text-sm font-medium text-gray-700 mb-2">Fotos</legend>
             <FileUpload
               bucket="general"
               folder="internal-requests"
@@ -645,10 +648,10 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
                 });
               }}
             />
-          </div>
+          </fieldset>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Subida de Diseño</label>
+          <fieldset className="border-0 p-0 m-0">
+            <legend className="block text-sm font-medium text-gray-700 mb-2">Subida de Diseño</legend>
             <FileUpload
               bucket="general"
               folder="designs"
@@ -664,7 +667,7 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
                 });
               }}
             />
-          </div>
+          </fieldset>
 
           <div className="flex gap-3 pt-4">
             <Button

@@ -57,13 +57,13 @@ export const Quotations = () => {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setQuotations(data as any);
+      setQuotations(data as Quotation[]);
     }
     setLoading(false);
   };
 
   // Función para calcular comparativos
-  const calculateComparatives = (quotation: any) => {
+  const calculateComparatives = (quotation: Quotation) => {
     const quotations = [
       {
         provider: quotation.quotation_1_provider,
@@ -136,7 +136,7 @@ export const Quotations = () => {
     e.preventDefault();
     if (!profile) return;
 
-    const quotationData: any = {
+    const quotationData: Record<string, unknown> = {
       title: formData.title,
       description: formData.description,
       tipo_cotizacion: formData.tipo_cotizacion || null,
@@ -179,7 +179,7 @@ export const Quotations = () => {
       
       // Subir PDF a Supabase Storage
       const pdfFileName = `quotations/comparativo-${Date.now()}-${formData.title.replace(/\s+/g, '_')}.pdf`;
-      const { data: pdfUploadData, error: pdfUploadError } = await supabase.storage
+      const { error: pdfUploadError } = await supabase.storage
         .from('documents')
         .upload(pdfFileName, pdfBlob, {
           contentType: 'application/pdf',
@@ -245,7 +245,7 @@ export const Quotations = () => {
     });
   };
 
-  const getComparisonData = (quotation: any) => {
+  const getComparisonData = (quotation: Quotation) => {
     const amounts = [
       quotation.quotation_1_amount,
       quotation.quotation_2_amount,
@@ -302,7 +302,7 @@ export const Quotations = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {quotations.map((quotation: any) => {
+        {quotations.map((quotation: Quotation) => {
           const comparison = getComparisonData(quotation);
 
           return (
@@ -498,7 +498,7 @@ export const Quotations = () => {
                       <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
                         <p className="font-medium text-blue-700 mb-2">Comparativo por Monto:</p>
                         <ol className="list-decimal list-inside space-y-1">
-                          {JSON.parse(JSON.stringify(quotation.comparativo_por_monto)).map((item: any, idx: number) => (
+                          {JSON.parse(JSON.stringify(quotation.comparativo_por_monto)).map((item: { provider?: string; amount?: number }, idx: number) => (
                             <li key={idx}>
                               {item.provider}: ${item.amount?.toLocaleString('es-CO')}
                             </li>
@@ -615,7 +615,7 @@ export const Quotations = () => {
                   setFormData({
                     ...formData,
                     [`quotation_${num}_provider`]: e.target.value,
-                  } as any)
+                  } as typeof formData)
                 }
                 fullWidth
               />
@@ -629,7 +629,7 @@ export const Quotations = () => {
                   setFormData({
                     ...formData,
                     [`quotation_${num}_amount`]: e.target.value,
-                  } as any)
+                  } as typeof formData)
                 }
                 fullWidth
               />
@@ -646,7 +646,7 @@ export const Quotations = () => {
                     setFormData({
                       ...formData,
                       [`quotation_${num}_url`]: urls[0] || '',
-                    } as any);
+                    } as typeof formData);
                   }}
                   existingFiles={
                     formData[`quotation_${num}_url` as keyof typeof formData]
@@ -657,7 +657,7 @@ export const Quotations = () => {
                     setFormData({
                       ...formData,
                       [`quotation_${num}_url`]: '',
-                    } as any);
+                    } as typeof formData);
                   }}
                 />
               </div>

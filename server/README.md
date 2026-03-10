@@ -41,5 +41,22 @@ Ver código fuente para lista completa de endpoints.
 
 ## Variables de Entorno
 
-Ver `.env.example` para todas las variables requeridas.
+Ver `.env.example` o `env-example-backend.txt` en la raíz del proyecto para todas las variables requeridas.
+
+## Pruebas de flujo API → Supabase
+
+Para verificar que todos los registros se crean y viajan correctamente a Supabase:
+
+1. Backend con **Supabase** (no usar `USE_LOCAL_DB=true`).
+2. En `server/.env` define usuario de prueba:
+   - `TEST_EMAIL=tu_usuario@ejemplo.com`
+   - `TEST_PASSWORD=tu_contraseña`
+3. Con el servidor en marcha (`npm run dev`), en otra terminal:
+
+```bash
+cd server
+npm run test:supabase
+```
+
+El script ejecuta GET de todos los recursos (sites, contractors, tasks, etc.) y POST de creación con datos mínimos, y muestra un resumen de éxitos y fallos.
 

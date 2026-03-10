@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Select } from '../atoms/Select';

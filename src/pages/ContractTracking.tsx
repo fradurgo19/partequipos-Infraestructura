@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Ruler, Calendar, AlertTriangle, CheckCircle, Clock, FileCheck } from 'lucide-react';
 import { Card } from '../atoms/Card';
-import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
 import { Measurements } from './Measurements';
 import { supabase } from '../lib/supabase';
@@ -35,7 +34,7 @@ interface ContractTracking {
 }
 
 export const ContractTracking = () => {
-  const { profile } = useAuth();
+  useAuth();
   const [activeTab, setActiveTab] = useState<'measurements' | 'deadlines'>('measurements');
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [tracking, setTracking] = useState<ContractTracking[]>([]);
@@ -76,10 +75,10 @@ export const ContractTracking = () => {
     ]);
 
     if (!contractsResult.error && contractsResult.data) {
-      setContracts(contractsResult.data as any);
+      setContracts(contractsResult.data as Contract[]);
     }
     if (!trackingResult.error && trackingResult.data) {
-      setTracking(trackingResult.data as any);
+      setTracking(trackingResult.data as ContractTracking[]);
     }
     setLoading(false);
   };

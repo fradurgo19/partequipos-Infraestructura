@@ -32,17 +32,17 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
   const getAvailableModules = () => {
     const allModules = [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-      { id: 'sites', label: 'Sites & Projects', icon: MapPin, path: '/sites' },
-      { id: 'tasks', label: 'Tasks', icon: ClipboardList, path: '/tasks' },
-      { id: 'service-orders', label: 'Service Orders', icon: FileText, path: '/service-orders' },
-      { id: 'purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, path: '/purchase-orders' },
-      { id: 'contractors', label: 'Contractors', icon: Building2, path: '/contractors' },
-      { id: 'contracts', label: 'Contracts', icon: FileCheck, path: '/contracts' },
-      { id: 'measurements', label: 'Measurements', icon: Ruler, path: '/measurements' },
-      { id: 'internal-requests', label: 'Internal Requests', icon: Send, path: '/internal-requests' },
-      { id: 'quotations', label: 'Quotations', icon: FileSpreadsheet, path: '/quotations' },
-      { id: 'contract-tracking', label: 'Contract Tracking', icon: FileCheck, path: '/contract-tracking' },
-      { id: 'users', label: 'Users & Roles', icon: Users, path: '/users' },
+      { id: 'sites', label: 'Sedes y Proyectos', icon: MapPin, path: '/sites' },
+      { id: 'tasks', label: 'Tareas', icon: ClipboardList, path: '/tasks' },
+      { id: 'service-orders', label: 'Órdenes de Servicio', icon: FileText, path: '/service-orders' },
+      { id: 'purchase-orders', label: 'Órdenes de Compra', icon: ShoppingCart, path: '/purchase-orders' },
+      { id: 'contractors', label: 'Contratistas', icon: Building2, path: '/contractors' },
+      { id: 'contracts', label: 'Contratos', icon: FileCheck, path: '/contracts' },
+      { id: 'measurements', label: 'Mediciones', icon: Ruler, path: '/measurements' },
+      { id: 'internal-requests', label: 'Solicitudes Internas', icon: Send, path: '/internal-requests' },
+      { id: 'quotations', label: 'Cotizaciones', icon: FileSpreadsheet, path: '/quotations' },
+      { id: 'contract-tracking', label: 'Seguimiento de Contratos', icon: FileCheck, path: '/contract-tracking' },
+      { id: 'users', label: 'Usuarios y Roles', icon: Users, path: '/users' },
     ];
 
     if (profile?.role === 'internal_client') {
@@ -89,11 +89,11 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
         {/* Header con botón de colapsar (solo desktop) */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
           {!isCollapsed && (
-            <h2 className="font-semibold text-[#50504f] lg:block hidden">Menu</h2>
+            <h2 className="font-semibold text-[#50504f] lg:block hidden">Menú</h2>
           )}
           <div className="flex items-center gap-2">
             {isCollapsed && (
-              <h2 className="font-semibold text-[#50504f] lg:hidden">Menu</h2>
+              <h2 className="font-semibold text-[#50504f] lg:hidden">Menú</h2>
             )}
             {/* Botón cerrar para móvil */}
             <Button 

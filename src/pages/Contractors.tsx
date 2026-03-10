@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Building2, Mail, Phone, MapPin, Globe, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, Phone, MapPin, FileText } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';

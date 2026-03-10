@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   MapPin,
   ClipboardList,
   FileText,
-  Ruler,
   Send,
   FileSpreadsheet,
   TrendingUp,
@@ -48,11 +47,7 @@ export const Dashboard = () => {
     avgResponseTime: 0,
     avgExecutionTime: 0,
   });
-  useEffect(() => {
-    loadStats();
-  }, [profile]);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!profile) return;
 
     const [tasksResult, serviceOrdersResult, sitesResult, measurementsResult, requestsResult, usersResult] =
@@ -108,17 +103,21 @@ export const Dashboard = () => {
       avgResponseTime: Math.round(avgResponseTime * 10) / 10,
       avgExecutionTime: Math.round(avgExecutionTime * 10) / 10,
     });
-  };
+  }, [profile]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const getModuleCards = () => {
     const allCards = [
       {
         id: 'sites',
-        title: 'Sites & Projects',
+        title: 'Sedes y Proyectos',
         icon: MapPin,
-        description: 'Manage locations and project details',
+        description: 'Gestionar ubicaciones y detalles de proyectos',
         stat: stats.totalSites,
-        statLabel: 'Total Sites',
+        statLabel: 'Total Sedes',
         gradient: 'from-blue-500 to-blue-600',
         iconBg: 'bg-blue-100',
         iconColor: 'text-blue-600',
@@ -127,11 +126,11 @@ export const Dashboard = () => {
       },
       {
         id: 'tasks',
-        title: 'Tasks',
+        title: 'Tareas',
         icon: ClipboardList,
-        description: 'Track maintenance tasks and workflows',
+        description: 'Seguimiento de tareas de mantenimiento y flujos de trabajo',
         stat: stats.pendingTasks,
-        statLabel: 'Pending Tasks',
+        statLabel: 'Tareas Pendientes',
         gradient: 'from-[#cf1b22] to-[#a0151a]',
         iconBg: 'bg-red-100',
         iconColor: 'text-[#cf1b22]',
@@ -140,11 +139,11 @@ export const Dashboard = () => {
       },
       {
         id: 'service-orders',
-        title: 'Service Orders',
+        title: 'Órdenes de Servicio',
         icon: FileText,
-        description: 'Manage service orders and contractors',
+        description: 'Gestionar órdenes de servicio y contratistas',
         stat: stats.totalServiceOrders,
-        statLabel: 'Total Orders',
+        statLabel: 'Total Órdenes',
         gradient: 'from-green-500 to-green-600',
         iconBg: 'bg-green-100',
         iconColor: 'text-green-600',
@@ -153,11 +152,11 @@ export const Dashboard = () => {
       },
       {
         id: 'purchase-orders',
-        title: 'Purchase Orders',
+        title: 'Órdenes de Compra',
         icon: ShoppingCart,
-        description: 'Manage purchase orders with format',
+        description: 'Gestionar órdenes de compra con formato',
         stat: 0,
-        statLabel: 'Total Orders',
+        statLabel: 'Total Órdenes',
         gradient: 'from-purple-500 to-purple-600',
         iconBg: 'bg-purple-100',
         iconColor: 'text-purple-600',
@@ -166,11 +165,11 @@ export const Dashboard = () => {
       },
       {
         id: 'contractors',
-        title: 'Contractors',
+        title: 'Contratistas',
         icon: Building2,
-        description: 'Manage contractors database',
+        description: 'Base de datos de contratistas',
         stat: 0,
-        statLabel: 'Total Contractors',
+        statLabel: 'Total Contratistas',
         gradient: 'from-amber-500 to-amber-600',
         iconBg: 'bg-amber-100',
         iconColor: 'text-amber-600',
@@ -179,11 +178,11 @@ export const Dashboard = () => {
       },
       {
         id: 'contracts',
-        title: 'Contracts',
+        title: 'Contratos',
         icon: FileCheck,
-        description: 'Manage labor and supply contracts',
+        description: 'Gestionar contratos de mano de obra y suministro',
         stat: 0,
-        statLabel: 'Total Contracts',
+        statLabel: 'Total Contratos',
         gradient: 'from-emerald-500 to-emerald-600',
         iconBg: 'bg-emerald-100',
         iconColor: 'text-emerald-600',
@@ -192,11 +191,11 @@ export const Dashboard = () => {
       },
       {
         id: 'internal-requests',
-        title: 'Internal Requests',
+        title: 'Solicitudes Internas',
         icon: Send,
-        description: 'Submit department requests',
+        description: 'Enviar solicitudes de departamentos',
         stat: stats.pendingRequests,
-        statLabel: 'Pending Requests',
+        statLabel: 'Solicitudes Pendientes',
         gradient: 'from-orange-500 to-orange-600',
         iconBg: 'bg-orange-100',
         iconColor: 'text-orange-600',
@@ -205,11 +204,11 @@ export const Dashboard = () => {
       },
       {
         id: 'quotations',
-        title: 'Quotation Comparison',
+        title: 'Comparación de Cotizaciones',
         icon: FileSpreadsheet,
-        description: 'Compare and review quotations',
+        description: 'Comparar y revisar cotizaciones',
         stat: 0,
-        statLabel: 'Pending Review',
+        statLabel: 'Pendiente Revisión',
         gradient: 'from-teal-500 to-teal-600',
         iconBg: 'bg-teal-100',
         iconColor: 'text-teal-600',
@@ -218,11 +217,11 @@ export const Dashboard = () => {
       },
       {
         id: 'contract-tracking',
-        title: 'Contract Tracking',
+        title: 'Seguimiento de Contratos',
         icon: FileCheck,
-        description: 'Measurements and deadline compliance',
+        description: 'Mediciones y cumplimiento de plazos',
         stat: stats.pendingMeasurements,
-        statLabel: 'Pending Measurements',
+        statLabel: 'Mediciones Pendientes',
         gradient: 'from-cyan-500 to-cyan-600',
         iconBg: 'bg-cyan-100',
         iconColor: 'text-cyan-600',
@@ -231,11 +230,11 @@ export const Dashboard = () => {
       },
       {
         id: 'users',
-        title: 'Users & Roles',
+        title: 'Usuarios y Roles',
         icon: Users,
-        description: 'Manage users and permissions',
+        description: 'Gestionar usuarios y permisos',
         stat: stats.totalUsers,
-        statLabel: 'Total Users',
+        statLabel: 'Total Usuarios',
         gradient: 'from-indigo-500 to-indigo-600',
         iconBg: 'bg-indigo-100',
         iconColor: 'text-indigo-600',
@@ -393,7 +392,7 @@ export const Dashboard = () => {
         <div>
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#50504f] mb-4 sm:mb-6 md:mb-8 flex items-center gap-2 sm:gap-3 flex-wrap">
             <span className="h-1 w-8 sm:w-12 md:w-16 bg-gradient-to-r from-[#cf1b22] to-[#50504f] rounded-full"></span>
-            <span className="whitespace-nowrap">Module Access</span>
+            <span className="whitespace-nowrap">Acceso a Módulos</span>
             <span className="h-1 w-8 sm:w-12 md:w-16 bg-gradient-to-l from-[#cf1b22] to-[#50504f] rounded-full"></span>
           </h2>
           

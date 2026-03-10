@@ -16,32 +16,19 @@ router.post('/login', async (req, res) => {
     }
 
     if (USE_LOCAL_DB) {
-      // Autenticación con PostgreSQL local
-      console.log('🔐 Intentando login con:', email);
-      
       const userResult = await db.query(
         'SELECT * FROM users WHERE email = $1',
         [email]
       );
 
-      console.log('👤 Usuario encontrado:', userResult.rows.length > 0);
-
       if (userResult.rows.length === 0) {
-        console.log('❌ Usuario no encontrado');
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       const user = userResult.rows[0];
-      console.log('🔑 Hash en BD:', user.password_hash);
-      console.log('🔑 Password recibida:', password);
-
-      // Verificar contraseña
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      
-      console.log('✅ Password válida:', isValidPassword);
-      
+
       if (!isValidPassword) {
-        console.log('❌ Password incorrecta');
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 

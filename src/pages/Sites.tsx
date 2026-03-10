@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { 
-  Plus, MapPin, Image, FileText, Edit, Trash2, Camera, 
-  Building2, Droplet, Square, Network, History, 
+import {
+  Plus, MapPin, FileText, Edit, Trash2, Camera,
+  Building2, Droplet, Square, Network, History,
   AlertCircle, CheckCircle, Clock, ClipboardList, TrendingUp
 } from 'lucide-react';
 import { Card } from '../atoms/Card';
@@ -12,7 +12,7 @@ import { Modal } from '../molecules/Modal';
 import { FileUpload } from '../molecules/FileUpload';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { Site } from '../types';
+import { Site, Task } from '../types';
 
 export const Sites = () => {
   const { profile } = useAuth();
@@ -23,7 +23,7 @@ export const Sites = () => {
   const [selectedSite, setSelectedSite] = useState<Site | null>(null);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'photos' | 'blueprints' | 'tasks' | 'stats' | 'demand'>('general');
-  const [siteTasks, setSiteTasks] = useState<any[]>([]);
+  const [siteTasks, setSiteTasks] = useState<Task[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -77,7 +77,7 @@ export const Sites = () => {
         })
       );
 
-      setSites(sitesWithStats as any);
+      setSites(sitesWithStats as Site[]);
     }
     setLoading(false);
   };
@@ -86,17 +86,17 @@ export const Sites = () => {
     e.preventDefault();
     if (!profile) return;
 
-    const coordinates = formData.latitude && formData.longitude 
-      ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) }
+    const coordinates = formData.latitude && formData.longitude
+      ? { lat: Number.parseFloat(formData.latitude), lng: Number.parseFloat(formData.longitude) }
       : null;
 
     const siteData = {
       name: formData.name,
       location: formData.location,
       coordinates,
-      area_to_paint: formData.area_to_paint ? parseFloat(formData.area_to_paint) : null,
-      bathrooms_count: formData.bathrooms_count ? parseInt(formData.bathrooms_count) : 0,
-      walls_count: formData.walls_count ? parseInt(formData.walls_count) : 0,
+      area_to_paint: formData.area_to_paint ? Number.parseFloat(formData.area_to_paint) : null,
+      bathrooms_count: formData.bathrooms_count ? Number.parseInt(formData.bathrooms_count, 10) : 0,
+      walls_count: formData.walls_count ? Number.parseInt(formData.walls_count, 10) : 0,
       characteristics: formData.characteristics,
       photos_urls: formData.photos_urls,
       blueprint_urls: formData.blueprint_urls,
@@ -162,7 +162,7 @@ export const Sites = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('¿Estás seguro de eliminar esta sede?')) {
+    if (globalThis.confirm('¿Estás seguro de eliminar esta sede?')) {
       const { error } = await supabase.from('sites').delete().eq('id', id);
 
       if (!error) {
@@ -215,7 +215,7 @@ export const Sites = () => {
 
       {/* Grid de Sedes - Responsive */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 md:gap-6">
-        {sites.map((site: any) => (
+        {sites.map((site: Site) => (
           <Card key={site.id} className="hover:shadow-xl transition-all duration-300 border-l-4 border-[#cf1b22]">
             <div className="space-y-4">
               {/* Header con acciones */}
@@ -307,11 +307,11 @@ export const Sites = () => {
               </div>
 
               {/* Botón Ver Detalles */}
-              <Button 
-                variant="outline" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={() => handleViewDetails(site)}
-                className="w-full border-[#cf1b22] text-[#cf1b22] hover:bg-[#cf1b22] hover:text-white"
+                className="w-full border border-[#cf1b22] text-[#cf1b22] hover:bg-[#cf1b22] hover:text-white"
               >
                 <FileText className="w-4 h-4 mr-2" />
                 Ver Detalles Completos
@@ -477,27 +477,26 @@ export const Sites = () => {
             </h3>
             
             <FileUpload
-              onFileSelected={(url) => {
-                setFormData({ 
-                  ...formData, 
-                  photos_urls: [...formData.photos_urls, url] 
+              onUploadComplete={(urls: string[]) => {
+                setFormData({
+                  ...formData,
+                  photos_urls: [...formData.photos_urls, ...urls],
                 });
               }}
               accept="image/*"
-              label="Subir fotos de la sede"
             />
             
             {formData.photos_urls.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
-                {formData.photos_urls.map((url, idx) => (
-                  <div key={idx} className="relative group">
-                    <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-24 object-cover rounded" />
+                {formData.photos_urls.map((url) => (
+                  <div key={url} className="relative group">
+                    <img src={url} alt="" className="w-full h-24 object-cover rounded" />
                     <button
                       type="button"
                       onClick={() => {
                         setFormData({
                           ...formData,
-                          photos_urls: formData.photos_urls.filter((_, i) => i !== idx),
+                          photos_urls: formData.photos_urls.filter((u) => u !== url),
                         });
                       }}
                       className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
@@ -518,27 +517,26 @@ export const Sites = () => {
             </h3>
             
             <FileUpload
-              onFileSelected={(url) => {
-                setFormData({ 
-                  ...formData, 
-                  blueprint_urls: [...formData.blueprint_urls, url] 
+              onUploadComplete={(urls: string[]) => {
+                setFormData({
+                  ...formData,
+                  blueprint_urls: [...formData.blueprint_urls, ...urls],
                 });
               }}
               accept="image/*,application/pdf"
-              label="Subir planos (PDF o imágenes)"
             />
             
             {formData.blueprint_urls.length > 0 && (
               <div className="space-y-2">
-                {formData.blueprint_urls.map((url, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                {formData.blueprint_urls.map((url) => (
+                  <div key={url} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                     <span className="text-sm truncate flex-1">{url.split('/').pop()}</span>
                     <button
                       type="button"
                       onClick={() => {
                         setFormData({
                           ...formData,
-                          blueprint_urls: formData.blueprint_urls.filter((_, i) => i !== idx),
+                          blueprint_urls: formData.blueprint_urls.filter((u) => u !== url),
                         });
                       }}
                       className="text-red-500 hover:text-red-700"
@@ -730,18 +728,17 @@ export const Sites = () => {
                 <div className="space-y-4">
                   {selectedSite.photos_urls && selectedSite.photos_urls.length > 0 ? (
                     <div className="grid grid-cols-2 gap-4">
-                      {selectedSite.photos_urls.map((url, idx) => (
-                        <div key={idx} className="relative group">
-                          <img 
-                            src={url} 
-                            alt={`Foto ${idx + 1}`} 
-                            className="w-full h-48 object-cover rounded-lg border-2 border-gray-200 hover:border-[#cf1b22] transition-colors cursor-pointer"
-                            onClick={() => window.open(url, '_blank')}
+                      {selectedSite.photos_urls.map((url) => (
+                        <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="relative group block">
+                          <img
+                            src={url}
+                            alt=""
+                            className="w-full h-48 object-cover rounded-lg border-2 border-gray-200 hover:border-[#cf1b22] transition-colors"
                           />
                           <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                            Foto {idx + 1}
+                            {url.split('/').pop()}
                           </div>
-                        </div>
+                        </a>
                       ))}
                     </div>
                   ) : (
@@ -758,23 +755,23 @@ export const Sites = () => {
                 <div className="space-y-4">
                   {selectedSite.blueprint_urls && selectedSite.blueprint_urls.length > 0 ? (
                     <div className="space-y-3">
-                      {selectedSite.blueprint_urls.map((url, idx) => (
-                        <div 
-                          key={idx} 
-                          className="flex items-center justify-between bg-white border-2 border-gray-200 hover:border-[#cf1b22] p-4 rounded-lg cursor-pointer transition-colors group"
-                          onClick={() => window.open(url, '_blank')}
+                      {selectedSite.blueprint_urls.map((url) => (
+                        <a
+                          key={url}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between bg-white border-2 border-gray-200 hover:border-[#cf1b22] p-4 rounded-lg transition-colors group"
                         >
                           <div className="flex items-center gap-3">
                             <FileText className="w-8 h-8 text-[#cf1b22]" />
                             <div>
-                              <p className="font-semibold text-[#50504f]">Plano {idx + 1}</p>
+                              <p className="font-semibold text-[#50504f]">{url.split('/').pop() ?? 'Plano'}</p>
                               <p className="text-xs text-gray-500">{url.split('/').pop()}</p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
-                            Ver
-                          </Button>
-                        </div>
+                          <span className="opacity-0 group-hover:opacity-100 text-sm font-medium text-[#cf1b22]">Ver</span>
+                        </a>
                       ))}
                     </div>
                   ) : (
@@ -791,28 +788,28 @@ export const Sites = () => {
                 <div className="space-y-4">
                   {siteTasks.length > 0 ? (
                     <div className="space-y-3">
-                      {siteTasks.map((task: any) => (
-                        <div 
-                          key={task.id} 
-                          className={`border-l-4 p-4 rounded-lg bg-white shadow-sm ${
-                            task.status === 'pending' ? 'border-red-500' :
-                            task.status === 'in_progress' ? 'border-orange-500' :
-                            'border-green-500'
-                          }`}
+                      {siteTasks.map((task: Task) => {
+                        let borderClass = 'border-green-500';
+                        if (task.status === 'pending') borderClass = 'border-red-500';
+                        else if (task.status === 'in_progress') borderClass = 'border-orange-500';
+                        let badgeClass = 'bg-green-100 text-green-700';
+                        if (task.status === 'pending') badgeClass = 'bg-red-100 text-red-700';
+                        else if (task.status === 'in_progress') badgeClass = 'bg-orange-100 text-orange-700';
+                        let statusLabel = '🟢 Completada';
+                        if (task.status === 'pending') statusLabel = '🔴 Pendiente';
+                        else if (task.status === 'in_progress') statusLabel = '🟠 En Proceso';
+                        return (
+                        <div
+                          key={task.id}
+                          className={`border-l-4 p-4 rounded-lg bg-white shadow-sm ${borderClass}`}
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
                               <h4 className="font-bold text-[#50504f] mb-1">{task.title}</h4>
                               <p className="text-sm text-gray-600 line-clamp-2">{task.description}</p>
                             </div>
-                            <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              task.status === 'pending' ? 'bg-red-100 text-red-700' :
-                              task.status === 'in_progress' ? 'bg-orange-100 text-orange-700' :
-                              'bg-green-100 text-green-700'
-                            }`}>
-                              {task.status === 'pending' ? '🔴 Pendiente' :
-                               task.status === 'in_progress' ? '🟠 En Proceso' :
-                               '🟢 Completada'}
+                            <div className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}`}>
+                              {statusLabel}
                             </div>
                           </div>
 
@@ -835,7 +832,7 @@ export const Sites = () => {
                             )}
                             <div>
                               <p className="text-gray-500 text-xs">Asignada a</p>
-                              <p className="font-medium text-[#50504f]">{task.assignee?.full_name || 'Sin asignar'}</p>
+                              <p className="font-medium text-[#50504f]">{(task as Task & { assignee?: { full_name: string } }).assignee?.full_name || 'Sin asignar'}</p>
                             </div>
                           </div>
 
@@ -844,14 +841,14 @@ export const Sites = () => {
                             <div className="mt-3">
                               <p className="text-xs text-gray-500 mb-2 font-medium">📸 Fotos de la Tarea</p>
                               <div className="grid grid-cols-4 gap-2">
-                                {task.photo_urls.slice(0, 4).map((url: string, idx: number) => (
-                                  <img
-                                    key={idx}
-                                    src={url}
-                                    alt={`Foto tarea ${idx + 1}`}
-                                    className="w-full h-20 object-cover rounded border-2 border-gray-200 hover:border-[#cf1b22] cursor-pointer transition-colors"
-                                    onClick={() => window.open(url, '_blank')}
-                                  />
+                                {task.photo_urls.slice(0, 4).map((url: string) => (
+                                  <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block">
+                                    <img
+                                      src={url}
+                                      alt=""
+                                      className="w-full h-20 object-cover rounded border-2 border-gray-200 hover:border-[#cf1b22] transition-colors"
+                                    />
+                                  </a>
                                 ))}
                               </div>
                               {task.photo_urls.length > 4 && (
@@ -862,7 +859,8 @@ export const Sites = () => {
                             </div>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -924,7 +922,7 @@ export const Sites = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white border border-gray-200 p-4 rounded-lg">
                       <p className="text-xs text-gray-500 mb-1">Creado por</p>
-                      <p className="font-semibold text-[#50504f]">{selectedSite.created_by?.full_name || 'N/A'}</p>
+                      <p className="font-semibold text-[#50504f]">{(selectedSite as Site & { created_by?: { full_name: string } }).created_by?.full_name || 'N/A'}</p>
                     </div>
                     <div className="bg-white border border-gray-200 p-4 rounded-lg">
                       <p className="text-xs text-gray-500 mb-1">Fecha de Creación</p>
@@ -947,27 +945,27 @@ export const Sites = () => {
                     
                     {(() => {
                       // Análisis de tipos de tareas más solicitadas
-                      const tasksByType = siteTasks.reduce((acc: any, task) => {
+                      const tasksByType = siteTasks.reduce((acc: Record<string, number>, task) => {
                         acc[task.task_type] = (acc[task.task_type] || 0) + 1;
                         return acc;
                       }, {});
 
                       const sortedTypes = Object.entries(tasksByType)
-                        .sort((a: any, b: any) => b[1] - a[1])
+                        .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
                         .slice(0, 5);
 
                       return sortedTypes.length > 0 ? (
                         <div className="space-y-3">
-                          {sortedTypes.map(([type, count]: any, idx) => (
+                          {sortedTypes.map(([type, count]: [string, number], idx) => {
+                            let rankColor = 'bg-gray-400';
+                            if (idx === 0) rankColor = 'bg-[#cf1b22]';
+                            else if (idx === 1) rankColor = 'bg-orange-500';
+                            else if (idx === 2) rankColor = 'bg-yellow-500';
+                            return (
                             <div key={type} className="bg-white border border-gray-200 p-4 rounded-lg">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
-                                    idx === 0 ? 'bg-[#cf1b22]' :
-                                    idx === 1 ? 'bg-orange-500' :
-                                    idx === 2 ? 'bg-yellow-500' :
-                                    'bg-gray-400'
-                                  }`}>
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${rankColor}`}>
                                     {idx + 1}
                                   </div>
                                   <div>
@@ -990,7 +988,8 @@ export const Sites = () => {
                                 {((count / siteTasks.length) * 100).toFixed(1)}% del total
                               </p>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="text-center py-8 bg-gray-50 rounded-lg">
@@ -1004,17 +1003,17 @@ export const Sites = () => {
                   <div>
                     <h4 className="font-semibold text-[#50504f] mb-4">Solicitudes por Área</h4>
                     {(() => {
-                      const tasksByArea = siteTasks.reduce((acc: any, task) => {
+                      const tasksByArea = siteTasks.reduce((acc: Record<string, number>, task) => {
                         acc[task.requesting_area] = (acc[task.requesting_area] || 0) + 1;
                         return acc;
                       }, {});
 
                       const sortedAreas = Object.entries(tasksByArea)
-                        .sort((a: any, b: any) => b[1] - a[1]);
+                        .sort((a: [string, number], b: [string, number]) => b[1] - a[1]);
 
                       return sortedAreas.length > 0 ? (
                         <div className="grid grid-cols-2 gap-3">
-                          {sortedAreas.map(([area, count]: any) => (
+                          {sortedAreas.map(([area, count]: [string, number]) => (
                             <div key={area} className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 p-4 rounded-lg text-center">
                               <p className="text-2xl font-bold text-blue-600">{count}</p>
                               <p className="text-sm font-medium text-[#50504f] mt-1">{area}</p>

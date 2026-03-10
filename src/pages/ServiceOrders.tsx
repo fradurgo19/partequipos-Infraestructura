@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Download, Clock, DollarSign, TrendingUp, FileText, CheckCircle } from 'lucide-react';
+import { Plus, Download, Clock, DollarSign, TrendingUp, FileText } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -10,7 +10,27 @@ import { Badge } from '../atoms/Badge';
 import { FileUpload } from '../molecules/FileUpload';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ServiceOrder, Task } from '../types';
+import { ServiceOrder, Site, Contractor } from '../types';
+
+type TaskOption = { id: string; title: string; description?: string; site_id: string; request_date?: string; status?: string };
+type ServiceOrderWithRelations = ServiceOrder & {
+  purchase_order?: { order_number: string };
+  site?: { name: string };
+  contractor?: { company_name: string };
+  requester?: { full_name: string };
+  executor?: { full_name: string };
+};
+
+interface OrdersBySiteItem {
+  site_id: string;
+  site_name: string;
+  total_orders: number;
+  completed_orders: number;
+  in_progress_orders: number;
+  pending_orders: number;
+  total_budget: number;
+  total_actual: number;
+}
 import { generateServiceOrderPDF } from '../services/pdfGenerator';
 
 // Actividades comunes para órdenes de servicio
@@ -35,14 +55,13 @@ const COMMON_ACTIVITIES = [
 export const ServiceOrders = () => {
   const { profile } = useAuth();
   const [orders, setOrders] = useState<ServiceOrder[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [sites, setSites] = useState<any[]>([]);
-  const [contractors, setContractors] = useState<any[]>([]);
-  const [infrastructureUsers, setInfrastructureUsers] = useState<any[]>([]);
-  const [ordersBySite, setOrdersBySite] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<TaskOption[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [infrastructureUsers, setInfrastructureUsers] = useState<Array<{ id: string; full_name: string }>>([]);
+  const [ordersBySite, setOrdersBySite] = useState<OrdersBySiteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<ServiceOrder | null>(null);
     const [formData, setFormData] = useState({
       site_id: '',
       task_id: '',
@@ -73,7 +92,6 @@ export const ServiceOrders = () => {
       sitesResult,
       contractorsResult,
       usersResult,
-      ordersBySiteResult
     ] = await Promise.all([
       supabase
         .from('service_orders')
@@ -93,23 +111,18 @@ export const ServiceOrders = () => {
         .order('created_at', { ascending: false }),
       supabase.from('sites').select('*').order('name'),
       supabase.from('contractors').select('*').order('company_name'),
-      supabase.from('profiles').select('*').eq('role', 'infrastructure').order('full_name'),
-      supabase
-        .from('service_orders')
-        .select('site_id, site:sites(id, name)')
-        .order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id, full_name').eq('role', 'infrastructure').order('full_name'),
     ]);
 
     if (!ordersResult.error && ordersResult.data) {
-      // Mapear 'attachments' a 'attachment_urls' para compatibilidad
-      const mappedOrders = ordersResult.data.map((order: any) => ({
+      const mappedOrders = ordersResult.data.map((order: ServiceOrder & { attachments?: string[] }) => ({
         ...order,
         attachment_urls: order.attachments || order.attachment_urls || [],
       }));
-      setOrders(mappedOrders as any);
+      setOrders(mappedOrders as ServiceOrder[]);
     }
     if (!tasksResult.error && tasksResult.data) {
-      setTasks(tasksResult.data);
+      setTasks(tasksResult.data as TaskOption[]);
     }
     if (!sitesResult.error && sitesResult.data) {
       setSites(sitesResult.data);
@@ -120,10 +133,9 @@ export const ServiceOrders = () => {
     if (!usersResult.error && usersResult.data) {
       setInfrastructureUsers(usersResult.data);
     }
-    // Calcular órdenes por sede manualmente
     if (!ordersResult.error && ordersResult.data) {
-      const siteCounts: Record<string, any> = {};
-      ordersResult.data.forEach((order: any) => {
+      const siteCounts: Record<string, OrdersBySiteItem> = {};
+      ordersResult.data.forEach((order: ServiceOrder & { site?: { name: string } }) => {
         const siteId = order.site_id;
         if (!siteCounts[siteId]) {
           siteCounts[siteId] = {
@@ -158,13 +170,13 @@ export const ServiceOrders = () => {
       if (!error && data) {
         return data;
       }
-    } catch (error) {
+    } catch {
       console.log('RPC function not available, using fallback');
     }
-    
+
     // Fallback: generar número manualmente
     const site = sites.find(s => s.id === siteId);
-    const siteCode = site ? site.name.substring(0, 3).toUpperCase().replace(/\s/g, '') : 'SED';
+    const siteCode = site ? site.name.substring(0, 3).toUpperCase().replace(/\s+/g, '') : 'SED';
     
     // Obtener el último número de orden para esta sede
     const { data: lastOrder } = await supabase
@@ -180,7 +192,7 @@ export const ServiceOrders = () => {
     if (lastOrder?.order_number) {
       const match = lastOrder.order_number.match(/-(\d+)$/);
       if (match) {
-        nextNumber = parseInt(match[1]) + 1;
+        nextNumber = Number.parseInt(match[1], 10) + 1;
       }
     }
     
@@ -195,7 +207,7 @@ export const ServiceOrders = () => {
       // Generar número de orden consecutivo por sede
       const orderNumber = await generateOrderNumber(formData.site_id);
 
-      const orderData: any = {
+      const orderData: Record<string, unknown> = {
         order_number: orderNumber,
         site_id: formData.site_id,
         contractor_id: formData.contractor_id,
@@ -205,8 +217,8 @@ export const ServiceOrders = () => {
         activity_type: formData.activity_type,
         activities: formData.activities,
         description: formData.description,
-        budget_amount: parseFloat(formData.budget_amount),
-        actual_amount: formData.actual_amount ? parseFloat(formData.actual_amount) : null,
+        budget_amount: Number.parseFloat(formData.budget_amount),
+        actual_amount: formData.actual_amount ? Number.parseFloat(formData.actual_amount) : null,
         request_date: formData.request_date, // Ya es date
         start_date: formData.start_date || null, // Ya es date
         end_date: formData.end_date || null, // Ya es date
@@ -243,13 +255,13 @@ export const ServiceOrders = () => {
       setShowModal(false);
       resetForm();
       loadData();
-    } catch (error) {
-      console.error('Error creating service order:', error);
+    } catch (err) {
+      console.error('Error creating service order:', err);
       alert('Error al crear la orden de servicio');
     }
   };
 
-  const createPurchaseOrderFromServiceOrder = async (serviceOrder: any) => {
+  const createPurchaseOrderFromServiceOrder = async (serviceOrder: ServiceOrder) => {
     try {
       const contractor = contractors.find(c => c.id === serviceOrder.contractor_id);
       if (!contractor) return;
@@ -317,7 +329,7 @@ export const ServiceOrders = () => {
 
   const handleDownloadPDF = async (order: ServiceOrder) => {
     try {
-      await generateServiceOrderPDF(order);
+      await Promise.resolve(generateServiceOrderPDF(order));
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error al generar el PDF');
@@ -440,7 +452,7 @@ export const ServiceOrders = () => {
         <Card>
           <h3 className="text-lg font-semibold text-[#50504f] mb-4">Órdenes por Sede</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {ordersBySite.map((site: any) => (
+            {ordersBySite.map((site: OrdersBySiteItem) => (
               <div key={site.site_id} className="p-4 bg-gray-50 rounded-lg">
                 <p className="font-semibold text-[#50504f]">{site.site_name}</p>
                 <p className="text-sm text-gray-600">
@@ -456,7 +468,7 @@ export const ServiceOrders = () => {
 
       {/* Lista de órdenes */}
       <div className="grid grid-cols-1 gap-4">
-        {orders.map((order: any) => (
+        {orders.map((order: ServiceOrderWithRelations) => (
           <Card key={order.id} hover>
             <div className="space-y-4">
               <div className="flex items-start justify-between">
@@ -465,7 +477,12 @@ export const ServiceOrders = () => {
                     <h3 className="font-semibold text-lg text-[#50504f]">
                       Orden #{order.order_number}
                     </h3>
-                    <Badge variant={order.status}>{order.status.replace('_', ' ')}</Badge>
+                    <Badge variant={(() => {
+                      if (order.status === 'approved' || order.status === 'completed') return 'success';
+                      if (order.status === 'in_progress') return 'in_progress';
+                      if (order.status === 'cancelled') return 'danger';
+                      return 'pending';
+                    })()}>{order.status.replace('_', ' ')}</Badge>
                     {order.purchase_order && (
                       <Badge variant="default" size="sm">
                         OC: {order.purchase_order.order_number}
@@ -503,8 +520,8 @@ export const ServiceOrders = () => {
                     <div className="mt-3">
                       <p className="text-gray-500 text-xs mb-1">Actividades</p>
                       <div className="flex flex-wrap gap-2">
-                        {order.activities.map((activity: string, idx: number) => (
-                          <Badge key={idx} variant="default" size="sm">
+                        {order.activities.map((activity: string) => (
+                          <Badge key={activity} variant="default" size="sm">
                             {activity}
                           </Badge>
                         ))}
@@ -583,7 +600,7 @@ export const ServiceOrders = () => {
           resetForm();
         }}
         title="Crear Orden de Servicio"
-        size="large"
+        size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Select
@@ -606,10 +623,10 @@ export const ServiceOrders = () => {
             onChange={(e) => setFormData({ ...formData, task_id: e.target.value })}
             options={[
               { value: '', label: 'Seleccione una tarea' },
-              ...filteredTasks.map((task) => ({ 
-                value: task.id, 
-                label: `${task.title} - ${new Date(task.request_date || task.created_at).toLocaleDateString()}` 
-              })),
+              ...filteredTasks.map((task) => {
+                const dateSuffix = task.request_date ? ` - ${new Date(task.request_date).toLocaleDateString()}` : '';
+                return { value: task.id, label: `${task.title}${dateSuffix}` };
+              }),
             ]}
             fullWidth
           />
@@ -643,24 +660,24 @@ export const ServiceOrders = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <fieldset className="border-0 p-0 m-0">
+            <legend className="block text-sm font-medium text-gray-700 mb-2">
               Contratista (Ordenados por mejor tiempo de respuesta)
-            </label>
+            </legend>
             <Select
               value={formData.contractor_id}
               onChange={(e) => setFormData({ ...formData, contractor_id: e.target.value })}
               options={[
                 { value: '', label: 'Seleccione un contratista' },
-                ...sortedContractors.map((contractor) => ({
-                  value: contractor.id,
-                  label: `${contractor.company_name} ${contractor.rating ? `⭐ ${contractor.rating}` : ''}`,
-                })),
+                ...sortedContractors.map((contractor) => {
+                  const ratingStr = contractor.rating ? ` ⭐ ${contractor.rating}` : '';
+                  return { value: contractor.id, label: `${contractor.company_name}${ratingStr}` };
+                }),
               ]}
               fullWidth
               required
             />
-          </div>
+          </fieldset>
 
           <Select
             label="Tipo de Actividad Principal"
@@ -674,10 +691,10 @@ export const ServiceOrders = () => {
             required
           />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <fieldset className="border-0 p-0 m-0">
+            <legend className="block text-sm font-medium text-gray-700 mb-2">
               Actividades Adicionales (Seleccione múltiples)
-            </label>
+            </legend>
             <div className="grid grid-cols-3 gap-2">
               {COMMON_ACTIVITIES.map((activity) => (
                 <label key={activity} className="flex items-center space-x-2">
@@ -703,7 +720,7 @@ export const ServiceOrders = () => {
                 </label>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <Textarea
             label="Descripción"
@@ -771,10 +788,10 @@ export const ServiceOrders = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <fieldset className="border-0 p-0 m-0">
+            <legend className="block text-sm font-medium text-gray-700 mb-2">
               Adjuntos
-            </label>
+            </legend>
             <FileUpload
               bucket="service-orders"
               folder="attachments"
@@ -790,7 +807,7 @@ export const ServiceOrders = () => {
                 });
               }}
             />
-          </div>
+          </fieldset>
 
           <div className="flex gap-3 pt-4">
             <Button
