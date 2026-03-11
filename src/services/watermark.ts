@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 const getApiBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_URL;
   if (envUrl) return envUrl;
@@ -9,7 +11,8 @@ export const addWatermarkToImage = async (imageFile: File): Promise<string> => {
   const formData = new FormData();
   formData.append('image', imageFile);
 
-  const token = localStorage.getItem('token');
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
   if (!token) {
     const msg = 'Sesión expirada. Inicia sesión de nuevo.';
     console.error('addWatermarkToImage:', msg);
