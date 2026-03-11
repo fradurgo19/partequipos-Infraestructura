@@ -34,7 +34,7 @@ const REQUESTING_AREAS = [
 ];
 
 export const Tasks = () => {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [infrastructureUsers, setInfrastructureUsers] = useState<User[]>([]);
@@ -127,8 +127,8 @@ export const Tasks = () => {
     e.preventDefault();
     if (!profile) return;
 
-    // Buscar usuario de infraestructura para asignar
-    const infrastructureUser = infrastructureUsers[0]; // Siempre asignar al primero disponible
+    const userId = session?.user?.id ?? profile.id;
+    const infrastructureUser = infrastructureUsers[0];
 
     const taskData = {
       title: formData.title,
@@ -150,37 +150,44 @@ export const Tasks = () => {
     const { data, error } = await supabase.from('tasks').insert([taskData]).select().single();
 
     if (!error && data) {
-      // Crear evento en timeline
-      await supabase.from('task_timeline').insert([
+      // Crear evento en timeline (user_id debe ser auth.uid() para RLS)
+      const { error: timelineError } = await supabase.from('task_timeline').insert([
         {
           task_id: data.id,
           event_type: 'created',
           description: `Tarea creada por ${formData.requester_name || profile.full_name}`,
-          user_id: profile.id,
+          user_id: userId,
         },
       ]);
+      if (timelineError) {
+        console.error('Error creando evento en timeline:', timelineError);
+      }
 
-      // Notificaciones según presupuesto usando endpoint del backend
+      // Notificaciones según presupuesto (token desde sesión Supabase)
       const budget = Number.parseFloat(formData.budget_amount || '0');
-      
       if (budget > 0) {
         try {
-          const token = localStorage.getItem('token');
-          await fetch(`${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api')}/notifications/task-budget`, {
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          const token = currentSession?.access_token;
+          const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
+          const res = await fetch(`${apiBase}/notifications/task-budget`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
+              ...(token && { Authorization: `Bearer ${token}` }),
             },
             body: JSON.stringify({
               taskTitle: formData.title,
-              budget: budget,
+              budget,
               taskId: data.id,
               requesterName: formData.requester_name || profile.full_name,
             }),
           });
-        } catch (error) {
-          console.error('Error enviando notificaciones:', error);
+          if (!res.ok && res.status !== 202) {
+            console.error('Notificaciones task-budget:', res.status);
+          }
+        } catch (err) {
+          console.error('Error enviando notificaciones:', err);
         }
       }
 
@@ -212,12 +219,13 @@ export const Tasks = () => {
       let eventType = 'updated';
       if (newStatus === 'completed') eventType = 'completed';
       else if (newStatus === 'in_progress') eventType = 'started';
+      const uid = session?.user?.id ?? profile.id;
       await supabase.from('task_timeline').insert([
         {
           task_id: taskId,
           event_type: eventType,
           description: `Estado cambiado a ${newStatus}`,
-          user_id: profile.id,
+          user_id: uid,
         },
       ]);
 
@@ -256,18 +264,16 @@ export const Tasks = () => {
     const { error } = await supabase.from('tasks').update(updateData).eq('id', taskId);
 
     if (!error) {
-      // Guardar en timeline con foto si existe
+      const uid = session?.user?.id ?? profile.id;
       const timelineData: Record<string, string | undefined> = {
         task_id: taskId,
         event_type: eventType,
         description: `${eventType} registrado por ${profile.full_name}`,
-        user_id: profile.id,
+        user_id: uid,
       };
-      
       if (photoUrl) {
         timelineData.photo_url = photoUrl;
       }
-
       await supabase.from('task_timeline').insert([timelineData]);
 
       // Recargar datos para actualizar la vista
@@ -390,6 +396,29 @@ export const Tasks = () => {
                       <span className="text-sm font-semibold text-green-700">
                         Presupuesto: ${task.budget_amount.toLocaleString()}
                       </span>
+                    </div>
+                  )}
+
+                  {task.photo_urls && Array.isArray(task.photo_urls) && task.photo_urls.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-2">Fotos de la tarea</p>
+                      <div className="flex flex-wrap gap-2">
+                        {task.photo_urls.map((url) => (
+                          <a
+                            key={url}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block rounded border border-gray-200 overflow-hidden hover:opacity-90 focus:ring-2 focus:ring-[#cf1b22] focus:ring-offset-1"
+                          >
+                            <img
+                              src={url}
+                              alt=""
+                              className="w-16 h-16 object-cover"
+                            />
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

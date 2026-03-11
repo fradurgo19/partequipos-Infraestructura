@@ -27,7 +27,7 @@ router.post('/email', authenticateToken, async (req, res) => {
       to,
       subject,
       text: message,
-      html: html || message.replace(/\n/g, '<br>'),
+      html: html || message.replaceAll('\n', '<br>'),
     };
 
     const info = await transporter.sendMail(mailOptions);
@@ -43,10 +43,21 @@ router.post('/email', authenticateToken, async (req, res) => {
   }
 });
 
-// Endpoint para enviar notificaciones de tareas según presupuesto
+// Timeout para envío de un solo email (evitar colgar la función)
+const EMAIL_SEND_TIMEOUT_MS = 8000;
+
+function sendMailWithTimeout(options) {
+  return Promise.race([
+    transporter.sendMail(options),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('Email send timeout')), EMAIL_SEND_TIMEOUT_MS)),
+  ]);
+}
+
+// Endpoint para enviar notificaciones de tareas según presupuesto.
+// Responde 202 de inmediato y envía correos en segundo plano para evitar timeout 504.
 router.post('/task-budget', authenticateToken, async (req, res) => {
   try {
-    const { taskTitle, budget, taskId, requesterName } = req.body;
+    const { taskTitle, budget, requesterName } = req.body;
 
     if (!budget || !taskTitle) {
       return res.status(400).json({ error: 'budget and taskTitle are required' });
@@ -56,57 +67,64 @@ router.post('/task-budget', authenticateToken, async (req, res) => {
     let recipients = [];
 
     if (budgetNum > 10000000) {
-      // Mayor a 10M → Notificar a Felipe (Director) y Pedro Cano
       recipients = [
         { email: 'fbustamante@partequipos.com', name: 'ANDRES FELIPE BUSTAMANTE CESPEDES' },
         { email: 'pedro.cano@partequipos.com', name: 'Pedro Cano' },
       ];
     } else if (budgetNum > 5000000) {
-      // Entre 5M y 10M → Notificar a Felipe (Director)
       recipients = [
         { email: 'fbustamante@partequipos.com', name: 'ANDRES FELIPE BUSTAMANTE CESPEDES' },
       ];
     } else if (budgetNum > 0 && budgetNum <= 5000000) {
-      // Hasta 5M → Notificar a Edison (Ingeniero)
       recipients = [
         { email: 'infraestructura@partequipos.com', name: 'EDISON VALENCIA' },
       ];
     }
 
-    const results = [];
-    for (const recipient of recipients) {
-      try {
-        const subject = budgetNum > 10000000
-          ? `🚨 Tarea de Alto Presupuesto - ${taskTitle}`
-          : budgetNum > 5000000
-          ? `⚠️ Tarea Requiere Aprobación - ${taskTitle}`
-          : `📋 Nueva Tarea - ${taskTitle}`;
-
-        const message = budgetNum > 10000000
-          ? `Se ha creado una tarea con presupuesto de $${budgetNum.toLocaleString('es-CO')} que requiere su revisión y aprobación.\n\nTarea: ${taskTitle}\nSolicitante: ${requesterName || 'N/A'}\n\nPor favor, revise la tarea en el sistema.`
-          : budgetNum > 5000000
-          ? `Se ha creado una tarea con presupuesto de $${budgetNum.toLocaleString('es-CO')} que requiere su aprobación.\n\nTarea: ${taskTitle}\nSolicitante: ${requesterName || 'N/A'}\n\nPor favor, revise la tarea en el sistema.`
-          : `Se ha creado una nueva tarea con presupuesto de $${budgetNum.toLocaleString('es-CO')}.\n\nTarea: ${taskTitle}\nSolicitante: ${requesterName || 'N/A'}\n\nPuede revisar la tarea en el sistema.`;
-
-        const info = await transporter.sendMail({
-          from: 'fradurgo19@gmail.com',
-          to: recipient.email,
-          subject,
-          text: message,
-          html: message.replace(/\n/g, '<br>'),
-        });
-
-        results.push({ recipient: recipient.email, success: true, messageId: info.messageId });
-      } catch (error) {
-        console.error(`Error sending email to ${recipient.email}:`, error);
-        results.push({ recipient: recipient.email, success: false, error: error.message });
-      }
+    let subject;
+    if (budgetNum > 10000000) {
+      subject = `🚨 Tarea de Alto Presupuesto - ${taskTitle}`;
+    } else if (budgetNum > 5000000) {
+      subject = `⚠️ Tarea Requiere Aprobación - ${taskTitle}`;
+    } else {
+      subject = `📋 Nueva Tarea - ${taskTitle}`;
     }
 
-    res.json({
+    const reqName = requesterName || 'N/A';
+    let message;
+    if (budgetNum > 10000000) {
+      message = `Se ha creado una tarea con presupuesto de $${budgetNum.toLocaleString('es-CO')} que requiere su revisión y aprobación.\n\nTarea: ${taskTitle}\nSolicitante: ${reqName}\n\nPor favor, revise la tarea en el sistema.`;
+    } else if (budgetNum > 5000000) {
+      message = `Se ha creado una tarea con presupuesto de $${budgetNum.toLocaleString('es-CO')} que requiere su aprobación.\n\nTarea: ${taskTitle}\nSolicitante: ${reqName}\n\nPor favor, revise la tarea en el sistema.`;
+    } else {
+      message = `Se ha creado una nueva tarea con presupuesto de $${budgetNum.toLocaleString('es-CO')}.\n\nTarea: ${taskTitle}\nSolicitante: ${reqName}\n\nPuede revisar la tarea en el sistema.`;
+    }
+
+    // Responder de inmediato para evitar 504; envío en segundo plano
+    res.status(202).json({
       success: true,
-      results,
-      message: 'Notification emails sent',
+      message: 'Notificaciones en cola',
+    });
+
+    // Enviar correos en segundo plano (sin bloquear la respuesta)
+    const baseOptions = {
+      from: 'fradurgo19@gmail.com',
+      subject,
+      text: message,
+      html: message.replaceAll('\n', '<br>'),
+    };
+    setImmediate(() => {
+      Promise.all(
+        recipients.map((r) =>
+          sendMailWithTimeout({ ...baseOptions, to: r.email }).then(
+            (info) => ({ recipient: r.email, success: true, messageId: info.messageId }),
+            (err) => {
+              console.error(`Error sending email to ${r.email}:`, err?.message || err);
+              return { recipient: r.email, success: false, error: err?.message || 'Unknown error' };
+            }
+          )
+        )
+      ).catch((err) => console.error('Error sending task-budget emails:', err));
     });
   } catch (error) {
     console.error('Error sending task notifications:', error);
@@ -125,9 +143,7 @@ router.post('/cut-approval', authenticateToken, async (req, res) => {
 
     const cutValueNum = Number.parseFloat(String(cutValue || 0));
     
-    // Siempre enviar a Edison primero
     const edisonEmail = 'infraestructura@partequipos.com';
-    const edisonName = 'EDISON VALENCIA';
 
     // Preparar HTML con fotos
     let photosHTML = '';
@@ -160,7 +176,7 @@ router.post('/cut-approval', authenticateToken, async (req, res) => {
         from: 'fradurgo19@gmail.com',
         to: edisonEmail,
         subject: edisonSubject,
-        text: edisonMessage.replace(/<[^>]*>/g, ''),
+        text: edisonMessage.replaceAll(/<[^>]*>/g, ''),
         html: `
           <div style="font-family: Arial, sans-serif; padding: 20px;">
             <h2 style="color: #cf1b22;">Solicitud de Aprobación de Corte</h2>
@@ -211,41 +227,25 @@ router.post('/cut-edison-approved', authenticateToken, async (req, res) => {
     }
 
     const cutValueNum = Number.parseFloat(String(cutValue || 0));
-    const recipients = [];
+    const felipe = { email: 'fbustamante@partequipos.com', name: 'ANDRES FELIPE BUSTAMANTE CESPEDES' };
+    const recipients = cutValueNum > 10000000
+      ? [felipe, { email: 'pedro.cano@partequipos.com', name: 'Pedro Cano' }, { email: 'claudia.cano@partequipos.com', name: 'Claudia Cano' }]
+      : [felipe];
 
-    // Siempre notificar a Felipe
-    recipients.push({ email: 'fbustamante@partequipos.com', name: 'ANDRES FELIPE BUSTAMANTE CESPEDES' });
-
-    // Si el valor supera 10M, también notificar a Pedro y Claudia
-    if (cutValueNum > 10000000) {
-      recipients.push({ email: 'pedro.cano@partequipos.com', name: 'Pedro Cano' });
-      recipients.push({ email: 'claudia.cano@partequipos.com', name: 'Claudia Cano' });
-    }
+    const isHighValue = cutValueNum > 10000000;
+    const subject = isHighValue
+      ? `🚨 Corte de Alto Valor Aprobado por Edison - ${cutTitle}`
+      : `✅ Corte Aprobado por Edison - ${cutTitle}`;
+    const taskLine = taskTitle ? `Tarea Asociada: ${taskTitle}` : '';
+    const message = isHighValue
+      ? `Edison ha aprobado y firmado un corte con valor de $${cutValueNum.toLocaleString('es-CO')} que requiere su revisión final.\n\nCorte: ${cutTitle}\nSede: ${siteName || 'N/A'}\n${taskLine}\n\nPor favor, revise y apruebe el corte en el sistema.`
+      : `Edison ha aprobado y firmado un corte que requiere su revisión.\n\nCorte: ${cutTitle}\nSede: ${siteName || 'N/A'}\n${taskLine}\nValor: $${cutValueNum.toLocaleString('es-CO')}\n\nPor favor, revise y apruebe el corte en el sistema.`;
+    const headingHtml = isHighValue ? '🚨 Corte de Alto Valor' : '✅ Corte Aprobado';
+    const taskLi = taskTitle ? `<li><strong>Tarea Asociada:</strong> ${taskTitle}</li>` : '';
 
     const results = [];
     for (const recipient of recipients) {
       try {
-        const subject = cutValueNum > 10000000
-          ? `🚨 Corte de Alto Valor Aprobado por Edison - ${cutTitle}`
-          : `✅ Corte Aprobado por Edison - ${cutTitle}`;
-
-        const message = cutValueNum > 10000000
-          ? `Edison ha aprobado y firmado un corte con valor de $${cutValueNum.toLocaleString('es-CO')} que requiere su revisión final.
-
-Corte: ${cutTitle}
-Sede: ${siteName || 'N/A'}
-${taskTitle ? `Tarea Asociada: ${taskTitle}` : ''}
-
-Por favor, revise y apruebe el corte en el sistema.`
-          : `Edison ha aprobado y firmado un corte que requiere su revisión.
-
-Corte: ${cutTitle}
-Sede: ${siteName || 'N/A'}
-${taskTitle ? `Tarea Asociada: ${taskTitle}` : ''}
-Valor: $${cutValueNum.toLocaleString('es-CO')}
-
-Por favor, revise y apruebe el corte en el sistema.`;
-
         const info = await transporter.sendMail({
           from: 'fradurgo19@gmail.com',
           to: recipient.email,
@@ -253,28 +253,22 @@ Por favor, revise y apruebe el corte en el sistema.`;
           text: message,
           html: `
             <div style="font-family: Arial, sans-serif; padding: 20px;">
-              <h2 style="color: #cf1b22;">${cutValueNum > 10000000 ? '🚨 Corte de Alto Valor' : '✅ Corte Aprobado'}</h2>
+              <h2 style="color: #cf1b22;">${headingHtml}</h2>
               <p>Edison ha aprobado y firmado un corte que requiere su revisión.</p>
-              
               <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-left: 4px solid #cf1b22;">
                 <h3>Información del Corte:</h3>
                 <ul>
                   <li><strong>Corte:</strong> ${cutTitle}</li>
                   <li><strong>Sede:</strong> ${siteName || 'N/A'}</li>
-                  ${taskTitle ? `<li><strong>Tarea Asociada:</strong> ${taskTitle}</li>` : ''}
+                  ${taskLi}
                   <li><strong>Valor:</strong> $${cutValueNum.toLocaleString('es-CO')}</li>
                 </ul>
               </div>
-
               <p>Por favor, revise y apruebe el corte en el sistema.</p>
-
-              <p style="margin-top: 30px; color: #666; font-size: 12px;">
-                Este es un correo automático del sistema de gestión de infraestructura.
-              </p>
+              <p style="margin-top: 30px; color: #666; font-size: 12px;">Este es un correo automático del sistema de gestión de infraestructura.</p>
             </div>
           `,
         });
-
         results.push({ recipient: recipient.email, success: true, messageId: info.messageId });
       } catch (error) {
         console.error(`Error sending email to ${recipient.email}:`, error);
@@ -303,7 +297,6 @@ router.post('/quotation-comparative', authenticateToken, async (req, res) => {
     }
 
     const felipeEmail = 'fbustamante@partequipos.com';
-    const felipeName = 'ANDRES FELIPE BUSTAMANTE CESPEDES';
 
     // Preparar información de comparativos
     let comparativesHTML = '';
@@ -342,7 +335,7 @@ router.post('/quotation-comparative', authenticateToken, async (req, res) => {
       
       Se ha generado un PDF comparativo con el análisis detallado de las tres cotizaciones.
       
-      ${comparativesHTML.replace(/<[^>]*>/g, '')}
+      ${comparativesHTML.replaceAll(/<[^>]*>/g, '')}
 
       Por favor, revise el PDF adjunto en el sistema o descárguelo desde el siguiente enlace:
       ${pdfUrl}
