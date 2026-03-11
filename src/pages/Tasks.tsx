@@ -113,7 +113,8 @@ export const Tasks = () => {
       });
     } catch (error) {
       console.error('Error al agregar marca de agua:', error);
-      alert('Error al procesar la foto');
+      const message = error instanceof Error ? error.message : 'Error al procesar la foto';
+      alert(message);
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) {
@@ -702,7 +703,8 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
       }));
     } catch (error) {
       console.error('Error al agregar marca de agua:', error);
-      alert('Error al procesar la foto');
+      const message = error instanceof Error ? error.message : 'Error al procesar la foto';
+      alert(message);
     } finally {
       setUploadingPhoto(false);
       setActiveDateField(null);

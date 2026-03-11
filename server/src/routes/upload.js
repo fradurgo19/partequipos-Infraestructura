@@ -5,7 +5,11 @@ import { supabase } from '../index.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (por debajo del límite de Vercel)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_SIZE },
+});
 
 // Upload file to Supabase Storage
 router.post('/file', authenticateToken, upload.single('file'), async (req, res) => {
@@ -18,7 +22,7 @@ router.post('/file', authenticateToken, upload.single('file'), async (req, res) 
     const fileExt = req.file.originalname.split('.').pop();
     const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-    const { data, error } = await supabase.storage.from(bucket).upload(fileName, req.file.buffer, {
+    const { error } = await supabase.storage.from(bucket).upload(fileName, req.file.buffer, {
       contentType: req.file.mimetype,
       upsert: false,
     });
@@ -44,29 +48,41 @@ router.post('/file', authenticateToken, upload.single('file'), async (req, res) 
 });
 
 // Upload and watermark image
-router.post('/image/watermark', authenticateToken, upload.single('image'), async (req, res) => {
+router.post('/image/watermark', authenticateToken, (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err?.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'La imagen supera el tamaño máximo (4 MB)' });
+    }
+    if (err) return next(err);
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image provided' });
     }
 
-    const { bucket = 'images', folder = 'watermarked' } = req.body;
+    const { bucket = 'general', folder = 'watermarked' } = req.body || {};
     const LOGO_URL = 'https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png';
 
-    // Download logo
+    // Download logo (con timeout para no bloquear)
     let logoBuffer;
     try {
-      const logoResponse = await fetch(LOGO_URL);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const logoResponse = await fetch(LOGO_URL, { signal: controller.signal });
+      clearTimeout(timeoutId);
       logoBuffer = Buffer.from(await logoResponse.arrayBuffer());
     } catch (error) {
-      console.error('Error downloading logo:', error);
-      // If logo fails, continue without it
+      if (error.name !== 'AbortError') console.error('Error downloading logo:', error);
+      // Si falla o timeout, continuar sin logo
     }
 
-    // Get image metadata
+    // Get image metadata (con fallback si width no viene)
     const image = sharp(req.file.buffer);
     const metadata = await image.metadata();
-    const logoSize = Math.floor(metadata.width * 0.1); // 10% of image width
+    const width = metadata.width && Number.isFinite(metadata.width) ? metadata.width : 800;
+    const logoSize = Math.max(20, Math.min(120, Math.floor(width * 0.1)));
 
     // Create date text
     const now = new Date();
@@ -133,7 +149,7 @@ router.post('/image/watermark', authenticateToken, upload.single('image'), async
     const fileExt = 'jpg';
     const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from(bucket)
       .upload(fileName, watermarkedImage, {
         contentType: 'image/jpeg',
@@ -142,7 +158,8 @@ router.post('/image/watermark', authenticateToken, upload.single('image'), async
 
     if (error) {
       console.error('Watermark upload error:', error);
-      return res.status(500).json({ error: 'Failed to upload watermarked image' });
+      const message = error.message || 'Error al subir la imagen con marca de agua';
+      return res.status(500).json({ error: message });
     }
 
     const {
@@ -156,7 +173,8 @@ router.post('/image/watermark', authenticateToken, upload.single('image'), async
     });
   } catch (error) {
     console.error('Watermark error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    const message = error.message || 'Error al procesar la imagen';
+    res.status(500).json({ error: message });
   }
 });
 

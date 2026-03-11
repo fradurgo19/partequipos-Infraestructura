@@ -28,6 +28,17 @@ const SPECIALTIES = [
   'Otro'
 ];
 
+/** Normaliza specialty a array (API/Supabase puede devolver string o jsonb). */
+function normalizeSpecialty(specialty: unknown): string[] {
+  if (Array.isArray(specialty)) {
+    return specialty.filter((s): s is string => typeof s === 'string');
+  }
+  if (typeof specialty === 'string' && specialty.trim()) {
+    return [specialty.trim()];
+  }
+  return [];
+}
+
 export const Contractors = () => {
   const { profile } = useAuth();
   const [contractors, setContractors] = useState<Contractor[]>([]);
@@ -109,7 +120,7 @@ export const Contractors = () => {
       contact_name: contractor.contact_name,
       email: contractor.email,
       phone: contractor.phone,
-      specialty: contractor.specialty || [],
+      specialty: normalizeSpecialty(contractor.specialty),
       rating: contractor.rating?.toString() || '',
       nit: contractor.nit || '',
       address: contractor.address || '',
@@ -196,7 +207,9 @@ export const Contractors = () => {
 
       {/* Lista de contratistas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-        {contractors.map((contractor) => (
+        {contractors.map((contractor) => {
+          const specs = normalizeSpecialty(contractor.specialty);
+          return (
           <Card key={contractor.id} hover className="border-l-4 border-blue-500">
             <div className="space-y-3">
               <div className="flex items-start justify-between">
@@ -267,18 +280,19 @@ export const Contractors = () => {
                 )}
               </div>
 
-              {contractor.specialty && contractor.specialty.length > 0 && (
+              {specs.length > 0 ? (
                 <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-200">
-                  {contractor.specialty.map((spec) => (
+                  {specs.map((spec) => (
                     <Badge key={spec} variant="default" size="sm">
                       {spec}
                     </Badge>
                   ))}
                 </div>
-              )}
+              ) : null}
             </div>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {contractors.length === 0 && (
