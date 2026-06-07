@@ -544,13 +544,17 @@ export const Sites = () => {
             </h3>
             
             <FileUpload
+              multiple
+              compressImages
+              folder="uploads"
+              accept="image/*"
+              uploadLabel="Seleccionar fotos"
               onUploadComplete={(urls: string[]) => {
                 setFormData({
                   ...formData,
                   photos_urls: [...formData.photos_urls, ...urls],
                 });
               }}
-              accept="image/*"
             />
             
             {formData.photos_urls.length > 0 && (

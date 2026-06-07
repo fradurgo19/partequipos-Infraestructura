@@ -1,4 +1,24 @@
 import { supabase } from '../lib/supabase';
+import { compressImageFile, isImageFile } from './imageCompression';
+
+const uniqueStoragePath = (folder: string, extension: string): string =>
+  `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${extension}`;
+
+export interface UploadOptions {
+  compressImages?: boolean;
+}
+
+const prepareFile = async (file: File, compressImages?: boolean): Promise<File> => {
+  if (!compressImages || !isImageFile(file)) {
+    return file;
+  }
+  try {
+    return await compressImageFile(file);
+  } catch (error) {
+    console.warn('Compresión omitida, se sube original:', file.name, error);
+    return file;
+  }
+};
 
 /**
  * Upload file to Supabase Storage
@@ -6,18 +26,19 @@ import { supabase } from '../lib/supabase';
 export const uploadFile = async (
   bucket: string,
   file: File,
-  path: string
+  path: string,
+  options?: UploadOptions
 ): Promise<{ url: string; path: string } | null> => {
   try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${path}/${Date.now()}.${fileExt}`;
+    const prepared = await prepareFile(file, options?.compressImages);
+    const ext = prepared.type === 'image/jpeg' ? 'jpg' : prepared.name.split('.').pop() || 'bin';
+    const fileName = uniqueStoragePath(path, ext);
 
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+    const { error } = await supabase.storage.from(bucket).upload(fileName, prepared, {
+      contentType: prepared.type || 'application/octet-stream',
+      cacheControl: '3600',
+      upsert: false,
+    });
 
     if (error) throw error;
 
@@ -41,9 +62,10 @@ export const uploadFile = async (
 export const uploadFiles = async (
   bucket: string,
   files: File[],
-  path: string
+  path: string,
+  options?: UploadOptions
 ): Promise<string[]> => {
-  const uploadPromises = files.map((file) => uploadFile(bucket, file, path));
+  const uploadPromises = files.map((file) => uploadFile(bucket, file, path, options));
   const results = await Promise.all(uploadPromises);
   return results.filter((r): r is { url: string; path: string } => r !== null).map((r) => r.url);
 };
