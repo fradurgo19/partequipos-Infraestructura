@@ -14,6 +14,47 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Site, Task } from '../types';
 
+const parseCountField = (value: string): number => {
+  if (!value.trim()) return 0;
+  const n = Number.parseInt(value, 10);
+  return Number.isNaN(n) ? 0 : n;
+};
+
+/** Convierte network_info (JSONB) a texto para el formulario. */
+const networkInfoToText = (value: Site['network_info']): string => {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && 'description' in value && value.description != null) {
+    return String(value.description);
+  }
+  return '';
+};
+
+/** Guarda la descripción de redes como JSONB sin exigir JSON manual. */
+const textToNetworkInfo = (text: string): { description: string } | null => {
+  const trimmed = text.trim();
+  return trimmed ? { description: trimmed } : null;
+};
+
+const emptySiteForm = () => ({
+  name: '',
+  location: '',
+  city: '',
+  google_maps_url: '',
+  area_to_paint: '',
+  urinals_count: '',
+  bathrooms_count: '',
+  air_conditioners_count: '',
+  water_tanks_count: '',
+  water_pumps_count: '',
+  rci_pumps_count: '',
+  electrical_plants_count: '',
+  characteristics: '',
+  photos_urls: [] as string[],
+  blueprint_urls: [] as string[],
+  network_info: '',
+});
+
 export const Sites = () => {
   const { profile } = useAuth();
   const [sites, setSites] = useState<Site[]>([]);
@@ -24,19 +65,7 @@ export const Sites = () => {
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'photos' | 'blueprints' | 'tasks' | 'stats' | 'demand'>('general');
   const [siteTasks, setSiteTasks] = useState<Task[]>([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    location: '',
-    latitude: '',
-    longitude: '',
-    area_to_paint: '',
-    bathrooms_count: '',
-    walls_count: '',
-    characteristics: '',
-    photos_urls: [] as string[],
-    blueprint_urls: [] as string[],
-    network_info: '',
-  });
+  const [formData, setFormData] = useState(emptySiteForm());
 
   useEffect(() => {
     loadSites();
@@ -86,78 +115,82 @@ export const Sites = () => {
     e.preventDefault();
     if (!profile) return;
 
-    const coordinates = formData.latitude && formData.longitude
-      ? { lat: Number.parseFloat(formData.latitude), lng: Number.parseFloat(formData.longitude) }
-      : null;
-
-    const siteData = {
+    const siteData: Record<string, unknown> = {
       name: formData.name,
       location: formData.location,
-      coordinates,
+      city: formData.city.trim() || null,
+      google_maps_url: formData.google_maps_url.trim() || null,
       area_to_paint: formData.area_to_paint ? Number.parseFloat(formData.area_to_paint) : null,
-      bathrooms_count: formData.bathrooms_count ? Number.parseInt(formData.bathrooms_count, 10) : 0,
-      walls_count: formData.walls_count ? Number.parseInt(formData.walls_count, 10) : 0,
+      urinals_count: parseCountField(formData.urinals_count),
+      bathrooms_count: parseCountField(formData.bathrooms_count),
+      air_conditioners_count: parseCountField(formData.air_conditioners_count),
+      water_tanks_count: parseCountField(formData.water_tanks_count),
+      water_pumps_count: parseCountField(formData.water_pumps_count),
+      rci_pumps_count: parseCountField(formData.rci_pumps_count),
+      electrical_plants_count: parseCountField(formData.electrical_plants_count),
       characteristics: formData.characteristics,
       photos_urls: formData.photos_urls,
       blueprint_urls: formData.blueprint_urls,
-      network_info: formData.network_info ? JSON.parse(formData.network_info) : null,
-      created_by: profile.id,
+      network_info: textToNetworkInfo(formData.network_info),
     };
 
     if (editingSite) {
+      siteData.coordinates = editingSite.coordinates ?? null;
       const { error } = await supabase
         .from('sites')
         .update(siteData)
         .eq('id', editingSite.id);
 
-      if (!error) {
-        setShowModal(false);
-        resetForm();
-        loadSites();
+      if (error) {
+        console.error('Error al actualizar sede:', error);
+        alert(error.message || 'No se pudo actualizar la sede');
+        return;
       }
+      setShowModal(false);
+      resetForm();
+      loadSites();
     } else {
+      siteData.coordinates = null;
+      siteData.created_by = profile.id;
       const { error } = await supabase.from('sites').insert([siteData]);
 
-      if (!error) {
-        setShowModal(false);
-        resetForm();
-        loadSites();
+      if (error) {
+        console.error('Error al crear sede:', error);
+        alert(error.message || 'No se pudo crear la sede');
+        return;
       }
+      setShowModal(false);
+      resetForm();
+      loadSites();
     }
   };
 
   const handleEdit = (site: Site) => {
     setEditingSite(site);
     setFormData({
+      ...emptySiteForm(),
       name: site.name,
       location: site.location,
-      latitude: site.coordinates?.lat?.toString() || '',
-      longitude: site.coordinates?.lng?.toString() || '',
+      city: site.city || '',
+      google_maps_url: site.google_maps_url || '',
       area_to_paint: site.area_to_paint?.toString() || '',
+      urinals_count: site.urinals_count?.toString() || '',
       bathrooms_count: site.bathrooms_count?.toString() || '',
-      walls_count: site.walls_count?.toString() || '',
+      air_conditioners_count: site.air_conditioners_count?.toString() || '',
+      water_tanks_count: site.water_tanks_count?.toString() || '',
+      water_pumps_count: site.water_pumps_count?.toString() || '',
+      rci_pumps_count: site.rci_pumps_count?.toString() || '',
+      electrical_plants_count: site.electrical_plants_count?.toString() || '',
       characteristics: site.characteristics || '',
       photos_urls: site.photos_urls || [],
       blueprint_urls: site.blueprint_urls || [],
-      network_info: site.network_info ? JSON.stringify(site.network_info, null, 2) : '',
+      network_info: networkInfoToText(site.network_info),
     });
     setShowModal(true);
   };
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      location: '',
-      latitude: '',
-      longitude: '',
-      area_to_paint: '',
-      bathrooms_count: '',
-      walls_count: '',
-      characteristics: '',
-      photos_urls: [],
-      blueprint_urls: [],
-      network_info: '',
-    });
+    setFormData(emptySiteForm());
     setEditingSite(null);
   };
 
@@ -291,10 +324,10 @@ export const Sites = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
-                  <Building2 className="w-4 h-4 text-gray-500" />
+                  <MapPin className="w-4 h-4 text-green-600" />
                   <div>
-                    <p className="text-gray-500">Paredes</p>
-                    <p className="font-semibold text-[#50504f]">{site.walls_count || 0}</p>
+                    <p className="text-gray-500">Ciudad</p>
+                    <p className="font-semibold text-[#50504f] truncate">{site.city || '—'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 bg-gray-50 p-2 rounded">
@@ -382,45 +415,32 @@ export const Sites = () => {
               fullWidth
               rows={3}
             />
+
+            <Input
+              label="Ciudad"
+              placeholder="Ej: Bogotá"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              fullWidth
+            />
+
+            <Input
+              label="Ubicación en Google Maps"
+              placeholder="Enlace de Google Maps o coordenadas"
+              value={formData.google_maps_url}
+              onChange={(e) => setFormData({ ...formData, google_maps_url: e.target.value })}
+              fullWidth
+            />
           </div>
 
-          {/* Coordenadas */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-[#cf1b22] flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              Coordenadas GPS
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Latitud"
-                type="number"
-                step="any"
-                placeholder="4.6097100"
-                value={formData.latitude}
-                onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                fullWidth
-              />
-              <Input
-                label="Longitud"
-                type="number"
-                step="any"
-                placeholder="-74.0817500"
-                value={formData.longitude}
-                onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                fullWidth
-              />
-            </div>
-          </div>
-
-          {/* Métricas */}
+          {/* Métricas e infraestructura */}
           <div className="space-y-4">
             <h3 className="font-semibold text-[#cf1b22] flex items-center gap-2">
               <Square className="w-5 h-5" />
-              Métricas de la Sede
+              Métricas e Infraestructura
             </h3>
             
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <Input
                 label="Área a Pintar (m²)"
                 type="number"
@@ -431,19 +451,66 @@ export const Sites = () => {
                 fullWidth
               />
               <Input
-                label="Cantidad de Baños"
+                label="Orinales (cantidad)"
                 type="number"
+                min="0"
+                placeholder="0"
+                value={formData.urinals_count}
+                onChange={(e) => setFormData({ ...formData, urinals_count: e.target.value })}
+                fullWidth
+              />
+              <Input
+                label="Baños (cantidad)"
+                type="number"
+                min="0"
                 placeholder="0"
                 value={formData.bathrooms_count}
                 onChange={(e) => setFormData({ ...formData, bathrooms_count: e.target.value })}
                 fullWidth
               />
               <Input
-                label="Cantidad de Paredes"
+                label="Aires acondicionados (cantidad)"
                 type="number"
+                min="0"
                 placeholder="0"
-                value={formData.walls_count}
-                onChange={(e) => setFormData({ ...formData, walls_count: e.target.value })}
+                value={formData.air_conditioners_count}
+                onChange={(e) => setFormData({ ...formData, air_conditioners_count: e.target.value })}
+                fullWidth
+              />
+              <Input
+                label="Tanques de agua (cantidad)"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={formData.water_tanks_count}
+                onChange={(e) => setFormData({ ...formData, water_tanks_count: e.target.value })}
+                fullWidth
+              />
+              <Input
+                label="Bombas de agua (cantidad)"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={formData.water_pumps_count}
+                onChange={(e) => setFormData({ ...formData, water_pumps_count: e.target.value })}
+                fullWidth
+              />
+              <Input
+                label="Bombas RCI (cantidad)"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={formData.rci_pumps_count}
+                onChange={(e) => setFormData({ ...formData, rci_pumps_count: e.target.value })}
+                fullWidth
+              />
+              <Input
+                label="Plantas eléctricas (cantidad)"
+                type="number"
+                min="0"
+                placeholder="0"
+                value={formData.electrical_plants_count}
+                onChange={(e) => setFormData({ ...formData, electrical_plants_count: e.target.value })}
                 fullWidth
               />
             </div>
@@ -673,7 +740,7 @@ export const Sites = () => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     <div className="bg-gradient-to-br from-red-50 to-white border border-red-200 p-4 rounded-lg text-center">
                       <Square className="w-6 h-6 text-[#cf1b22] mx-auto mb-2" />
                       <p className="text-xs text-gray-500 mb-1">Área a Pintar</p>
@@ -682,23 +749,74 @@ export const Sites = () => {
                     </div>
                     <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 p-4 rounded-lg text-center">
                       <Droplet className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500 mb-1">Orinales</p>
+                      <p className="text-2xl font-bold text-blue-600">{selectedSite.urinals_count || 0}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 p-4 rounded-lg text-center">
+                      <Droplet className="w-6 h-6 text-blue-600 mx-auto mb-2" />
                       <p className="text-xs text-gray-500 mb-1">Baños</p>
                       <p className="text-2xl font-bold text-blue-600">{selectedSite.bathrooms_count || 0}</p>
                     </div>
-                    <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 p-4 rounded-lg text-center">
-                      <Building2 className="w-6 h-6 text-[#50504f] mx-auto mb-2" />
-                      <p className="text-xs text-gray-500 mb-1">Paredes</p>
-                      <p className="text-2xl font-bold text-[#50504f]">{selectedSite.walls_count || 0}</p>
+                    <div className="bg-gradient-to-br from-cyan-50 to-white border border-cyan-200 p-4 rounded-lg text-center">
+                      <Building2 className="w-6 h-6 text-cyan-600 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500 mb-1">Aires acondicionados</p>
+                      <p className="text-2xl font-bold text-cyan-600">{selectedSite.air_conditioners_count || 0}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-sky-50 to-white border border-sky-200 p-4 rounded-lg text-center">
+                      <Droplet className="w-6 h-6 text-sky-600 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500 mb-1">Tanques de agua</p>
+                      <p className="text-2xl font-bold text-sky-600">{selectedSite.water_tanks_count || 0}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-200 p-4 rounded-lg text-center">
+                      <Droplet className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500 mb-1">Bombas de agua</p>
+                      <p className="text-2xl font-bold text-indigo-600">{selectedSite.water_pumps_count || 0}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-violet-50 to-white border border-violet-200 p-4 rounded-lg text-center">
+                      <Droplet className="w-6 h-6 text-violet-600 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500 mb-1">Bombas RCI</p>
+                      <p className="text-2xl font-bold text-violet-600">{selectedSite.rci_pumps_count || 0}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 p-4 rounded-lg text-center">
+                      <Network className="w-6 h-6 text-amber-600 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500 mb-1">Plantas eléctricas</p>
+                      <p className="text-2xl font-bold text-amber-600">{selectedSite.electrical_plants_count || 0}</p>
                     </div>
                   </div>
 
-                  {selectedSite.network_info && (
+                  {(selectedSite.city || selectedSite.google_maps_url) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {selectedSite.city && (
+                        <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Ciudad</p>
+                          <p className="font-semibold text-[#50504f]">{selectedSite.city}</p>
+                        </div>
+                      )}
+                      {selectedSite.google_maps_url && (
+                        <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                          <p className="text-xs text-gray-500 mb-1">Google Maps</p>
+                          <a
+                            href={selectedSite.google_maps_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-[#cf1b22] hover:underline break-all"
+                          >
+                            Ver ubicación
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {networkInfoToText(selectedSite.network_info) && (
                     <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Network className="w-5 h-5 text-purple-600" />
                         <p className="text-sm text-purple-700 font-medium">INFORMACIÓN DE REDES</p>
                       </div>
-                      <p className="text-sm text-[#50504f] whitespace-pre-line">{selectedSite.network_info}</p>
+                      <p className="text-sm text-[#50504f] whitespace-pre-line">
+                        {networkInfoToText(selectedSite.network_info)}
+                      </p>
                     </div>
                   )}
 
