@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Filter, Search, Camera, Clock, CheckCircle, FileText, Calendar } from 'lucide-react';
+import { Plus, Filter, Search, Camera, Clock, CheckCircle, FileText, Calendar, Eye, Edit } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -7,11 +7,17 @@ import { Select } from '../atoms/Select';
 import { Textarea } from '../atoms/Textarea';
 import { Badge } from '../atoms/Badge';
 import { Modal } from '../molecules/Modal';
-import { StatusIndicator } from '../molecules/StatusIndicator';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { Task, TaskStatus, Site, User } from '../types';
+import { Task, TaskStatus, TaskPriority, Site, User } from '../types';
 import { addWatermarkToImage } from '../services/watermark';
+import { PriorityBadge } from '../molecules/PriorityBadge';
+import {
+  PRIORITY_OPTIONS,
+  comparePriority,
+  getPriorityRowClass,
+  normalizePriority,
+} from '../constants/taskPriority';
 
 // Tipos de tarea y áreas solicitantes
 const TASK_TYPES = [
@@ -33,32 +39,112 @@ const REQUESTING_AREAS = [
   'Bienes inmuebles'
 ];
 
+type TaskRow = Task & {
+  requester?: { id: string; full_name: string; role: string };
+  assignee?: { id: string; full_name: string; role: string };
+  responsible?: { id: string; full_name: string };
+  site?: { id: string; name: string; location: string };
+};
+
+const STATUS_LABELS: Record<TaskStatus, string> = {
+  pending: 'Pendiente',
+  in_progress: 'En progreso',
+  completed: 'Completado',
+  cancelled: 'Cancelada',
+};
+
+const formatDate = (value?: string | null): string =>
+  value ? new Date(value).toLocaleDateString('es-CO') : '—';
+
+const formatCurrency = (value?: number | null): string =>
+  value == null ? '—' : `$${value.toLocaleString('es-CO')}`;
+
+const getRequesterName = (task: TaskRow): string =>
+  task.requester_name || task.requester?.full_name || '—';
+
+const getSiteName = (task: TaskRow): string => task.site?.name || '—';
+
+const getResponsibleName = (task: TaskRow): string => task.responsible?.full_name || '—';
+
+const buildTaskPayload = (
+  formData: ReturnType<typeof emptyTaskForm>,
+  infrastructureUserId?: string
+) => ({
+  title: formData.title,
+  description: formData.description,
+  task_type: formData.task_type,
+  requesting_area: formData.requesting_area,
+  site_id: formData.site_id || null,
+  project_name: formData.project_name || null,
+  requester_name: formData.requester_name,
+  assignee_id: infrastructureUserId || null,
+  responsible_id: formData.responsible_id || null,
+  budget_amount: formData.budget_amount ? Number.parseFloat(formData.budget_amount) : null,
+  priority: formData.priority,
+  photo_urls: formData.photo_urls,
+});
+
+const sendTaskBudgetNotification = async (
+  taskTitle: string,
+  budget: number,
+  taskId: string,
+  requesterName: string
+): Promise<void> => {
+  if (budget <= 0) return;
+  try {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const token = currentSession?.access_token;
+    const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
+    const res = await fetch(`${apiBase}/notifications/task-budget`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify({ taskTitle, budget, taskId, requesterName }),
+    });
+    if (!res.ok && res.status !== 202) {
+      console.error('Notificaciones task-budget:', res.status);
+    }
+  } catch (err) {
+    console.error('Error enviando notificaciones:', err);
+  }
+};
+
+const emptyTaskForm = () => ({
+  title: '',
+  description: '',
+  task_type: '',
+  requesting_area: '',
+  site_id: '',
+  project_name: '',
+  requester_name: '',
+  assignee_id: '',
+  responsible_id: '',
+  budget_amount: '',
+  priority: 'medium' as TaskPriority,
+  photo_urls: [] as string[],
+});
+
 export const Tasks = () => {
   const { profile, session } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [infrastructureUsers, setInfrastructureUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    task_type: '',
-    requesting_area: '',
-    site_id: '',
-    project_name: '',
-    requester_name: '',
-    assignee_id: '',
-    responsible_id: '',
-    budget_amount: '',
-    photo_urls: [] as string[],
-  });
+  const [formData, setFormData] = useState(emptyTaskForm());
+
+  const canEdit = profile?.role === 'admin';
 
   useEffect(() => {
     loadData();
@@ -74,6 +160,7 @@ export const Tasks = () => {
           *,
           requester:profiles!tasks_requester_id_fkey(id, full_name, role),
           assignee:profiles!tasks_assignee_id_fkey(id, full_name, role),
+          responsible:profiles!tasks_responsible_id_fkey(id, full_name),
           site:sites(id, name, location)
         `)
         .order('created_at', { ascending: false }),
@@ -82,7 +169,7 @@ export const Tasks = () => {
     ]);
 
     if (!tasksResult.error && tasksResult.data) {
-      setTasks(tasksResult.data);
+      setTasks(tasksResult.data as TaskRow[]);
     }
     if (!sitesResult.error && sitesResult.data) {
       setSites(sitesResult.data);
@@ -128,73 +215,56 @@ export const Tasks = () => {
     if (!profile) return;
 
     const userId = session?.user?.id ?? profile.id;
-    const infrastructureUser = infrastructureUsers[0];
+    const taskPayload = buildTaskPayload(formData, infrastructureUsers[0]?.id);
+
+    if (editingTask) {
+      const { error } = await supabase
+        .from('tasks')
+        .update(taskPayload)
+        .eq('id', editingTask.id);
+
+      if (!error) {
+        setShowModal(false);
+        resetForm();
+        loadData();
+      }
+      return;
+    }
 
     const taskData = {
-      title: formData.title,
-      description: formData.description,
-      task_type: formData.task_type,
-      requesting_area: formData.requesting_area,
-      site_id: formData.site_id || null,
-      project_name: formData.project_name || null,
-      requester_name: formData.requester_name,
-      assignee_id: infrastructureUser?.id || null,
-      responsible_id: formData.responsible_id || null,
-      budget_amount: formData.budget_amount ? Number.parseFloat(formData.budget_amount) : null,
+      ...taskPayload,
       requester_id: profile.id,
       status: 'pending' as TaskStatus,
       request_date: new Date().toISOString().split('T')[0],
-      photo_urls: formData.photo_urls,
     };
 
     const { data, error } = await supabase.from('tasks').insert([taskData]).select().single();
 
-    if (!error && data) {
-      // Crear evento en timeline (user_id debe ser auth.uid() para RLS)
-      const { error: timelineError } = await supabase.from('task_timeline').insert([
-        {
-          task_id: data.id,
-          event_type: 'created',
-          description: `Tarea creada por ${formData.requester_name || profile.full_name}`,
-          user_id: userId,
-        },
-      ]);
-      if (timelineError) {
-        console.error('Error creando evento en timeline:', timelineError);
-      }
+    if (error || !data) return;
 
-      // Notificaciones según presupuesto (token desde sesión Supabase)
-      const budget = Number.parseFloat(formData.budget_amount || '0');
-      if (budget > 0) {
-        try {
-          const { data: { session: currentSession } } = await supabase.auth.getSession();
-          const token = currentSession?.access_token;
-          const apiBase = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api');
-          const res = await fetch(`${apiBase}/notifications/task-budget`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { Authorization: `Bearer ${token}` }),
-            },
-            body: JSON.stringify({
-              taskTitle: formData.title,
-              budget,
-              taskId: data.id,
-              requesterName: formData.requester_name || profile.full_name,
-            }),
-          });
-          if (!res.ok && res.status !== 202) {
-            console.error('Notificaciones task-budget:', res.status);
-          }
-        } catch (err) {
-          console.error('Error enviando notificaciones:', err);
-        }
-      }
-
-      setShowModal(false);
-      resetForm();
-      loadData();
+    const { error: timelineError } = await supabase.from('task_timeline').insert([
+      {
+        task_id: data.id,
+        event_type: 'created',
+        description: `Tarea creada por ${formData.requester_name || profile.full_name}`,
+        user_id: userId,
+      },
+    ]);
+    if (timelineError) {
+      console.error('Error creando evento en timeline:', timelineError);
     }
+
+    const budget = Number.parseFloat(formData.budget_amount || '0');
+    await sendTaskBudgetNotification(
+      formData.title,
+      budget,
+      data.id,
+      formData.requester_name || profile.full_name
+    );
+
+    setShowModal(false);
+    resetForm();
+    loadData();
   };
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
@@ -234,19 +304,38 @@ export const Tasks = () => {
   };
 
   const resetForm = () => {
+    setFormData(emptyTaskForm());
+    setEditingTask(null);
+  };
+
+  const openViewModal = (task: TaskRow) => {
+    setSelectedTask(task);
+    setShowViewModal(true);
+  };
+
+  const openEditModal = (task: TaskRow) => {
+    if (!canEdit) return;
+    setEditingTask(task);
     setFormData({
-      title: '',
-      description: '',
-      task_type: '',
-      requesting_area: '',
-      site_id: '',
-      project_name: '',
-      requester_name: '',
-      assignee_id: '',
-      responsible_id: '',
-      budget_amount: '',
-      photo_urls: [],
+      title: task.title,
+      description: task.description,
+      task_type: task.task_type,
+      requesting_area: task.requesting_area,
+      site_id: task.site_id ?? '',
+      project_name: task.project_name ?? '',
+      requester_name: task.requester_name ?? task.requester?.full_name ?? '',
+      assignee_id: task.assignee_id ?? '',
+      responsible_id: task.responsible_id ?? '',
+      budget_amount: task.budget_amount?.toString() ?? '',
+      priority: normalizePriority(task.priority),
+      photo_urls: task.photo_urls ?? [],
     });
+    setShowModal(true);
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setShowModal(true);
   };
 
   const handleUpdateTimeline = async (taskId: string, eventType: string, dateField: string, photoUrl?: string) => {
@@ -281,18 +370,28 @@ export const Tasks = () => {
     }
   };
 
-  const openTimelineModal = (task: Task) => {
+  const openTimelineModal = (task: TaskRow) => {
     setSelectedTask(task);
     setShowTimelineModal(true);
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const handlePriorityChange = async (taskId: string, priority: TaskPriority) => {
+    if (!canEdit) return;
+    const { error } = await supabase.from('tasks').update({ priority }).eq('id', taskId);
+    if (!error) loadData();
+  };
+
+  const filteredTasks = tasks
+    .filter((task) => {
+      const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
+      const matchesPriority =
+        filterPriority === 'all' || normalizePriority(task.priority) === filterPriority;
+      const matchesSearch =
+        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.description.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesStatus && matchesPriority && matchesSearch;
+    })
+    .sort((a, b) => comparePriority(a.priority, b.priority));
 
   if (loading) {
     return (
@@ -309,7 +408,7 @@ export const Tasks = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Tareas</h1>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">Seguimiento de tareas de mantenimiento y flujos de trabajo</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+        <Button onClick={openCreateModal} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           <span className="text-sm sm:text-base">Crear tarea</span>
         </Button>
@@ -329,8 +428,8 @@ export const Tasks = () => {
               />
             </div>
           </div>
-          <div className="flex gap-2">
-            <Filter className="text-gray-400 w-5 h-5 my-auto" />
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <Filter className="text-gray-400 w-5 h-5 hidden sm:block" />
             <Select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -342,138 +441,126 @@ export const Tasks = () => {
                 { value: 'cancelled', label: 'Cancelada' },
               ]}
             />
+            <Select
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value)}
+              options={[
+                { value: 'all', label: 'Todas las prioridades' },
+                ...PRIORITY_OPTIONS,
+              ]}
+            />
           </div>
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4">
-        {filteredTasks.map((task) => (
-          <Card key={task.id} hover>
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-lg text-[#50504f]">
-                      {task.title}
-                    </h3>
-                    <Badge variant={task.status}>{task.status.replace('_', ' ')}</Badge>
-                  </div>
-                  <p className="text-gray-600 text-sm mb-3">{task.description}</p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                    <div>
-                      <p className="text-gray-500 text-xs">Type</p>
-                      <p className="font-medium text-[#50504f]">{task.task_type}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs">Área solicitante</p>
-                      <p className="font-medium text-[#50504f]">{task.requesting_area}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs">Solicitante</p>
-                      <p className="font-medium text-[#50504f]">
-                        {task.requester_name || (task as Task & { requester?: { full_name: string } }).requester?.full_name || 'N/A'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 text-xs">Asignado a</p>
-                      <p className="font-medium text-[#50504f]">
-                        Infraestructura
-                      </p>
-                    </div>
-                    {task.project_name && (
-                      <div>
-                        <p className="text-gray-500 text-xs">Proyecto</p>
-                        <p className="font-medium text-[#50504f]">
-                          {task.project_name}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {task.budget_amount && (
-                    <div className="mt-3 inline-block bg-green-50 px-3 py-1 rounded-full">
-                      <span className="text-sm font-semibold text-green-700">
-                        Presupuesto: ${task.budget_amount.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-
-                  {task.photo_urls && Array.isArray(task.photo_urls) && task.photo_urls.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <p className="text-xs text-gray-500 mb-2">Fotos de la tarea</p>
-                      <div className="flex flex-wrap gap-2">
-                        {task.photo_urls.map((url) => (
-                          <a
-                            key={url}
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block rounded border border-gray-200 overflow-hidden hover:opacity-90 focus:ring-2 focus:ring-[#cf1b22] focus:ring-offset-1"
-                          >
-                            <img
-                              src={url}
-                              alt=""
-                              className="w-16 h-16 object-cover"
-                            />
-                          </a>
+      {filteredTasks.length > 0 ? (
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Título</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Prioridad</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase min-w-[200px]">Descripción</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Tipo</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Área</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Sede</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Proyecto</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Solicitante</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Responsable</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Estado</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Presupuesto</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">F. Solicitud</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">F. Inicio</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">F. O.S.</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">F. Aprob. Pres.</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">F. Entrega</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">F. Finalización</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Fotos</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap">Creado</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase whitespace-nowrap sticky right-0 bg-gray-50">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+              {filteredTasks.map((task) => (
+                <tr key={task.id} className={`hover:bg-gray-50 ${getPriorityRowClass(task.priority)}`}>
+                  <td className="px-3 py-3 font-medium text-[#50504f] whitespace-nowrap">{task.title}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {canEdit ? (
+                      <select
+                        value={normalizePriority(task.priority)}
+                        onChange={(e) => handlePriorityChange(task.id, e.target.value as TaskPriority)}
+                        className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#cf1b22]"
+                        aria-label={`Prioridad de ${task.title}`}
+                      >
+                        {PRIORITY_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => openTimelineModal(task)}
-                  >
-                    <Clock className="w-4 h-4 mr-1" />
-                    Línea de Tiempo
-                  </Button>
-                  {(profile?.role === 'infrastructure' ||
-                    profile?.role === 'supervision' ||
-                    profile?.role === 'admin' ||
-                    task.assignee_id === profile?.id) && (
-                    <>
-                      {task.status === 'pending' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleStatusChange(task.id, 'in_progress')}
-                        >
+                      </select>
+                    ) : (
+                      <PriorityBadge priority={task.priority} size="sm" />
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-gray-600 max-w-xs">
+                    <span className="line-clamp-2" title={task.description}>{task.description}</span>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">{task.task_type}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{task.requesting_area}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{getSiteName(task)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{task.project_name || '—'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{getRequesterName(task)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{getResponsibleName(task)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <Badge variant={task.status}>{STATUS_LABELS[task.status]}</Badge>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">{formatCurrency(task.budget_amount)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(task.request_date)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(task.start_date)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(task.service_order_date)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(task.budget_approval_date)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(task.delivery_date)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(task.completion_date)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {task.photo_urls?.length ? `${task.photo_urls.length} foto(s)` : '—'}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(task.created_at)}</td>
+                  <td className="px-3 py-3 whitespace-nowrap sticky right-0 bg-white">
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => openViewModal(task)} title="Ver detalle">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      {canEdit && (
+                        <Button size="sm" variant="ghost" onClick={() => openEditModal(task)} title="Editar">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" onClick={() => openTimelineModal(task)} title="Línea de tiempo">
+                        <Clock className="w-4 h-4" />
+                      </Button>
+                      {canEdit && task.status === 'pending' && (
+                        <Button size="sm" onClick={() => handleStatusChange(task.id, 'in_progress')}>
                           Iniciar
                         </Button>
                       )}
-                      {task.status === 'in_progress' && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleStatusChange(task.id, 'completed')}
-                        >
+                      {canEdit && task.status === 'in_progress' && (
+                        <Button size="sm" variant="secondary" onClick={() => handleStatusChange(task.id, 'completed')}>
                           Completar
                         </Button>
                       )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t">
-                <span>Creado {new Date(task.created_at).toLocaleDateString()}</span>
-                <StatusIndicator status={task.status} showLabel={false} />
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {filteredTasks.length === 0 && (
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      ) : (
         <Card>
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay tareas</h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm || filterStatus !== 'all'
+              {searchTerm || filterStatus !== 'all' || filterPriority !== 'all'
                 ? 'Prueba ajustando los filtros'
                 : 'Crea tu primera tarea para comenzar'}
             </p>
@@ -482,12 +569,78 @@ export const Tasks = () => {
       )}
 
       <Modal
+        isOpen={showViewModal}
+        onClose={() => {
+          setShowViewModal(false);
+          setSelectedTask(null);
+        }}
+        title={`Detalle de tarea - ${selectedTask?.title ?? ''}`}
+        size="xl"
+      >
+        {selectedTask && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+              <div><p className="text-gray-500 text-xs">Título</p><p className="font-medium">{selectedTask.title}</p></div>
+              <div><p className="text-gray-500 text-xs">Prioridad</p><PriorityBadge priority={selectedTask.priority} /></div>
+              <div><p className="text-gray-500 text-xs">Estado</p><Badge variant={selectedTask.status}>{STATUS_LABELS[selectedTask.status]}</Badge></div>
+              <div><p className="text-gray-500 text-xs">Tipo</p><p className="font-medium">{selectedTask.task_type}</p></div>
+              <div><p className="text-gray-500 text-xs">Área solicitante</p><p className="font-medium">{selectedTask.requesting_area}</p></div>
+              <div><p className="text-gray-500 text-xs">Sede</p><p className="font-medium">{getSiteName(selectedTask)}</p></div>
+              <div><p className="text-gray-500 text-xs">Proyecto</p><p className="font-medium">{selectedTask.project_name || '—'}</p></div>
+              <div><p className="text-gray-500 text-xs">Solicitante</p><p className="font-medium">{getRequesterName(selectedTask)}</p></div>
+              <div><p className="text-gray-500 text-xs">Asignado a</p><p className="font-medium">{selectedTask.assignee?.full_name || 'Infraestructura'}</p></div>
+              <div><p className="text-gray-500 text-xs">Responsable</p><p className="font-medium">{getResponsibleName(selectedTask)}</p></div>
+              <div><p className="text-gray-500 text-xs">Presupuesto</p><p className="font-medium">{formatCurrency(selectedTask.budget_amount)}</p></div>
+              <div><p className="text-gray-500 text-xs">Fecha solicitud</p><p className="font-medium">{formatDate(selectedTask.request_date)}</p></div>
+              <div><p className="text-gray-500 text-xs">Fecha inicio</p><p className="font-medium">{formatDate(selectedTask.start_date)}</p></div>
+              <div><p className="text-gray-500 text-xs">Fecha orden de servicio</p><p className="font-medium">{formatDate(selectedTask.service_order_date)}</p></div>
+              <div><p className="text-gray-500 text-xs">Fecha aprobación presupuesto</p><p className="font-medium">{formatDate(selectedTask.budget_approval_date)}</p></div>
+              <div><p className="text-gray-500 text-xs">Fecha entrega</p><p className="font-medium">{formatDate(selectedTask.delivery_date)}</p></div>
+              <div><p className="text-gray-500 text-xs">Fecha finalización</p><p className="font-medium">{formatDate(selectedTask.completion_date)}</p></div>
+              <div><p className="text-gray-500 text-xs">Creado</p><p className="font-medium">{formatDate(selectedTask.created_at)}</p></div>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs mb-1">Descripción</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedTask.description}</p>
+            </div>
+            {selectedTask.photo_urls && selectedTask.photo_urls.length > 0 && (
+              <div>
+                <p className="text-gray-500 text-xs mb-2">Fotos</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedTask.photo_urls.map((url) => (
+                    <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                      <img src={url} alt="" className="w-20 h-20 object-cover rounded border" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              {canEdit && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowViewModal(false);
+                    openEditModal(selectedTask);
+                  }}
+                >
+                  <Edit className="w-4 h-4 mr-1" />
+                  Editar
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => setShowViewModal(false)}>Cerrar</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
         isOpen={showModal}
         onClose={() => {
           setShowModal(false);
           resetForm();
         }}
-        title="Crear Nueva Tarea"
+        title={editingTask ? 'Editar Tarea' : 'Crear Nueva Tarea'}
         size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -505,6 +658,17 @@ export const Tasks = () => {
             placeholder="Describa la tarea en detalle"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            fullWidth
+            required
+          />
+
+          <Select
+            label="Prioridad *"
+            value={formData.priority}
+            onChange={(e) =>
+              setFormData({ ...formData, priority: e.target.value as TaskPriority })
+            }
+            options={PRIORITY_OPTIONS}
             fullWidth
             required
           />
@@ -670,7 +834,7 @@ export const Tasks = () => {
               Cancelar
             </Button>
             <Button type="submit" fullWidth>
-              Crear Tarea
+              {editingTask ? 'Guardar cambios' : 'Crear Tarea'}
             </Button>
           </div>
         </form>
@@ -687,7 +851,7 @@ export const Tasks = () => {
         size="xl"
       >
         {selectedTask && (
-          <TimelineView task={selectedTask} onUpdate={handleUpdateTimeline} />
+          <TimelineView task={selectedTask} onUpdate={handleUpdateTimeline} canEdit={canEdit} />
         )}
       </Modal>
     </div>
@@ -698,9 +862,10 @@ export const Tasks = () => {
 interface TimelineViewProps {
   task: Task;
   onUpdate: (taskId: string, eventType: string, dateField: string, photoUrl?: string) => Promise<void>;
+  canEdit: boolean;
 }
 
-const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
+const TimelineView = ({ task, onUpdate, canEdit }: TimelineViewProps) => {
   useAuth();
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -924,7 +1089,7 @@ const TimelineView = ({ task, onUpdate }: TimelineViewProps) => {
                 ) : (
                   <div className="space-y-2">
                     <p className="text-sm text-gray-600">No registrado</p>
-                    {event.canUpdate && (
+                    {event.canUpdate && canEdit && (
                       <div className="flex gap-2">
                         <Button
                           size="sm"

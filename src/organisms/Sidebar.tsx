@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   Building2,
   FileCheck,
+  Wrench,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../atoms/Button';
@@ -42,6 +43,7 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
       { id: 'internal-requests', label: 'Solicitudes Internas', icon: Send, path: '/internal-requests' },
       { id: 'quotations', label: 'Cotizaciones', icon: FileSpreadsheet, path: '/quotations' },
       { id: 'contract-tracking', label: 'Seguimiento de Contratos', icon: FileCheck, path: '/contract-tracking' },
+      { id: 'mantenimientos', label: 'Mantenimientos', icon: Wrench, path: '/mantenimientos' },
       { id: 'users', label: 'Usuarios y Roles', icon: Users, path: '/users' },
     ];
 
@@ -56,10 +58,13 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
     }
 
     if (profile?.role === 'admin' || profile?.role === 'infrastructure') {
-      return allModules;
+      if (profile?.role === 'admin') {
+        return allModules;
+      }
+      return allModules.filter((m) => m.id !== 'users' && m.id !== 'mantenimientos');
     }
 
-    return allModules.filter((m) => m.id !== 'users');
+    return allModules.filter((m) => m.id !== 'users' && m.id !== 'mantenimientos');
   };
 
   const modules = getAvailableModules();

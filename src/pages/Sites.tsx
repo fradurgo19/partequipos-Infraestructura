@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Plus, MapPin, FileText, Edit, Trash2, Camera,
   Building2, Droplet, Square, Network, History,
-  AlertCircle, CheckCircle, Clock, ClipboardList, TrendingUp
+  AlertCircle, CheckCircle, Clock, ClipboardList, TrendingUp, Download
 } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
@@ -28,6 +28,30 @@ const networkInfoToText = (value: Site['network_info']): string => {
     return String(value.description);
   }
   return '';
+};
+
+const getFileNameFromUrl = (url: string): string => {
+  const segment = url.split('/').pop() ?? 'plano';
+  return segment.split('?')[0] || 'plano';
+};
+
+const downloadBlueprint = async (url: string): Promise<void> => {
+  const fileName = getFileNameFromUrl(url);
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('No se pudo descargar el archivo');
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(blobUrl);
+  } catch {
+    globalThis.open(url, '_blank', 'noopener,noreferrer');
+  }
 };
 
 /** Guarda la descripción de redes como JSONB sin exigir JSON manual. */
@@ -877,24 +901,42 @@ export const Sites = () => {
                 <div className="space-y-4">
                   {selectedSite.blueprint_urls && selectedSite.blueprint_urls.length > 0 ? (
                     <div className="space-y-3">
-                      {selectedSite.blueprint_urls.map((url) => (
-                        <a
-                          key={url}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between bg-white border-2 border-gray-200 hover:border-[#cf1b22] p-4 rounded-lg transition-colors group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <FileText className="w-8 h-8 text-[#cf1b22]" />
-                            <div>
-                              <p className="font-semibold text-[#50504f]">{url.split('/').pop() ?? 'Plano'}</p>
-                              <p className="text-xs text-gray-500">{url.split('/').pop()}</p>
+                      {selectedSite.blueprint_urls.map((url) => {
+                        const fileName = getFileNameFromUrl(url);
+                        return (
+                          <div
+                            key={url}
+                            className="flex items-center justify-between bg-white border-2 border-gray-200 hover:border-[#cf1b22] p-4 rounded-lg transition-colors"
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <FileText className="w-8 h-8 text-[#cf1b22] flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="font-semibold text-[#50504f] truncate">{fileName}</p>
+                                <p className="text-xs text-gray-500 truncate">{url}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-medium text-gray-600 hover:text-[#cf1b22]"
+                              >
+                                Ver
+                              </a>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => downloadBlueprint(url)}
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                Descargar
+                              </Button>
                             </div>
                           </div>
-                          <span className="opacity-0 group-hover:opacity-100 text-sm font-medium text-[#cf1b22]">Ver</span>
-                        </a>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-12 bg-gray-50 rounded-lg">

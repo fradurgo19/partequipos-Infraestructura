@@ -2,6 +2,8 @@ export type UserRole = 'admin' | 'infrastructure' | 'supervision' | 'contractor'
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 
+export type TaskPriority = 'emergency' | 'high' | 'medium' | 'low';
+
 export type ServiceOrderStatus = 'draft' | 'pending_approval' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface User {
@@ -60,7 +62,9 @@ export interface Task {
   requester_name?: string;
   requester_id: string;
   assignee_id?: string;
+  responsible_id?: string;
   status: TaskStatus;
+  priority?: TaskPriority;
   budget_amount?: number;
   photo_urls?: string[];
   signature_url?: string;
@@ -239,10 +243,29 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'task' | 'service_order' | 'quotation' | 'measurement';
+  type: 'task' | 'service_order' | 'quotation' | 'measurement' | 'internal_request' | 'maintenance';
   reference_id?: string;
   read: boolean;
   created_at: string;
+}
+
+export type MaintenanceKind = 'preventive' | 'corrective';
+export type ComponentStatus = 'active' | 'inactive';
+
+export interface Maintenance {
+  id: string;
+  site_id: string;
+  component_type: string;
+  component_id: string;
+  maintenance_kind: MaintenanceKind;
+  last_maintenance_date: string;
+  next_maintenance_date: string;
+  component_status: ComponentStatus;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  site?: Pick<Site, 'id' | 'name' | 'city'>;
 }
 
 export interface PurchaseOrder {

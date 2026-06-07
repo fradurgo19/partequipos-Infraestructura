@@ -13,6 +13,7 @@ import {
   FileCheck,
   ShoppingCart,
   Building2,
+  Wrench,
 } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +31,7 @@ interface DashboardStats {
   budgetUsed: number;
   avgResponseTime: number;
   avgExecutionTime: number;
+  upcomingMaintenances: number;
 }
 
 export const Dashboard = () => {
@@ -46,11 +48,12 @@ export const Dashboard = () => {
     budgetUsed: 0,
     avgResponseTime: 0,
     avgExecutionTime: 0,
+    upcomingMaintenances: 0,
   });
   const loadStats = useCallback(async () => {
     if (!profile) return;
 
-    const [tasksResult, serviceOrdersResult, sitesResult, measurementsResult, requestsResult, usersResult] =
+    const [tasksResult, serviceOrdersResult, sitesResult, measurementsResult, requestsResult, usersResult, maintenancesResult] =
       await Promise.all([
         supabase.from('tasks').select('*', { count: 'exact', head: false }),
         supabase.from('service_orders').select('*', { count: 'exact', head: false }),
@@ -58,6 +61,9 @@ export const Dashboard = () => {
         supabase.from('measurements').select('*', { count: 'exact', head: false }),
         supabase.from('internal_requests').select('*', { count: 'exact', head: false }),
         supabase.from('profiles').select('*', { count: 'exact', head: false }),
+        profile.role === 'admin'
+          ? supabase.from('maintenances').select('next_maintenance_date, component_status')
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
     // Calcular presupuesto
@@ -87,6 +93,16 @@ export const Dashboard = () => {
         }, 0) / tasksResult.data.filter(t => t.started_at).length
       : 0;
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingMaintenances =
+      maintenancesResult.data?.filter((m) => {
+        if (m.component_status !== 'active' || !m.next_maintenance_date) return false;
+        const next = new Date(`${m.next_maintenance_date}T00:00:00`);
+        const days = Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        return days >= 0 && days <= 10;
+      }).length ?? 0;
+
     setStats({
       totalTasks: tasksResult.data?.length || 0,
       pendingTasks:
@@ -102,6 +118,7 @@ export const Dashboard = () => {
       budgetUsed,
       avgResponseTime: Math.round(avgResponseTime * 10) / 10,
       avgExecutionTime: Math.round(avgExecutionTime * 10) / 10,
+      upcomingMaintenances,
     });
   }, [profile]);
 
@@ -241,6 +258,19 @@ export const Dashboard = () => {
         animation: 'float-card',
         path: '/users',
       },
+      {
+        id: 'mantenimientos',
+        title: 'Mantenimientos',
+        icon: Wrench,
+        description: 'Mantenimientos preventivos y correctivos por sede',
+        stat: stats.upcomingMaintenances,
+        statLabel: 'Próximos (10 días)',
+        gradient: 'from-rose-500 to-rose-600',
+        iconBg: 'bg-rose-100',
+        iconColor: 'text-rose-600',
+        animation: 'float-card-reverse',
+        path: '/mantenimientos',
+      },
     ];
 
     if (profile?.role === 'internal_client') {
@@ -252,11 +282,19 @@ export const Dashboard = () => {
     }
 
     if (profile?.role === 'supervision') {
-      return allCards.filter((c) => !['users'].includes(c.id));
+      return allCards.filter((c) => !['users', 'mantenimientos'].includes(c.id));
     }
 
-    // Admin e Infrastructure ven todo
-    return allCards;
+    if (profile?.role === 'infrastructure') {
+      return allCards.filter((c) => !['users', 'mantenimientos'].includes(c.id));
+    }
+
+    // Admin ve todo
+    if (profile?.role === 'admin') {
+      return allCards;
+    }
+
+    return allCards.filter((c) => !['users', 'mantenimientos'].includes(c.id));
   };
 
   const moduleCards = getModuleCards();
