@@ -3,8 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { createClient } from '@supabase/supabase-js';
 import { pool } from './config/database.js';
+import { supabase as supabaseClient } from './lib/supabaseClient.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -35,9 +35,7 @@ if (USE_LOCAL_DB) {
   console.log('☁️  Usando Supabase');
 }
 const db = USE_LOCAL_DB ? pool : null;
-const supabase = USE_LOCAL_DB
-  ? null
-  : createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const supabase = supabaseClient;
 
 // Exportar para uso en otros módulos
 export { db, supabase };

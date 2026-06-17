@@ -1,4 +1,4 @@
-import { supabase } from '../index.js';
+import { supabase } from '../lib/supabaseClient.js';
 import { isCoordinator } from './transforms.js';
 
 const getInfraProfileByUser = async (pagosUser) => {

@@ -20,21 +20,21 @@ export const Login = () => {
     setError('');
     setLoading(true);
 
-    const { error: infraError } = await signIn(email, password);
-
-    if (!infraError) {
-      navigate('/dashboard');
-      setLoading(false);
-      return;
-    }
-
     try {
       await pagosAuthService.signIn(email, password);
       navigate('/pagos/reports');
+      return;
     } catch (pagosError) {
-      const message =
+      const pagosMessage =
         pagosError instanceof Error ? pagosError.message : 'Credenciales inválidas';
-      setError(message);
+
+      const { error: infraError } = await signIn(email, password);
+      if (!infraError) {
+        navigate('/dashboard');
+        return;
+      }
+
+      setError(pagosMessage);
     } finally {
       setLoading(false);
     }

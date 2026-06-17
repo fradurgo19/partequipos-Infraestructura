@@ -1,5 +1,5 @@
 import express from 'express';
-import { supabase } from '../../index.js';
+import { supabase } from '../../lib/supabaseClient.js';
 import {
   authenticatePagosToken,
   requirePagosCoordinator,

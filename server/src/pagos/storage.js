@@ -1,4 +1,4 @@
-import { supabase } from '../index.js';
+import { supabase } from '../lib/supabaseClient.js';
 
 export const uploadInvoiceFile = async (file, userId) => {
   const fileExt = file.originalname.split('.').pop();

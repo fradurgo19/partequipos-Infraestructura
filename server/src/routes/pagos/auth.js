@@ -1,8 +1,8 @@
 import express from 'express';
-import { supabase } from '../index.js';
-import { authenticatePagosToken, signPagosToken } from '../middleware/pagosAuth.js';
-import { getPagosTable } from '../pagos/transforms.js';
-
+import { supabase } from '../../lib/supabaseClient.js';
+import { authenticatePagosToken, signPagosToken } from '../../middleware/pagosAuth.js';
+import { getPagosTable } from '../../pagos/transforms.js';
+import { authenticatePagosCredentials } from '../../pagos/login.js';
 const router = express.Router();
 const PAGOS_TABLE = getPagosTable();
 
@@ -57,7 +57,8 @@ router.post('/signup', async (req, res) => {
     res.status(201).json({ user: mapProfileResponse(user), token });
   } catch (error) {
     console.error('Error en signup pagos:', error);
-    res.status(500).json({ error: 'Error al crear usuario' });
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al crear usuario' });
   }
 });
 
@@ -68,30 +69,20 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email y contraseña son requeridos' });
     }
 
-    const { data: isValid, error: rpcError } = await supabase.rpc('check_password', {
-      user_email: email,
-      user_password: password,
-    });
+    if (!supabase) {
+      return res.status(500).json({ error: 'Supabase no configurado en el servidor' });
+    }
 
-    if (rpcError || !isValid) {
+    const result = await authenticatePagosCredentials(email, password);
+    if (!result) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const { data: user, error } = await supabase
-      .from(PAGOS_TABLE)
-      .select('id, email, full_name, role, department, location, created_at, updated_at')
-      .eq('email', email)
-      .single();
-
-    if (error || !user) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
-    }
-
-    const token = signPagosToken(user);
-    res.json({ user: mapProfileResponse(user), token });
+    res.json(result);
   } catch (error) {
     console.error('Error en login pagos:', error);
-    res.status(500).json({ error: 'Error al iniciar sesión' });
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al iniciar sesión' });
   }
 });
 
