@@ -1,6 +1,7 @@
 import { UserProfile } from '../types';
 import { supabase } from '../../lib/supabase';
 import { PAGOS_API } from '../config';
+import { debugLog } from '../../utils/debugLog';
 
 const TOKEN_KEY = 'pagos_auth_token';
 
@@ -47,14 +48,33 @@ export const pagosAuthService = {
   },
 
   async signIn(email: string, password: string) {
+    const loginUrl = `${PAGOS_API}/auth/login`;
+    const startedAt = Date.now();
+    // #region agent log
+    debugLog('authService.ts:signIn:start', 'pagos login fetch start', {
+      loginUrl,
+      apiBase: PAGOS_API,
+      isProd: import.meta.env.PROD,
+    }, 'F');
+    // #endregion
+
     let response: Response;
     try {
-      response = await fetchWithTimeout(`${PAGOS_API}/auth/login`, {
+      response = await fetchWithTimeout(loginUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
     } catch (error) {
+      // #region agent log
+      debugLog('authService.ts:signIn:fetch-error', 'pagos login fetch failed', {
+        loginUrl,
+        durationMs: Date.now() - startedAt,
+        errorName: error instanceof Error ? error.name : 'unknown',
+        errorMessage: error instanceof Error ? error.message : 'unknown',
+        isAbort: error instanceof DOMException && error.name === 'AbortError',
+      }, 'F');
+      // #endregion
       if (error instanceof DOMException && error.name === 'AbortError') {
         const timeoutError = new Error('El servidor tardó demasiado en responder. Intenta de nuevo.');
         (timeoutError as Error & { status?: number }).status = 504;
@@ -64,6 +84,16 @@ export const pagosAuthService = {
     }
 
     const data = await response.json().catch(() => ({}));
+    // #region agent log
+    debugLog('authService.ts:signIn:response', 'pagos login fetch response', {
+      loginUrl,
+      durationMs: Date.now() - startedAt,
+      status: response.status,
+      ok: response.ok,
+      hasToken: typeof data.token === 'string',
+      error: typeof data.error === 'string' ? data.error : null,
+    }, 'F');
+    // #endregion
     if (!response.ok) {
       const loginError = new Error(
         typeof data.error === 'string' ? data.error : 'Error al iniciar sesión'
