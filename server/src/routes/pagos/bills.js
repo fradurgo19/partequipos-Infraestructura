@@ -7,8 +7,10 @@ import {
 } from '../../pagos/transforms.js';
 import { canViewAllBills } from '../../pagos/access.js';
 import { fetchConsumptionsByBillIds } from '../../pagos/storage.js';
-import { normalizeBillBody } from '../../pagos/billBody.js';
 import { createPagosBill } from '../../pagos/handlers/createBill.js';
+import { getPagosBillById } from '../../pagos/handlers/getBillById.js';
+import { updatePagosBill } from '../../pagos/handlers/updateBill.js';
+import { deletePagosBill } from '../../pagos/handlers/deleteBill.js';
 
 const router = express.Router();
 
@@ -61,25 +63,12 @@ router.get('/', authenticatePagosToken, async (req, res) => {
 
 router.get('/:id', authenticatePagosToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    const viewAll = await canViewAllBills(req.pagosUser);
-
-    let query = supabase.from('utility_bills').select('*').eq('id', id);
-    if (!viewAll) {
-      query = query.eq('user_id', req.pagosUser.id);
-    }
-
-    const { data: billRow, error } = await query.single();
-    if (error || !billRow) {
-      return res.status(404).json({ error: 'Factura no encontrada' });
-    }
-
-    const { data: consumptionsData } = await supabase.from('bill_consumptions').select('*').eq('bill_id', id);
-    const consumptions = (consumptionsData || []).map(transformConsumptionToFrontend);
-    res.json(transformBillToFrontend(billRow, consumptions));
+    const bill = await getPagosBillById(req.pagosUser, req.params.id);
+    res.json(bill);
   } catch (error) {
     console.error('Error al obtener factura:', error);
-    res.status(500).json({ error: 'Error al obtener factura' });
+    const status = error?.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al obtener factura' });
   }
 });
 
@@ -96,107 +85,23 @@ router.post('/', authenticatePagosToken, async (req, res) => {
 
 router.put('/:id', authenticatePagosToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    const updates = req.body;
-    const incomingConsumptions = Array.isArray(updates.consumptions) ? updates.consumptions : null;
-
-    if (incomingConsumptions?.length === 0) {
-      return res.status(400).json({ error: 'Debe incluir al menos un consumo' });
-    }
-
-    if (incomingConsumptions?.length) {
-      const normalized = normalizeBillBody(updates, incomingConsumptions);
-      updates.serviceType = normalized.serviceType;
-      updates.provider = normalized.provider;
-      updates.value = normalized.value;
-      updates.totalAmount = normalized.totalAmount;
-      updates.consumption = normalized.consumption;
-      updates.unitOfMeasure = normalized.unitOfMeasure;
-    }
-
-    const rawPayload = {
-      service_type: updates.serviceType,
-      provider: updates.provider,
-      description: updates.description,
-      value: updates.value,
-      period: updates.period,
-      invoice_number: updates.invoiceNumber,
-      contract_number: updates.contractNumber,
-      total_amount: updates.totalAmount,
-      consumption: updates.consumption,
-      unit_of_measure: updates.unitOfMeasure,
-      cost_center: updates.costCenter,
-      city: updates.city,
-      business_group: updates.businessGroup,
-      location: updates.location,
-      due_date: updates.dueDate,
-      document_url: updates.documentUrl,
-      document_name: updates.documentName,
-      status: updates.status,
-      notes: updates.notes,
-      approved_by: updates.approvedBy,
-      approved_at: updates.approvedAt,
-    };
-    const updatePayload = Object.fromEntries(
-      Object.entries(rawPayload).filter(([, v]) => v !== undefined)
-    );
-
-    const { data: updatedRow, error: updateError } = await supabase
-      .from('utility_bills')
-      .update(updatePayload)
-      .eq('id', id)
-      .eq('user_id', req.pagosUser.id)
-      .select()
-      .single();
-
-    if (updateError || !updatedRow) {
-      return res.status(404).json({ error: 'Factura no encontrada' });
-    }
-
-    if (!incomingConsumptions) {
-      return res.json(transformBillToFrontend(updatedRow));
-    }
-
-    await supabase.from('bill_consumptions').delete().eq('bill_id', id);
-    const payload = incomingConsumptions.map((c) => ({
-      bill_id: id,
-      service_type: c.serviceType || c.service_type,
-      provider: c.provider,
-      period_from: c.periodFrom || c.period_from,
-      period_to: c.periodTo || c.period_to,
-      value: Number.parseFloat(c.value),
-      total_amount: Number.parseFloat(c.totalAmount),
-      consumption: c.consumption ? Number.parseFloat(c.consumption) : null,
-      unit_of_measure: c.unitOfMeasure || c.unit_of_measure,
-    }));
-
-    const { data: newConsumptions } = await supabase.from('bill_consumptions').insert(payload).select();
-    const consumptions = (newConsumptions || []).map(transformConsumptionToFrontend);
-    return res.json(transformBillToFrontend(updatedRow, consumptions));
+    const bill = await updatePagosBill(req.pagosUser, req.params.id, req.body);
+    res.json(bill);
   } catch (error) {
     console.error('Error al actualizar factura:', error);
-    res.status(500).json({ error: 'Error al actualizar factura' });
+    const status = error?.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al actualizar factura' });
   }
 });
 
 router.delete('/:id', authenticatePagosToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { data, error } = await supabase
-      .from('utility_bills')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', req.pagosUser.id)
-      .eq('status', 'draft')
-      .select('id');
-
-    if (error || !data?.length) {
-      return res.status(404).json({ error: 'Factura no encontrada o no se puede eliminar' });
-    }
-    res.json({ message: 'Factura eliminada exitosamente' });
+    const result = await deletePagosBill(req.pagosUser, req.params.id);
+    res.json(result);
   } catch (error) {
     console.error('Error al eliminar factura:', error);
-    res.status(500).json({ error: 'Error al eliminar factura' });
+    const status = error?.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al eliminar factura' });
   }
 });
 

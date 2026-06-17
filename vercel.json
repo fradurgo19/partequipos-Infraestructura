@@ -19,6 +19,9 @@
     "api/pagos/bills.js": {
       "maxDuration": 30
     },
+    "api/pagos/bills/[id].js": {
+      "maxDuration": 30
+    },
     "api/pagos/users.js": {
       "maxDuration": 30
     },

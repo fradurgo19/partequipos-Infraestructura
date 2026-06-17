@@ -43,6 +43,10 @@ export const billService = {
     });
     if (!response.ok) {
       if (response.status === 404) return null;
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Respuesta inválida del servidor al cargar la factura');
+      }
       const error = await response.json();
       throw new Error(error.error || 'Error al obtener factura');
     }
@@ -69,6 +73,10 @@ export const billService = {
       body: JSON.stringify(updates),
     });
     if (!response.ok) {
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('Respuesta inválida del servidor al actualizar la factura');
+      }
       const error = await response.json();
       throw new Error(error.error || 'Error al actualizar factura');
     }
