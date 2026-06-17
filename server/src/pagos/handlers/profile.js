@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabaseClient.js';
-import { getPagosTable } from './transforms.js';
+import { supabase } from '../../lib/supabaseClient.js';
+import { getPagosTable } from '../transforms.js';
 
 const PAGOS_TABLE = getPagosTable();
 
