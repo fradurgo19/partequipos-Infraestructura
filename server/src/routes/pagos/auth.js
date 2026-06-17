@@ -1,0 +1,125 @@
+import express from 'express';
+import { supabase } from '../index.js';
+import { authenticatePagosToken, signPagosToken } from '../middleware/pagosAuth.js';
+import { getPagosTable } from '../pagos/transforms.js';
+
+const router = express.Router();
+const PAGOS_TABLE = getPagosTable();
+
+const mapProfileResponse = (user) => ({
+  id: user.id,
+  email: user.email,
+  fullName: user.full_name,
+  role: user.role,
+  department: user.department,
+  location: user.location,
+  createdAt: user.created_at,
+  updatedAt: user.updated_at,
+});
+
+router.post('/signup', async (req, res) => {
+  try {
+    const { email, password, fullName, location } = req.body;
+    if (!email || !password || !fullName || !location) {
+      return res.status(400).json({ error: 'Todos los campos son requeridos' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+
+    const { data: existing } = await supabase.from(PAGOS_TABLE).select('id').eq('email', email).maybeSingle();
+    if (existing) {
+      return res.status(400).json({ error: 'El usuario ya existe' });
+    }
+
+    const { data: userId, error: registerError } = await supabase.rpc('register_user', {
+      p_email: email,
+      p_password: password,
+      p_full_name: fullName,
+      p_location: location,
+    });
+
+    if (registerError) {
+      return res.status(500).json({ error: registerError.message });
+    }
+
+    const { data: user, error: fetchError } = await supabase
+      .from(PAGOS_TABLE)
+      .select('id, email, full_name, role, department, location, created_at, updated_at')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError || !user) {
+      return res.status(500).json({ error: 'Error al obtener usuario creado' });
+    }
+
+    const token = signPagosToken(user);
+    res.status(201).json({ user: mapProfileResponse(user), token });
+  } catch (error) {
+    console.error('Error en signup pagos:', error);
+    res.status(500).json({ error: 'Error al crear usuario' });
+  }
+});
+
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+    }
+
+    const { data: isValid, error: rpcError } = await supabase.rpc('check_password', {
+      user_email: email,
+      user_password: password,
+    });
+
+    if (rpcError || !isValid) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    const { data: user, error } = await supabase
+      .from(PAGOS_TABLE)
+      .select('id, email, full_name, role, department, location, created_at, updated_at')
+      .eq('email', email)
+      .single();
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    const token = signPagosToken(user);
+    res.json({ user: mapProfileResponse(user), token });
+  } catch (error) {
+    console.error('Error en login pagos:', error);
+    res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+});
+
+router.get('/profile', authenticatePagosToken, async (req, res) => {
+  try {
+    const { data: user, error } = await supabase
+      .from(PAGOS_TABLE)
+      .select('id, email, full_name, role, department, location, created_at, updated_at')
+      .eq('id', req.pagosUser.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(mapProfileResponse(user));
+  } catch (error) {
+    console.error('Error al obtener perfil pagos:', error);
+    res.status(500).json({ error: 'Error al obtener perfil' });
+  }
+});
+
+router.get('/verify', authenticatePagosToken, (req, res) => {
+  res.json({ valid: true, user: req.pagosUser });
+});
+
+router.post('/logout', authenticatePagosToken, (req, res) => {
+  res.json({ message: 'Sesión cerrada exitosamente' });
+});
+
+export default router;

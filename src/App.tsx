@@ -16,11 +16,13 @@ import { Quotations } from './pages/Quotations';
 import { Users } from './pages/Users';
 import { ContractTracking } from './pages/ContractTracking';
 import { Mantenimientos } from './pages/Mantenimientos';
+import { PagosApp } from './pagos/PagosApp';
 
 function App() {
   return (
     <AuthProvider>
       <Routes>
+        <Route path="/pagos/*" element={<PagosApp />} />
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>

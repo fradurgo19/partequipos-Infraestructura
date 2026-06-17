@@ -20,6 +20,7 @@ import notificationsRoutes from './routes/notifications.js';
 import purchaseOrdersRoutes from './routes/purchaseOrders.js';
 import contractorsRoutes from './routes/contractors.js';
 import contractsRoutes from './routes/contracts.js';
+import pagosRoutes from './routes/pagos/index.js';
 
 dotenv.config();
 
@@ -104,6 +105,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/purchase-orders', purchaseOrdersRoutes);
 app.use('/api/contractors', contractorsRoutes);
 app.use('/api/contracts', contractsRoutes);
+app.use('/api/pagos', pagosRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
