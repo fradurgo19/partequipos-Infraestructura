@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../atoms/Input';
@@ -10,13 +10,9 @@ import { FileUpload } from '../molecules/FileUpload';
 import { UtilityBillFormData, ServiceType } from '../types';
 import { validateBillForm, hasValidationErrors, ValidationErrors } from '../utils/validators';
 import { parseCurrencyInput, getCurrentPeriod, formatCurrency } from '../utils/formatters';
-import { billService } from '../services/billService';
-import { PAGOS_API } from '../config';
-import {
-  getBillLocationAddresses,
-  getBillLocationBusinessGroups,
-  getBillLocationCities
-} from '../constants/billLocations';
+import { billService, uploadBillDocument } from '../services/billService';
+import { useBillSiteLocations } from '../hooks/useBillSiteLocations';
+import { resolveBillLocationFromStored } from '../constants/billLocations';
 
 const initialFormData: UtilityBillFormData = {
   description: '',
@@ -64,6 +60,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   const [submitError, setSubmitError] = useState('');
   const navigate = useNavigate();
   const isEditMode = Boolean(billId);
+  const { catalog, loading: locationsLoading, cities, getBusinessGroups, getAddresses } =
+    useBillSiteLocations();
 
   const generateRowId = () =>
     globalThis.crypto?.randomUUID?.() ?? `consumption-${Math.random().toString(36).slice(2, 11)}`;
@@ -102,25 +100,49 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   ];
 
   const cityOptions = useMemo(
-    () => getBillLocationCities().map((city) => ({ value: city, label: city })),
-    []
+    () => cities.map((city) => ({ value: city, label: city })),
+    [cities]
   );
 
   const businessGroupOptions = useMemo(() => {
     if (!formData.city) return [];
-    return getBillLocationBusinessGroups(formData.city).map((group) => ({
+    return getBusinessGroups(formData.city).map((group) => ({
       value: group,
       label: group
     }));
-  }, [formData.city]);
+  }, [formData.city, getBusinessGroups]);
 
   const locationAddressOptions = useMemo(() => {
     if (!formData.city || !formData.businessGroup) return [];
-    return getBillLocationAddresses(formData.city, formData.businessGroup).map((entry) => ({
+    return getAddresses(formData.city, formData.businessGroup).map((entry) => ({
       value: entry.address,
       label: entry.address
     }));
-  }, [formData.city, formData.businessGroup]);
+  }, [formData.city, formData.businessGroup, getAddresses]);
+
+  useEffect(() => {
+    if (!isEditMode || locationsLoading || !initialData?.location) {
+      return;
+    }
+
+    const resolved = resolveBillLocationFromStored(
+      initialData.location,
+      initialData.city,
+      initialData.businessGroup,
+      catalog
+    );
+
+    if (!resolved.city) {
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      city: resolved.city,
+      businessGroup: resolved.businessGroup,
+      location: resolved.address,
+    }));
+  }, [catalog, locationsLoading, isEditMode, initialData]);
 
   const providerOptionsRaw: Record<ServiceType, Array<{ value: string; label: string }>> = {
     electricity: [
@@ -420,26 +442,9 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
 
       // Subir archivo si existe
       if (formData.attachedDocument) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', formData.attachedDocument);
-
-        const token = localStorage.getItem('pagos_auth_token');
-        const uploadResponse = await fetch(`${PAGOS_API}/upload`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: uploadFormData
-        });
-
-        if (uploadResponse.ok) {
-          const uploadData = await uploadResponse.json();
-          documentUrl = uploadData.url;
-          documentName = uploadData.filename;
-          console.log('✅ Archivo subido:', documentUrl);
-        } else {
-          throw new Error('Error al subir el archivo');
-        }
+        const uploadData = await uploadBillDocument(formData.attachedDocument);
+        documentUrl = uploadData.url;
+        documentName = uploadData.filename;
       }
 
       const mappedConsumptions = formData.consumptions.map((c) => ({
@@ -646,13 +651,13 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           />
 
           <Select
-            label="Grupo empresarial *"
+            label="Sede *"
             value={formData.businessGroup}
             options={businessGroupOptions}
             onChange={(e) => handleBusinessGroupChange(e.target.value)}
-            placeholder={formData.city ? 'Seleccione un grupo empresarial' : 'Primero seleccione ciudad'}
+            placeholder={formData.city ? 'Seleccione una sede' : 'Primero seleccione ciudad'}
             error={errors.businessGroup}
-            disabled={!formData.city}
+            disabled={!formData.city || locationsLoading}
           />
 
           <Select
@@ -661,10 +666,10 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
             options={locationAddressOptions}
             onChange={(e) => handleInputChange('location', e.target.value)}
             placeholder={
-              formData.businessGroup ? 'Seleccione una ubicación' : 'Primero seleccione grupo empresarial'
+              formData.businessGroup ? 'Seleccione una ubicación' : 'Primero seleccione una sede'
             }
             error={errors.location}
-            disabled={!formData.city || !formData.businessGroup}
+            disabled={!formData.city || !formData.businessGroup || locationsLoading}
           />
 
           <Input

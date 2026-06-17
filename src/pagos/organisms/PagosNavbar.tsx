@@ -1,35 +1,54 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, PlusCircle, LogOut, BarChart3, Users } from 'lucide-react';
+import { FileText, PlusCircle, LogOut, BarChart3, Users, LayoutDashboard } from 'lucide-react';
 import { usePagosAuth } from '../context/PagosAuthContext';
 
 export const PagosNavbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, signOut } = usePagosAuth();
+  const { profile, signOut, isInfraAdminAccess } = usePagosAuth();
 
   const handleSignOut = async () => {
+    if (isInfraAdminAccess) {
+      navigate('/dashboard');
+      return;
+    }
     await signOut();
-    navigate('/pagos/login');
+    navigate('/login');
   };
 
   const allNavItems = [
     { path: '/pagos/bills', label: 'Facturas', icon: FileText, roles: ['area_coordinator'] },
-    { path: '/pagos/new-bill', label: 'Nueva Factura', icon: PlusCircle, roles: ['area_coordinator', 'basic_user'] },
-    { path: '/pagos/reports', label: 'Mis Facturas', icon: BarChart3, roles: ['area_coordinator', 'basic_user'] },
+    {
+      path: '/pagos/new-bill',
+      label: 'Nueva Factura',
+      icon: PlusCircle,
+      roles: ['area_coordinator', 'basic_user'],
+      hideForInfraAdmin: true,
+    },
+    {
+      path: '/pagos/reports',
+      label: 'Mis Facturas',
+      icon: BarChart3,
+      roles: ['area_coordinator', 'basic_user'],
+      hideForInfraAdmin: true,
+    },
     { path: '/pagos/users', label: 'Usuarios', icon: Users, roles: ['area_coordinator'] },
   ];
 
-  const navItems = allNavItems.filter((item) =>
-    item.roles.includes(profile?.role || 'basic_user')
-  );
+  const navItems = allNavItems.filter((item) => {
+    if (isInfraAdminAccess && item.hideForInfraAdmin) {
+      return false;
+    }
+    return item.roles.includes(profile?.role || 'basic_user');
+  });
 
   return (
     <nav className="bg-gradient-to-r from-[#cf1b22] via-[#a11217] to-[#50504f] border-b border-[#cf1b22]/60 sticky top-0 z-50 shadow-lg">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-6">
-            <Link to="/pagos/reports" className="flex items-center space-x-2">
+            <Link to={isInfraAdminAccess ? '/pagos/bills' : '/pagos/reports'} className="flex items-center space-x-2">
               <span className="text-lg font-bold text-white">Pagos · Facturas</span>
             </Link>
             <div className="hidden md:flex space-x-2">
@@ -52,9 +71,20 @@ export const PagosNavbar: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-3">
+            {isInfraAdminAccess && (
+              <Link
+                to="/dashboard"
+                className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-white/10 text-white rounded-lg text-sm"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Infraestructura</span>
+              </Link>
+            )}
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-white">{profile?.fullName}</p>
-              <p className="text-xs text-white/80 capitalize">{profile?.role?.replace('_', ' ')}</p>
+              <p className="text-xs text-white/80 capitalize">
+                {isInfraAdminAccess ? 'admin · pagos' : profile?.role?.replace('_', ' ')}
+              </p>
             </div>
             <button
               type="button"
@@ -62,7 +92,7 @@ export const PagosNavbar: React.FC = () => {
               className="flex items-center space-x-2 px-3 py-2 bg-[#a11217] text-white rounded-lg"
             >
               <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Salir</span>
+              <span className="hidden sm:inline">{isInfraAdminAccess ? 'Volver' : 'Salir'}</span>
             </button>
           </div>
         </div>

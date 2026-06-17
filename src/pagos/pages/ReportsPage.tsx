@@ -9,6 +9,7 @@ import { UtilityBill, BillStatus } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { BillDetailsModal } from '../molecules/BillDetailsModal';
 import { PAGOS_API } from '../config';
+import { pagosAuthService } from '../services/authService';
 
 interface BillsByPeriod {
   [period: string]: UtilityBill[];
@@ -46,13 +47,8 @@ export const ReportsPage: React.FC = () => {
 
   const loadUsers = useCallback(async () => {
     try {
-      const token = localStorage.getItem('pagos_auth_token');
-      const response = await fetch(`${PAGOS_API}/users`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const headers = await pagosAuthService.getPagosApiAuthHeaders();
+      const response = await fetch(`${PAGOS_API}/users`, { headers });
       if (response.ok) {
         const data = await response.json();
         setUsers(data);

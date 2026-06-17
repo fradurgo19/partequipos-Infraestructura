@@ -1,10 +1,12 @@
 export interface BillLocationEntry {
+  siteId?: string;
   city: string;
   address: string;
   businessGroup: string;
 }
 
-export const BILL_LOCATION_CATALOG: BillLocationEntry[] = [
+/** Catálogo legacy para facturas migradas con grupos empresariales históricos. */
+export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'ITAGUI', address: 'CL 30 NRO. 41-30', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'MEDELLIN', address: 'CRA 50 NRO.35-32', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'MEDELLIN', address: 'CL 16 Nro.45-104 b. colombia.', businessGroup: 'PARTEQUIPOS S.A.S.' },
@@ -27,52 +29,71 @@ export const BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'SABANETA', address: 'CL 70 SUR NRO. 43A - 15 INT 2404 CANTO LUNA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BOGOTA', address: 'CL 23 NRO.72-91 APT 701 LA RIVIERA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'CARTAGENA', address: 'CRA18 Nro. 24 45 apto 703 ED PUNTA MADERO', businessGroup: 'WACONDA S.A.S.' },
-  { city: 'BARRANQUILLA', address: 'CRA 51 NRO.96A-79 ED FENIX', businessGroup: 'WACONDA S.A.S.' }
+  { city: 'BARRANQUILLA', address: 'CRA 51 NRO.96A-79 ED FENIX', businessGroup: 'WACONDA S.A.S.' },
 ];
 
 const sortLabels = (items: string[]) =>
   [...new Set(items)].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
-export const getBillLocationCities = (): string[] =>
-  sortLabels(BILL_LOCATION_CATALOG.map((entry) => entry.city));
+const mergeCatalogs = (primary: BillLocationEntry[], fallback: BillLocationEntry[]) => {
+  const seen = new Set<string>();
+  const merged: BillLocationEntry[] = [];
 
-export const getBillLocationBusinessGroups = (city: string): string[] =>
-  sortLabels(
-    BILL_LOCATION_CATALOG.filter((entry) => entry.city === city).map((entry) => entry.businessGroup)
-  );
+  for (const entry of [...primary, ...fallback]) {
+    const key = `${entry.city}|${entry.businessGroup}|${entry.address}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(entry);
+  }
 
-export const getBillLocationAddresses = (city: string, businessGroup: string): BillLocationEntry[] =>
-  BILL_LOCATION_CATALOG.filter(
-    (entry) => entry.city === city && entry.businessGroup === businessGroup
-  ).sort((a, b) => a.address.localeCompare(b.address, 'es', { sensitivity: 'base' }));
+  return merged;
+};
+
+export const getBillLocationCities = (catalog: BillLocationEntry[]): string[] =>
+  sortLabels(catalog.map((entry) => entry.city));
+
+export const getBillLocationBusinessGroups = (city: string, catalog: BillLocationEntry[]): string[] =>
+  sortLabels(catalog.filter((entry) => entry.city === city).map((entry) => entry.businessGroup));
+
+export const getBillLocationAddresses = (
+  city: string,
+  businessGroup: string,
+  catalog: BillLocationEntry[]
+): BillLocationEntry[] =>
+  catalog
+    .filter((entry) => entry.city === city && entry.businessGroup === businessGroup)
+    .sort((a, b) => a.address.localeCompare(b.address, 'es', { sensitivity: 'base' }));
 
 export const findBillLocationEntry = (
   city: string,
   businessGroup: string,
-  address: string
+  address: string,
+  catalog: BillLocationEntry[]
 ): BillLocationEntry | undefined =>
-  BILL_LOCATION_CATALOG.find(
+  catalog.find(
     (entry) => entry.city === city && entry.businessGroup === businessGroup && entry.address === address
   );
 
-/** Resuelve ciudad/grupo a partir de texto de ubicación legacy o dirección. */
+/** Resuelve ciudad/sede a partir de datos almacenados o catálogo combinado. */
 export const resolveBillLocationFromStored = (
   location: string,
   city?: string,
-  businessGroup?: string
+  businessGroup?: string,
+  siteCatalog: BillLocationEntry[] = [],
+  legacyCatalog: BillLocationEntry[] = LEGACY_BILL_LOCATION_CATALOG
 ): Pick<BillLocationEntry, 'city' | 'address' | 'businessGroup'> => {
+  const catalog = mergeCatalogs(siteCatalog, legacyCatalog);
+
   if (city && businessGroup && location) {
-    const exact = findBillLocationEntry(city, businessGroup, location);
+    const exact = findBillLocationEntry(city, businessGroup, location, catalog);
     if (exact) return exact;
   }
 
   const normalized = location.trim().toUpperCase();
-  const byAddress = BILL_LOCATION_CATALOG.find(
-    (entry) => entry.address.toUpperCase() === normalized
-  );
+  const byAddress = catalog.find((entry) => entry.address.toUpperCase() === normalized);
   if (byAddress) return byAddress;
 
-  const byPartial = BILL_LOCATION_CATALOG.find(
+  const byPartial = catalog.find(
     (entry) =>
       normalized.includes(entry.address.toUpperCase()) ||
       entry.address.toUpperCase().includes(normalized)
@@ -82,6 +103,6 @@ export const resolveBillLocationFromStored = (
   return {
     city: city ?? '',
     address: location,
-    businessGroup: businessGroup ?? ''
+    businessGroup: businessGroup ?? '',
   };
 };

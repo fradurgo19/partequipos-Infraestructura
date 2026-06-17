@@ -1,9 +1,22 @@
 import { UserProfile } from '../types';
+import { supabase } from '../../lib/supabase';
 import { PAGOS_API } from '../config';
 
-const TOKEN_KEY = 'pagos_pagos_auth_token';
+const TOKEN_KEY = 'pagos_auth_token';
 
-const getToken = () => localStorage.getItem(TOKEN_KEY);
+const getToken = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) return token;
+
+  const legacyToken = localStorage.getItem('pagos_pagos_auth_token');
+  if (legacyToken) {
+    localStorage.setItem(TOKEN_KEY, legacyToken);
+    localStorage.removeItem('pagos_pagos_auth_token');
+    return legacyToken;
+  }
+
+  return null;
+};
 const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
 const removeToken = () => localStorage.removeItem(TOKEN_KEY);
 
@@ -96,5 +109,29 @@ export const pagosAuthService = {
 
   getAuthToken() {
     return getToken();
+  },
+
+  hasPagosSession() {
+    return Boolean(getToken());
+  },
+
+  async getPagosApiAuthHeaders(includeJson = true): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {};
+    if (includeJson) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const pagosToken = getToken();
+    if (pagosToken) {
+      headers.Authorization = `Bearer ${pagosToken}`;
+      return headers;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
+    return headers;
   },
 };

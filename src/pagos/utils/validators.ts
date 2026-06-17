@@ -42,7 +42,7 @@ export const validateBillForm = (formData: UtilityBillFormData): ValidationError
   }
 
   if (!formData.businessGroup.trim()) {
-    errors.businessGroup = 'El grupo empresarial es requerido';
+    errors.businessGroup = 'La sede es requerida';
   }
 
   if (!formData.location.trim()) {

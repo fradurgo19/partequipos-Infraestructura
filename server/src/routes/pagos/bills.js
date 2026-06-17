@@ -29,6 +29,13 @@ const getUserRole = async (userId) => {
   return data?.role;
 };
 
+const resolveActorRole = async (pagosUser) => {
+  if (pagosUser?.infraAdmin) {
+    return 'area_coordinator';
+  }
+  return getUserRole(pagosUser.id);
+};
+
 const normalizeBillBody = (bill, consumptions) => {
   const totalValue = consumptions.reduce((sum, c) => sum + (Number.parseFloat(c.value) || 0), 0);
   const totalAmount = consumptions.reduce((sum, c) => sum + (Number.parseFloat(c.totalAmount) || 0), 0);
@@ -61,7 +68,7 @@ const normalizeBillBody = (bill, consumptions) => {
 router.get('/', authenticatePagosToken, async (req, res) => {
   try {
     const { period, serviceType, location, status, search } = req.query;
-    const role = await getUserRole(req.pagosUser.id);
+    const role = await resolveActorRole(req.pagosUser);
 
     let query = supabase.from('utility_bills').select('*');
     if (!isCoordinator(role)) {
@@ -92,7 +99,7 @@ router.get('/', authenticatePagosToken, async (req, res) => {
 router.get('/:id', authenticatePagosToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const role = await getUserRole(req.pagosUser.id);
+    const role = await resolveActorRole(req.pagosUser);
 
     let query = supabase.from('utility_bills').select('*').eq('id', id);
     if (!isCoordinator(role)) {
@@ -115,6 +122,12 @@ router.get('/:id', authenticatePagosToken, async (req, res) => {
 
 router.post('/', authenticatePagosToken, async (req, res) => {
   try {
+    if (req.pagosUser?.infraAdmin) {
+      return res.status(403).json({
+        error: 'Los administradores deben usar una cuenta de pagos para registrar facturas',
+      });
+    }
+
     const bill = req.body;
     const consumptions = Array.isArray(bill.consumptions) ? bill.consumptions : [];
     if (consumptions.length === 0) {
@@ -299,14 +312,31 @@ router.post('/bulk-delete', authenticatePagosToken, async (req, res) => {
     }
 
     const idList = ids.map((id) => String(id).trim()).filter(Boolean);
-    const { data: rpcRows, error: rpcError } = await supabase.rpc('bulk_delete_utility_bills', {
-      p_actor_id: actorId,
-      p_ids: idList,
-    });
+    const role = await resolveActorRole(req.pagosUser);
 
     let deletedCount = 0;
-    if (!rpcError && Array.isArray(rpcRows)) {
-      deletedCount = rpcRows.length;
+
+    if (isCoordinator(role)) {
+      const { data: deletedRows, error: deleteError } = await supabase
+        .from('utility_bills')
+        .delete()
+        .in('id', idList)
+        .select('id');
+
+      if (deleteError) {
+        console.error('Error en bulk delete coordinador:', deleteError);
+        return res.status(500).json({ error: 'Error al eliminar facturas' });
+      }
+      deletedCount = deletedRows?.length ?? 0;
+    } else {
+      const { data: rpcRows, error: rpcError } = await supabase.rpc('bulk_delete_utility_bills', {
+        p_actor_id: actorId,
+        p_ids: idList,
+      });
+
+      if (!rpcError && Array.isArray(rpcRows)) {
+        deletedCount = rpcRows.length;
+      }
     }
 
     if (deletedCount === 0) {

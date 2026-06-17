@@ -1,6 +1,6 @@
-import { lazy, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { PagosAuthProvider } from './context/PagosAuthContext';
+import { PagosAuthProvider, usePagosAuth } from './context/PagosAuthContext';
 import { PagosAuthLayout } from './templates/PagosAuthLayout';
 import { PagosProtectedLayout } from './templates/PagosProtectedLayout';
 import { PagosRoleProtectedRoute } from './components/PagosRoleProtectedRoute';
@@ -18,6 +18,19 @@ const Loading = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#cf1b22]" />
   </div>
 );
+
+const PagosHomeRedirect = () => {
+  const { isInfraAdminAccess, loading } = usePagosAuth();
+  if (loading) return <Loading />;
+  return <Navigate to={isInfraAdminAccess ? 'bills' : 'reports'} replace />;
+};
+
+const PagosUserOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isInfraAdminAccess, loading } = usePagosAuth();
+  if (loading) return <Loading />;
+  if (isInfraAdminAccess) return <Navigate to="/pagos/bills" replace />;
+  return <>{children}</>;
+};
 
 export const PagosApp = () => (
   <PagosAuthProvider>
@@ -43,7 +56,9 @@ export const PagosApp = () => (
           path="new-bill"
           element={
             <PagosProtectedLayout>
-              <NewBillPage />
+              <PagosUserOnlyRoute>
+                <NewBillPage />
+              </PagosUserOnlyRoute>
             </PagosProtectedLayout>
           }
         />
@@ -51,7 +66,9 @@ export const PagosApp = () => (
           path="reports"
           element={
             <PagosProtectedLayout>
-              <ReportsPage />
+              <PagosUserOnlyRoute>
+                <ReportsPage />
+              </PagosUserOnlyRoute>
             </PagosProtectedLayout>
           }
         />
@@ -59,7 +76,9 @@ export const PagosApp = () => (
           path="reports/edit/:id"
           element={
             <PagosProtectedLayout>
-              <EditBillPage />
+              <PagosUserOnlyRoute>
+                <EditBillPage />
+              </PagosUserOnlyRoute>
             </PagosProtectedLayout>
           }
         />
@@ -83,8 +102,8 @@ export const PagosApp = () => (
             </PagosProtectedLayout>
           }
         />
-        <Route path="" element={<Navigate to="reports" replace />} />
-        <Route path="*" element={<Navigate to="reports" replace />} />
+        <Route path="" element={<PagosHomeRedirect />} />
+        <Route path="*" element={<PagosHomeRedirect />} />
       </Routes>
     </Suspense>
   </PagosAuthProvider>

@@ -2,14 +2,6 @@ import { UtilityBill, FilterOptions } from '../types';
 import { pagosAuthService } from './authService';
 import { PAGOS_API } from '../config';
 
-const getAuthHeaders = () => {
-  const token = pagosAuthService.getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
-};
-
 const mapDbRowToBill = (row: Record<string, unknown>): UtilityBill => row as unknown as UtilityBill;
 
 export const billService = {
@@ -30,7 +22,7 @@ export const billService = {
     const queryString = params.toString();
     const url = queryString ? `${PAGOS_API}/bills?${queryString}` : `${PAGOS_API}/bills`;
 
-    const response = await fetch(url, { headers: getAuthHeaders() });
+    const response = await fetch(url, { headers: await pagosAuthService.getPagosApiAuthHeaders() });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Error al obtener facturas');
@@ -40,7 +32,9 @@ export const billService = {
   },
 
   async getById(id: string): Promise<UtilityBill | null> {
-    const response = await fetch(`${PAGOS_API}/bills/${id}`, { headers: getAuthHeaders() });
+    const response = await fetch(`${PAGOS_API}/bills/${id}`, {
+      headers: await pagosAuthService.getPagosApiAuthHeaders(),
+    });
     if (!response.ok) {
       if (response.status === 404) return null;
       const error = await response.json();
@@ -52,7 +46,7 @@ export const billService = {
   async create(bill: Partial<UtilityBill>): Promise<UtilityBill> {
     const response = await fetch(`${PAGOS_API}/bills`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: await pagosAuthService.getPagosApiAuthHeaders(),
       body: JSON.stringify(bill),
     });
     if (!response.ok) {
@@ -65,7 +59,7 @@ export const billService = {
   async update(id: string, updates: Partial<UtilityBill>): Promise<UtilityBill> {
     const response = await fetch(`${PAGOS_API}/bills/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
+      headers: await pagosAuthService.getPagosApiAuthHeaders(),
       body: JSON.stringify(updates),
     });
     if (!response.ok) {
@@ -78,7 +72,7 @@ export const billService = {
   async delete(id: string): Promise<void> {
     const response = await fetch(`${PAGOS_API}/bills/${id}`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
+      headers: await pagosAuthService.getPagosApiAuthHeaders(),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -89,7 +83,7 @@ export const billService = {
   async bulkDelete(ids: string[]): Promise<void> {
     const response = await fetch(`${PAGOS_API}/bills/bulk-delete`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: await pagosAuthService.getPagosApiAuthHeaders(),
       body: JSON.stringify({ ids }),
     });
     if (!response.ok) {
@@ -101,7 +95,7 @@ export const billService = {
   async approve(id: string): Promise<UtilityBill> {
     const response = await fetch(`${PAGOS_API}/bills/${id}/approve`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: await pagosAuthService.getPagosApiAuthHeaders(),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -113,7 +107,7 @@ export const billService = {
   async updateStatus(id: string, status: string): Promise<UtilityBill> {
     const response = await fetch(`${PAGOS_API}/bills/${id}/status`, {
       method: 'PATCH',
-      headers: getAuthHeaders(),
+      headers: await pagosAuthService.getPagosApiAuthHeaders(),
       body: JSON.stringify({ status }),
     });
     if (!response.ok) {
@@ -125,13 +119,13 @@ export const billService = {
 };
 
 export const uploadBillDocument = async (file: File): Promise<{ url: string; filename: string }> => {
-  const token = pagosAuthService.getAuthToken();
+  const headers = await pagosAuthService.getPagosApiAuthHeaders(false);
   const formData = new FormData();
   formData.append('file', file);
 
   const response = await fetch(`${PAGOS_API}/upload`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers,
     body: formData,
   });
 

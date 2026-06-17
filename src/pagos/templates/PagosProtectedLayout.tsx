@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { usePagosAuth } from '../context/PagosAuthContext';
 import { PagosNavbar } from '../organisms/PagosNavbar';
 
@@ -8,7 +9,11 @@ interface PagosProtectedLayoutProps {
 }
 
 export const PagosProtectedLayout: React.FC<PagosProtectedLayoutProps> = ({ children }) => {
-  const { user, loading } = usePagosAuth();
+  const { user: pagosUser, loading: pagosLoading } = usePagosAuth();
+  const { user: mainUser, profile: mainProfile, loading: mainLoading } = useAuth();
+
+  const loading = pagosLoading || mainLoading;
+  const hasAccess = Boolean(pagosUser) || (mainProfile?.role === 'admin' && Boolean(mainUser));
 
   if (loading) {
     return (
@@ -18,8 +23,8 @@ export const PagosProtectedLayout: React.FC<PagosProtectedLayoutProps> = ({ chil
     );
   }
 
-  if (!user) {
-    return <Navigate to="/pagos/login" replace />;
+  if (!hasAccess) {
+    return <Navigate to="/login" replace />;
   }
 
   return (

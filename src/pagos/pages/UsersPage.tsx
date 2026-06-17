@@ -6,6 +6,7 @@ import { Input } from '../../atoms/Input';
 import { Select } from '../../atoms/Select';
 import { UserProfile, UserRole } from '../types';
 import { PAGOS_API } from '../config';
+import { pagosAuthService } from '../services/authService';
 
 interface NewUserForm {
   email: string;
@@ -71,13 +72,8 @@ export const UsersPage: React.FC = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('pagos_auth_token');
-      const response = await fetch(`${PAGOS_API}/users`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const headers = await pagosAuthService.getPagosApiAuthHeaders();
+      const response = await fetch(`${PAGOS_API}/users`, { headers });
 
       if (response.ok) {
         const data = await response.json();
@@ -143,8 +139,8 @@ export const UsersPage: React.FC = () => {
 
     setFormLoading(true);
     try {
-      const token = localStorage.getItem('pagos_auth_token');
-      
+      const headers = await pagosAuthService.getPagosApiAuthHeaders();
+
       if (isEditing) {
         // Actualizar usuario
         const updateData: Partial<NewUserForm> = {
@@ -161,10 +157,7 @@ export const UsersPage: React.FC = () => {
 
         const response = await fetch(`${PAGOS_API}/users/${editingUserId}`, {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
+          headers,
           body: JSON.stringify(updateData)
         });
 
@@ -179,10 +172,7 @@ export const UsersPage: React.FC = () => {
         // Crear nuevo usuario
         const response = await fetch(`${PAGOS_API}/users/create`, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
+          headers,
           body: JSON.stringify({
             email: formData.email,
             password: formData.password,
@@ -216,13 +206,10 @@ export const UsersPage: React.FC = () => {
     }
 
     try {
-      const token = localStorage.getItem('pagos_auth_token');
+      const headers = await pagosAuthService.getPagosApiAuthHeaders();
       const response = await fetch(`${PAGOS_API}/users/${userId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers,
       });
 
       if (response.ok) {
