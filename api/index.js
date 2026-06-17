@@ -12,8 +12,37 @@ const logApiHandler = (phase, data) => {
   // #endregion
 };
 
+const restoreCollapsedApiPath = (req) => {
+  const pathParam = req.query?.path;
+  if (!pathParam) {
+    return;
+  }
+
+  const segments = Array.isArray(pathParam) ? pathParam.join('/') : String(pathParam);
+  if (segments.startsWith('pagos')) {
+    return;
+  }
+
+  const query = { ...req.query };
+  delete query.path;
+  const qs = new URLSearchParams(
+    Object.entries(query).flatMap(([key, value]) =>
+      Array.isArray(value) ? value.map((v) => [key, String(v)]) : [[key, String(value ?? '')]]
+    )
+  ).toString();
+
+  const restored =
+    segments === 'health' ? '/health' : `/api/${segments.replace(/^\//, '')}`;
+  const restoredUrl = `${restored}${qs ? `?${qs}` : ''}`;
+  req.url = restoredUrl;
+  if (typeof req.originalUrl === 'string') {
+    req.originalUrl = restoredUrl;
+  }
+};
+
 export default async function handler(req, res) {
   const startedAt = Date.now();
+  restoreCollapsedApiPath(req);
   logApiHandler('entry', {
     url: req.url,
     method: req.method,

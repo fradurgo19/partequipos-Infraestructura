@@ -12,6 +12,7 @@
     }
   },
   "rewrites": [
+    { "source": "/api/pagos/:path*", "destination": "/api/pagos/:path*" },
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
