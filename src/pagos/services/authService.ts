@@ -20,6 +20,19 @@ const getToken = () => {
 const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
 const removeToken = () => localStorage.removeItem(TOKEN_KEY);
 
+const LOGIN_TIMEOUT_MS = 12_000;
+
+const fetchWithTimeout = async (url: string, options: RequestInit) => {
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), LOGIN_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    globalThis.clearTimeout(timeoutId);
+  }
+};
+
 export const pagosAuthService = {
   async signUp(email: string, password: string, fullName: string, location: string) {
     const response = await fetch(`${PAGOS_API}/auth/signup`, {
@@ -34,13 +47,31 @@ export const pagosAuthService = {
   },
 
   async signIn(email: string, password: string) {
-    const response = await fetch(`${PAGOS_API}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Error al iniciar sesión');
+    let response: Response;
+    try {
+      response = await fetchWithTimeout(`${PAGOS_API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        const timeoutError = new Error('El servidor tardó demasiado en responder. Intenta de nuevo.');
+        (timeoutError as Error & { status?: number }).status = 504;
+        throw timeoutError;
+      }
+      throw error;
+    }
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const loginError = new Error(
+        typeof data.error === 'string' ? data.error : 'Error al iniciar sesión'
+      );
+      (loginError as Error & { status?: number }).status = response.status;
+      throw loginError;
+    }
+
     setToken(data.token);
     return { user: { id: data.user.id, email: data.user.email } };
   },

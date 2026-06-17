@@ -25,8 +25,17 @@ export const Login = () => {
       navigate('/pagos/reports');
       return;
     } catch (pagosError) {
+      const pagosStatus =
+        pagosError instanceof Error
+          ? (pagosError as Error & { status?: number }).status
+          : undefined;
       const pagosMessage =
         pagosError instanceof Error ? pagosError.message : 'Credenciales inválidas';
+
+      if (pagosStatus && pagosStatus !== 401) {
+        setError(pagosMessage);
+        return;
+      }
 
       const { error: infraError } = await signIn(email, password);
       if (!infraError) {

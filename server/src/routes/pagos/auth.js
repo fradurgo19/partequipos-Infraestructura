@@ -1,6 +1,7 @@
 import express from 'express';
 import { supabase } from '../../lib/supabaseClient.js';
-import { authenticatePagosToken, signPagosToken } from '../../middleware/pagosAuth.js';
+import { authenticatePagosToken } from '../../middleware/pagosAuth.js';
+import { signPagosToken } from '../../pagos/jwt.js';
 import { getPagosTable } from '../../pagos/transforms.js';
 import { authenticatePagosCredentials } from '../../pagos/login.js';
 const router = express.Router();

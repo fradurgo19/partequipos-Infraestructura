@@ -1,9 +1,11 @@
+import bcrypt from 'bcryptjs';
 import { supabase } from '../lib/supabaseClient.js';
-import { signPagosToken } from '../middleware/pagosAuth.js';
+import { signPagosToken } from './jwt.js';
 import { getPagosTable } from './transforms.js';
 
 const PAGOS_TABLE = getPagosTable();
-const PROFILE_FIELDS = 'id, email, full_name, role, department, location, created_at, updated_at';
+const PROFILE_FIELDS =
+  'id, email, full_name, role, department, location, created_at, updated_at, password_hash';
 
 const mapProfileResponse = (user) => ({
   id: user.id,
@@ -16,34 +18,57 @@ const mapProfileResponse = (user) => ({
   updatedAt: user.updated_at,
 });
 
-export const authenticatePagosCredentials = async (email, password) => {
-  if (!supabase) {
-    throw new Error('Supabase no configurado en el servidor');
+const verifyPagosPassword = async (plainPassword, passwordHash) => {
+  if (!passwordHash) {
+    return false;
   }
 
-  const { data: isValid, error: rpcError } = await supabase.rpc('check_password', {
-    user_email: email,
-    user_password: password,
-  });
+  try {
+    return await bcrypt.compare(plainPassword, passwordHash);
+  } catch (error) {
+    console.error('Error al comparar contraseña pagos:', error);
+    return false;
+  }
+};
 
-  if (rpcError) {
-    console.error('Error RPC check_password:', rpcError);
-    const error = new Error(rpcError.message || 'Error al validar credenciales');
+export const authenticatePagosCredentials = async (email, password) => {
+  if (!supabase) {
+    const error = new Error('Supabase no configurado en el servidor');
     error.statusCode = 500;
     throw error;
   }
 
-  if (!isValid) {
+  const trimmedEmail = email.trim();
+
+  let { data: user, error: userError } = await supabase
+    .from(PAGOS_TABLE)
+    .select(PROFILE_FIELDS)
+    .eq('email', trimmedEmail)
+    .maybeSingle();
+
+  if (!user && !userError) {
+    const fallback = await supabase
+      .from(PAGOS_TABLE)
+      .select(PROFILE_FIELDS)
+      .ilike('email', trimmedEmail)
+      .maybeSingle();
+    user = fallback.data;
+    userError = fallback.error;
+  }
+
+  if (userError) {
+    console.error('Error al buscar usuario pagos:', userError);
+    const error = new Error('Error al validar credenciales');
+    error.statusCode = 500;
+    throw error;
+  }
+
+  if (!user) {
     return null;
   }
 
-  const { data: user, error: userError } = await supabase
-    .from(PAGOS_TABLE)
-    .select(PROFILE_FIELDS)
-    .eq('email', email)
-    .single();
-
-  if (userError || !user) {
+  const isValid = await verifyPagosPassword(password, user.password_hash);
+  if (!isValid) {
     return null;
   }
 

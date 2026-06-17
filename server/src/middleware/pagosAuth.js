@@ -1,20 +1,10 @@
-import jwt from 'jsonwebtoken';
 import { supabase } from '../lib/supabaseClient.js';
 import { enrichPagosUserIfInfraAdmin, isInfraAdminProfile } from '../pagos/access.js';
+import { getPagosJwtSecret, signPagosToken, verifyPagosToken } from '../pagos/jwt.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.PAGOS_JWT_SECRET;
+export { signPagosToken };
 
-export const signPagosToken = (user) => {
-  if (!JWT_SECRET) {
-    const error = new Error('JWT_SECRET no configurado');
-    error.statusCode = 500;
-    throw error;
-  }
-
-  return jwt.sign({ id: user.id, email: user.email, role: user.role, pagos: true }, JWT_SECRET, {
-    expiresIn: '7d',
-  });
-};
+const JWT_SECRET = getPagosJwtSecret();
 
 const attachInfraAdminAsPagosCoordinator = async (req, res, next, token) => {
   const {
@@ -64,7 +54,7 @@ export const authenticatePagosToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyPagosToken(token);
     if (decoded.pagos) {
       return applyPagosJwtUser(req, res, next, decoded);
     }
