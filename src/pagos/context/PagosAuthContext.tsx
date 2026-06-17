@@ -76,9 +76,11 @@ export const PagosAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (mainLoading) return;
 
     const init = async () => {
-      if (pagosAuthService.hasPagosSession()) {
+      if (mainProfile?.role === 'admin' && mainUser) {
+        applyInfraAdminSession();
+      } else if (pagosAuthService.hasPagosSession()) {
         await loadPagosProfile();
-      } else if (!applyInfraAdminSession()) {
+      } else {
         setProfile(null);
         setUser(null);
         setIsInfraAdminAccess(false);

@@ -121,13 +121,26 @@ export const pagosAuthService = {
       headers['Content-Type'] = 'application/json';
     }
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token && session.user?.id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (profile?.role === 'admin') {
+        headers.Authorization = `Bearer ${session.access_token}`;
+        return headers;
+      }
+    }
+
     const pagosToken = getToken();
     if (pagosToken) {
       headers.Authorization = `Bearer ${pagosToken}`;
       return headers;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
     if (session?.access_token) {
       headers.Authorization = `Bearer ${session.access_token}`;
     }

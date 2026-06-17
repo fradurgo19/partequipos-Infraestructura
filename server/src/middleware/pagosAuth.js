@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { supabase } from '../index.js';
+import { enrichPagosUserIfInfraAdmin, isInfraAdminProfile } from '../pagos/access.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.PAGOS_JWT_SECRET;
 
@@ -24,7 +25,7 @@ const attachInfraAdminAsPagosCoordinator = async (req, res, next, token) => {
     .eq('id', user.id)
     .single();
 
-  if (profileError || profile?.role !== 'admin') {
+  if (profileError || !isInfraAdminProfile(profile)) {
     return res.status(403).json({ error: 'Token inválido' });
   }
 
@@ -35,6 +36,11 @@ const attachInfraAdminAsPagosCoordinator = async (req, res, next, token) => {
     infraAdmin: true,
     fullName: profile.full_name,
   };
+  return next();
+};
+
+const applyPagosJwtUser = async (req, res, next, decoded) => {
+  req.pagosUser = await enrichPagosUserIfInfraAdmin(decoded);
   return next();
 };
 
@@ -53,8 +59,7 @@ export const authenticatePagosToken = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.pagos) {
-      req.pagosUser = decoded;
-      return next();
+      return applyPagosJwtUser(req, res, next, decoded);
     }
   } catch {
     // No es JWT de pagos; intentar sesión admin de infraestructura
@@ -68,9 +73,16 @@ export const authenticatePagosToken = async (req, res, next) => {
   }
 };
 
-export const requirePagosCoordinator = (req, res, next) => {
-  if (req.pagosUser?.role !== 'area_coordinator') {
-    return res.status(403).json({ error: 'No tienes permisos de coordinador' });
+export const requirePagosCoordinator = async (req, res, next) => {
+  if (req.pagosUser?.infraAdmin || req.pagosUser?.role === 'area_coordinator') {
+    return next();
   }
-  next();
+
+  const enriched = await enrichPagosUserIfInfraAdmin(req.pagosUser);
+  if (enriched?.infraAdmin || enriched?.role === 'area_coordinator') {
+    req.pagosUser = enriched;
+    return next();
+  }
+
+  return res.status(403).json({ error: 'No tienes permisos de coordinador' });
 };

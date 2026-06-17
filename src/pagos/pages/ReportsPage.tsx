@@ -16,7 +16,7 @@ interface BillsByPeriod {
 }
 
 export const ReportsPage: React.FC = () => {
-  const { profile } = usePagosAuth();
+  const { profile, loading: authLoading } = usePagosAuth();
   const navigate = useNavigate();
   const [bills, setBills] = useState<UtilityBill[]>([]);
   const [allBills, setAllBills] = useState<UtilityBill[]>([]);
@@ -29,12 +29,15 @@ export const ReportsPage: React.FC = () => {
   const isAdmin = profile?.role === 'area_coordinator';
 
   const loadBills = useCallback(async () => {
+    if (authLoading) {
+      return;
+    }
     try {
       setLoading(true);
       const data = await billService.getAll();
       const filteredBills = isAdmin
         ? data
-        : data.filter(bill => bill.user_id === profile?.id);
+        : data.filter((bill) => bill.user_id === profile?.id);
       filteredBills.sort((a, b) => b.period.localeCompare(a.period));
       setAllBills(filteredBills);
       setBills(filteredBills);
@@ -43,7 +46,7 @@ export const ReportsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, profile?.id]);
+  }, [isAdmin, profile?.id, authLoading]);
 
   const loadUsers = useCallback(async () => {
     try {

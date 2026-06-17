@@ -4,13 +4,11 @@ import { authenticatePagosToken, requirePagosCoordinator } from '../../middlewar
 import {
   transformBillToFrontend,
   transformConsumptionToFrontend,
-  getPagosTable,
-  isCoordinator,
 } from '../../pagos/transforms.js';
+import { canViewAllBills } from '../../pagos/access.js';
 import { fetchConsumptionsByBillIds } from '../../pagos/storage.js';
 
 const router = express.Router();
-const PAGOS_TABLE = getPagosTable();
 
 const attachConsumptions = async (bills) => {
   const billIds = bills.map((b) => b.id);
@@ -22,18 +20,6 @@ const attachConsumptions = async (bills) => {
     return acc;
   }, {});
   return bills.map((row) => transformBillToFrontend(row, byBill[row.id] || []));
-};
-
-const getUserRole = async (userId) => {
-  const { data } = await supabase.from(PAGOS_TABLE).select('role').eq('id', userId).single();
-  return data?.role;
-};
-
-const resolveActorRole = async (pagosUser) => {
-  if (pagosUser?.infraAdmin) {
-    return 'area_coordinator';
-  }
-  return getUserRole(pagosUser.id);
 };
 
 const normalizeBillBody = (bill, consumptions) => {
@@ -68,10 +54,10 @@ const normalizeBillBody = (bill, consumptions) => {
 router.get('/', authenticatePagosToken, async (req, res) => {
   try {
     const { period, serviceType, location, status, search } = req.query;
-    const role = await resolveActorRole(req.pagosUser);
+    const viewAll = await canViewAllBills(req.pagosUser);
 
     let query = supabase.from('utility_bills').select('*');
-    if (!isCoordinator(role)) {
+    if (!viewAll) {
       query = query.eq('user_id', req.pagosUser.id);
     }
     if (period) query = query.eq('period', period);
@@ -99,10 +85,10 @@ router.get('/', authenticatePagosToken, async (req, res) => {
 router.get('/:id', authenticatePagosToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const role = await resolveActorRole(req.pagosUser);
+    const viewAll = await canViewAllBills(req.pagosUser);
 
     let query = supabase.from('utility_bills').select('*').eq('id', id);
-    if (!isCoordinator(role)) {
+    if (!viewAll) {
       query = query.eq('user_id', req.pagosUser.id);
     }
 
@@ -312,11 +298,11 @@ router.post('/bulk-delete', authenticatePagosToken, async (req, res) => {
     }
 
     const idList = ids.map((id) => String(id).trim()).filter(Boolean);
-    const role = await resolveActorRole(req.pagosUser);
+    const viewAll = await canViewAllBills(req.pagosUser);
 
     let deletedCount = 0;
 
-    if (isCoordinator(role)) {
+    if (viewAll) {
       const { data: deletedRows, error: deleteError } = await supabase
         .from('utility_bills')
         .delete()
