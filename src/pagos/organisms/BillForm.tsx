@@ -116,7 +116,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     if (!formData.city || !formData.businessGroup) return [];
     return getAddresses(formData.city, formData.businessGroup).map((entry) => ({
       value: entry.address,
-      label: entry.address
+      label: entry.address,
+      title: entry.address,
     }));
   }, [formData.city, formData.businessGroup, getAddresses]);
 

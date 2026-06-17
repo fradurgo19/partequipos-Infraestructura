@@ -4,12 +4,17 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
   fullWidth?: boolean;
+  placeholder?: string;
   options: { value: string; label: string; title?: string }[];
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, fullWidth = false, options, className = '', ...props }, ref) => {
+  ({ label, error, fullWidth = false, options, className = '', placeholder, ...props }, ref) => {
     const widthStyle = fullWidth ? 'w-full' : '';
+    const resolvedOptions =
+      placeholder && !options.some((option) => option.value === '')
+        ? [{ value: '', label: placeholder, title: placeholder }, ...options]
+        : options;
 
     return (
       <div className={widthStyle}>
@@ -23,7 +28,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           className={`w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#cf1b22] focus:border-transparent transition-all ${error ? 'border-red-500' : ''} ${className}`}
           {...props}
         >
-          {options.map((option) => (
+          {resolvedOptions.map((option) => (
             <option
               key={option.value}
               value={option.value}

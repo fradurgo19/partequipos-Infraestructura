@@ -13,7 +13,7 @@ export const validateBillForm = (formData: UtilityBillFormData): ValidationError
   } else {
     formData.consumptions.forEach((c, idx) => {
       if (!c.serviceType) errors[`consumptions.${idx}.serviceType`] = 'Requerido';
-      if (!c.provider.trim()) errors[`consumptions.${idx}.provider`] = 'Requerido';
+      if (!c.provider?.trim()) errors[`consumptions.${idx}.provider`] = 'Requerido';
       if (!c.periodFrom) errors[`consumptions.${idx}.periodFrom`] = 'Requerido';
       if (!c.periodTo) errors[`consumptions.${idx}.periodTo`] = 'Requerido';
       if (c.periodFrom && c.periodTo && c.periodFrom > c.periodTo) {

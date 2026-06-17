@@ -49,6 +49,11 @@ const mergeCatalogs = (primary: BillLocationEntry[], fallback: BillLocationEntry
   return merged;
 };
 
+export const mergeBillLocationCatalogs = (
+  primary: BillLocationEntry[],
+  fallback: BillLocationEntry[]
+): BillLocationEntry[] => mergeCatalogs(primary, fallback);
+
 export const getBillLocationCities = (catalog: BillLocationEntry[]): string[] =>
   sortLabels(catalog.map((entry) => entry.city));
 
