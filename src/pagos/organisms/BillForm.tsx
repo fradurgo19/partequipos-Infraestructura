@@ -651,11 +651,11 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           />
 
           <Select
-            label="Sede *"
+            label="Grupo *"
             value={formData.businessGroup}
             options={businessGroupOptions}
             onChange={(e) => handleBusinessGroupChange(e.target.value)}
-            placeholder={formData.city ? 'Seleccione una sede' : 'Primero seleccione ciudad'}
+            placeholder={formData.city ? 'Seleccione un grupo' : 'Primero seleccione ciudad'}
             error={errors.businessGroup}
             disabled={!formData.city || locationsLoading}
           />
@@ -666,7 +666,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
             options={locationAddressOptions}
             onChange={(e) => handleInputChange('location', e.target.value)}
             placeholder={
-              formData.businessGroup ? 'Seleccione una ubicación' : 'Primero seleccione una sede'
+              formData.businessGroup ? 'Seleccione una ubicación' : 'Primero seleccione un grupo'
             }
             error={errors.location}
             disabled={!formData.city || !formData.businessGroup || locationsLoading}

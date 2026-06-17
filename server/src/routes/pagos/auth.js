@@ -64,14 +64,6 @@ router.post('/signup', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const routeStartedAt = Date.now();
-  // #region agent log
-  console.log('[debug-41f171] login-route-entry', JSON.stringify({
-    url: req.url,
-    originalUrl: req.originalUrl,
-    method: req.method,
-  }));
-  // #endregion
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -92,13 +84,6 @@ router.post('/login', async (req, res) => {
     console.error('Error en login pagos:', error);
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message || 'Error al iniciar sesión' });
-  } finally {
-    // #region agent log
-    console.log('[debug-41f171] login-route-finally', JSON.stringify({
-      durationMs: Date.now() - routeStartedAt,
-      url: req.url,
-    }));
-    // #endregion
   }
 });
 

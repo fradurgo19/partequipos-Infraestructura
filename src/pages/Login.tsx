@@ -2,7 +2,6 @@ import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { pagosAuthService } from '../pagos/services/authService';
-import { debugLog } from '../utils/debugLog';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Card } from '../atoms/Card';
@@ -44,30 +43,12 @@ export const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const startedAt = Date.now();
-    // #region agent log
-    debugLog('Login.tsx:handleSubmit:start', 'unified login start', { startedAt }, 'G');
-    // #endregion
 
     try {
       const [infraResult, pagosResult] = await Promise.allSettled([
         signInWithTimeout(signIn, email, password),
         pagosAuthService.signIn(email, password),
       ]);
-
-      // #region agent log
-      debugLog('Login.tsx:handleSubmit:settled', 'unified login settled', {
-        durationMs: Date.now() - startedAt,
-        infraStatus: infraResult.status,
-        infraOk: isInfraSignInSuccess(infraResult),
-        pagosStatus: pagosResult.status,
-        pagosOk: pagosResult.status === 'fulfilled',
-        pagosError:
-          pagosResult.status === 'rejected' && pagosResult.reason instanceof Error
-            ? pagosResult.reason.message
-            : null,
-      }, 'G');
-      // #endregion
 
       if (isInfraSignInSuccess(infraResult)) {
         navigate('/dashboard');
