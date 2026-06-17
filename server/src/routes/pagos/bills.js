@@ -7,6 +7,8 @@ import {
 } from '../../pagos/transforms.js';
 import { canViewAllBills } from '../../pagos/access.js';
 import { fetchConsumptionsByBillIds } from '../../pagos/storage.js';
+import { normalizeBillBody } from '../../pagos/billBody.js';
+import { createPagosBill } from '../../pagos/handlers/createBill.js';
 
 const router = express.Router();
 
@@ -20,35 +22,6 @@ const attachConsumptions = async (bills) => {
     return acc;
   }, {});
   return bills.map((row) => transformBillToFrontend(row, byBill[row.id] || []));
-};
-
-const normalizeBillBody = (bill, consumptions) => {
-  const totalValue = consumptions.reduce((sum, c) => sum + (Number.parseFloat(c.value) || 0), 0);
-  const totalAmount = consumptions.reduce((sum, c) => sum + (Number.parseFloat(c.totalAmount) || 0), 0);
-  const totalConsumption = consumptions.reduce((sum, c) => sum + (Number.parseFloat(c.consumption) || 0), 0);
-  const first = consumptions[0];
-
-  return {
-    serviceType: bill.serviceType || bill.service_type || first?.serviceType,
-    provider: bill.provider || first?.provider,
-    description: bill.description,
-    value: totalValue,
-    period: bill.period,
-    invoiceNumber: bill.invoiceNumber || bill.invoice_number,
-    contractNumber: bill.contractNumber || bill.contract_number,
-    totalAmount: bill.totalAmount || bill.total_amount || totalAmount,
-    consumption: totalConsumption || null,
-    unitOfMeasure: bill.unitOfMeasure || bill.unit_of_measure || first?.unitOfMeasure,
-    costCenter: bill.costCenter || bill.cost_center,
-    city: bill.city,
-    businessGroup: bill.businessGroup || bill.business_group,
-    location: bill.location,
-    dueDate: bill.dueDate || bill.due_date,
-    documentUrl: bill.documentUrl || bill.document_url,
-    documentName: bill.documentName || bill.document_name,
-    status: bill.status || 'pending',
-    notes: bill.notes,
-  };
 };
 
 router.get('/', authenticatePagosToken, async (req, res) => {
@@ -112,72 +85,12 @@ router.get('/:id', authenticatePagosToken, async (req, res) => {
 
 router.post('/', authenticatePagosToken, async (req, res) => {
   try {
-    const bill = req.body;
-    const consumptions = Array.isArray(bill.consumptions) ? bill.consumptions : [];
-    if (consumptions.length === 0) {
-      return res.status(400).json({ error: 'Debe agregar al menos un consumo para la factura' });
-    }
-
-    const normalized = normalizeBillBody(bill, consumptions);
-
-    const { data: createdBill, error } = await supabase
-      .from('utility_bills')
-      .insert({
-        user_id: req.pagosUser.id,
-        service_type: normalized.serviceType,
-        provider: normalized.provider,
-        description: normalized.description,
-        value: normalized.value,
-        period: normalized.period,
-        invoice_number: normalized.invoiceNumber,
-        contract_number: normalized.contractNumber,
-        total_amount: normalized.totalAmount,
-        consumption: normalized.consumption,
-        unit_of_measure: normalized.unitOfMeasure,
-        cost_center: normalized.costCenter,
-        city: normalized.city,
-        business_group: normalized.businessGroup,
-        location: normalized.location,
-        due_date: normalized.dueDate,
-        document_url: normalized.documentUrl,
-        document_name: normalized.documentName,
-        status: normalized.status,
-        notes: normalized.notes,
-      })
-      .select()
-      .single();
-
-    if (error) return res.status(500).json({ error: 'Error al crear factura' });
-
-    const consumptionsPayload = consumptions.map((c) => ({
-      bill_id: createdBill.id,
-      service_type: c.serviceType || c.service_type,
-      provider: c.provider,
-      period_from: c.periodFrom || c.period_from,
-      period_to: c.periodTo || c.period_to,
-      value: Number.parseFloat(c.value),
-      total_amount: Number.parseFloat(c.totalAmount),
-      consumption: c.consumption ? Number.parseFloat(c.consumption) : null,
-      unit_of_measure: c.unitOfMeasure || c.unit_of_measure,
-    }));
-
-    const { data: createdConsumptions, error: consumptionsError } = await supabase
-      .from('bill_consumptions')
-      .insert(consumptionsPayload)
-      .select();
-
-    if (consumptionsError) {
-      return res.status(500).json({ error: 'Error al crear consumos' });
-    }
-
-    const transformed = transformBillToFrontend(
-      createdBill,
-      (createdConsumptions || []).map(transformConsumptionToFrontend)
-    );
-    res.status(201).json(transformed);
+    const bill = await createPagosBill(req.pagosUser, req.body);
+    res.status(201).json(bill);
   } catch (error) {
     console.error('Error al crear factura:', error);
-    res.status(500).json({ error: 'Error al crear factura' });
+    const status = error?.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al crear factura' });
   }
 });
 

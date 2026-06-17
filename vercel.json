@@ -24,6 +24,9 @@
     },
     "api/pagos/sites.js": {
       "maxDuration": 30
+    },
+    "api/pagos/upload.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
