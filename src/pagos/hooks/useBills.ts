@@ -33,6 +33,8 @@ export const useBills = (filters?: FilterOptions) => {
     authLoading,
     filters?.period,
     filters?.serviceType,
+    filters?.city,
+    filters?.businessGroup,
     filters?.location,
     filters?.status,
     filters?.search,

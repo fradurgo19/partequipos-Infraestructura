@@ -129,6 +129,8 @@ export interface ChartData {
 export interface FilterOptions {
   period?: string;
   serviceType?: ServiceType | 'all';
+  city?: string | 'all';
+  businessGroup?: string | 'all';
   location?: string | 'all';
   status?: BillStatus | 'all';
   search?: string;

@@ -53,7 +53,7 @@ const normalizeBillBody = (bill, consumptions) => {
 
 router.get('/', authenticatePagosToken, async (req, res) => {
   try {
-    const { period, serviceType, location, status, search } = req.query;
+    const { period, serviceType, city, businessGroup, location, status, search } = req.query;
     const viewAll = await canViewAllBills(req.pagosUser);
 
     let query = supabase.from('utility_bills').select('*');
@@ -62,6 +62,10 @@ router.get('/', authenticatePagosToken, async (req, res) => {
     }
     if (period) query = query.eq('period', period);
     if (serviceType && serviceType !== 'all') query = query.eq('service_type', serviceType);
+    if (city && city !== 'all') query = query.eq('city', city);
+    if (businessGroup && businessGroup !== 'all') {
+      query = query.eq('business_group', businessGroup);
+    }
     if (location && location !== 'all') query = query.eq('location', location);
     if (status && status !== 'all') query = query.eq('status', status);
     if (search) {

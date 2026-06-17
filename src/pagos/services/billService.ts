@@ -11,6 +11,12 @@ export const billService = {
     if (filters?.serviceType && filters.serviceType !== 'all') {
       params.append('serviceType', filters.serviceType);
     }
+    if (filters?.city && filters.city !== 'all') {
+      params.append('city', filters.city);
+    }
+    if (filters?.businessGroup && filters.businessGroup !== 'all') {
+      params.append('businessGroup', filters.businessGroup);
+    }
     if (filters?.location && filters.location !== 'all') {
       params.append('location', filters.location);
     }

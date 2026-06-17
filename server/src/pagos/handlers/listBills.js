@@ -16,7 +16,7 @@ const attachConsumptions = async (bills) => {
 };
 
 export const listPagosBills = async (pagosUser, query = {}) => {
-  const { period, serviceType, location, status, search } = query;
+  const { period, serviceType, city, businessGroup, location, status, search } = query;
   const viewAll = await canViewAllBills(pagosUser);
 
   let dbQuery = supabase.from('utility_bills').select('*');
@@ -25,6 +25,10 @@ export const listPagosBills = async (pagosUser, query = {}) => {
   }
   if (period) dbQuery = dbQuery.eq('period', period);
   if (serviceType && serviceType !== 'all') dbQuery = dbQuery.eq('service_type', serviceType);
+  if (city && city !== 'all') dbQuery = dbQuery.eq('city', city);
+  if (businessGroup && businessGroup !== 'all') {
+    dbQuery = dbQuery.eq('business_group', businessGroup);
+  }
   if (location && location !== 'all') dbQuery = dbQuery.eq('location', location);
   if (status && status !== 'all') dbQuery = dbQuery.eq('status', status);
   if (search) {
