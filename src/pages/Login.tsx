@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { pagosAuthService } from '../pagos/services/authService';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Card } from '../atoms/Card';
@@ -19,13 +20,23 @@ export const Login = () => {
     setError('');
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error: infraError } = await signIn(email, password);
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
+    if (!infraError) {
       navigate('/dashboard');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await pagosAuthService.signIn(email, password);
+      navigate('/pagos/reports');
+    } catch (pagosError) {
+      const message =
+        pagosError instanceof Error ? pagosError.message : 'Credenciales inválidas';
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 

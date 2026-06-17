@@ -14,6 +14,7 @@ import {
   Building2,
   FileCheck,
   Wrench,
+  Receipt,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '../atoms/Button';
@@ -44,6 +45,7 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
       { id: 'quotations', label: 'Cotizaciones', icon: FileSpreadsheet, path: '/quotations' },
       { id: 'contract-tracking', label: 'Seguimiento de Contratos', icon: FileCheck, path: '/contract-tracking' },
       { id: 'mantenimientos', label: 'Mantenimientos', icon: Wrench, path: '/mantenimientos' },
+      { id: 'pagos', label: 'Pagos / Facturas', icon: Receipt, path: '/pagos/bills' },
       { id: 'users', label: 'Usuarios y Roles', icon: Users, path: '/users' },
     ];
 
@@ -61,10 +63,10 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
       if (profile?.role === 'admin') {
         return allModules;
       }
-      return allModules.filter((m) => m.id !== 'users' && m.id !== 'mantenimientos');
+      return allModules.filter((m) => m.id !== 'users' && m.id !== 'mantenimientos' && m.id !== 'pagos');
     }
 
-    return allModules.filter((m) => m.id !== 'users' && m.id !== 'mantenimientos');
+    return allModules.filter((m) => m.id !== 'users' && m.id !== 'mantenimientos' && m.id !== 'pagos');
   };
 
   const modules = getAvailableModules();
@@ -131,7 +133,10 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
         <nav className={`p-4 space-y-2 overflow-y-auto flex-1 ${isCollapsed ? 'px-2' : ''}`}>
           {modules.map((module) => {
             const Icon = module.icon;
-            const isActive = location.pathname === module.path;
+            const isActive =
+              module.id === 'pagos'
+                ? location.pathname.startsWith('/pagos')
+                : location.pathname === module.path;
 
             return (
               <Link
