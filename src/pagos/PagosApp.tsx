@@ -20,16 +20,10 @@ const Loading = () => (
 );
 
 const PagosHomeRedirect = () => {
-  const { isInfraAdminAccess, loading } = usePagosAuth();
+  const { profile, loading } = usePagosAuth();
   if (loading) return <Loading />;
-  return <Navigate to={isInfraAdminAccess ? 'bills' : 'reports'} replace />;
-};
-
-const PagosUserOnlyRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isInfraAdminAccess, loading } = usePagosAuth();
-  if (loading) return <Loading />;
-  if (isInfraAdminAccess) return <Navigate to="/pagos/bills" replace />;
-  return <>{children}</>;
+  const homePath = profile?.role === 'area_coordinator' ? 'bills' : 'reports';
+  return <Navigate to={homePath} replace />;
 };
 
 export const PagosApp = () => (
@@ -56,9 +50,7 @@ export const PagosApp = () => (
           path="new-bill"
           element={
             <PagosProtectedLayout>
-              <PagosUserOnlyRoute>
-                <NewBillPage />
-              </PagosUserOnlyRoute>
+              <NewBillPage />
             </PagosProtectedLayout>
           }
         />
@@ -66,9 +58,7 @@ export const PagosApp = () => (
           path="reports"
           element={
             <PagosProtectedLayout>
-              <PagosUserOnlyRoute>
-                <ReportsPage />
-              </PagosUserOnlyRoute>
+              <ReportsPage />
             </PagosProtectedLayout>
           }
         />
@@ -76,9 +66,7 @@ export const PagosApp = () => (
           path="reports/edit/:id"
           element={
             <PagosProtectedLayout>
-              <PagosUserOnlyRoute>
-                <EditBillPage />
-              </PagosUserOnlyRoute>
+              <EditBillPage />
             </PagosProtectedLayout>
           }
         />

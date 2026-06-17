@@ -108,12 +108,6 @@ router.get('/:id', authenticatePagosToken, async (req, res) => {
 
 router.post('/', authenticatePagosToken, async (req, res) => {
   try {
-    if (req.pagosUser?.infraAdmin) {
-      return res.status(403).json({
-        error: 'Los administradores deben usar una cuenta de pagos para registrar facturas',
-      });
-    }
-
     const bill = req.body;
     const consumptions = Array.isArray(bill.consumptions) ? bill.consumptions : [];
     if (consumptions.length === 0) {

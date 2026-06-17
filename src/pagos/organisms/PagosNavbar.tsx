@@ -24,31 +24,26 @@ export const PagosNavbar: React.FC = () => {
       label: 'Nueva Factura',
       icon: PlusCircle,
       roles: ['area_coordinator', 'basic_user'],
-      hideForInfraAdmin: true,
     },
     {
       path: '/pagos/reports',
       label: 'Mis Facturas',
       icon: BarChart3,
       roles: ['area_coordinator', 'basic_user'],
-      hideForInfraAdmin: true,
     },
     { path: '/pagos/users', label: 'Usuarios', icon: Users, roles: ['area_coordinator'] },
   ];
 
-  const navItems = allNavItems.filter((item) => {
-    if (isInfraAdminAccess && item.hideForInfraAdmin) {
-      return false;
-    }
-    return item.roles.includes(profile?.role || 'basic_user');
-  });
+  const navItems = allNavItems.filter((item) =>
+    item.roles.includes(profile?.role || 'basic_user')
+  );
 
   return (
     <nav className="bg-gradient-to-r from-[#cf1b22] via-[#a11217] to-[#50504f] border-b border-[#cf1b22]/60 sticky top-0 z-50 shadow-lg">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-6">
-            <Link to={isInfraAdminAccess ? '/pagos/bills' : '/pagos/reports'} className="flex items-center space-x-2">
+            <Link to="/pagos/bills" className="flex items-center space-x-2">
               <span className="text-lg font-bold text-white">Pagos · Facturas</span>
             </Link>
             <div className="hidden md:flex space-x-2">
