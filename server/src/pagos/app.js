@@ -15,6 +15,10 @@ export const createPagosApp = () => {
 
   app.use('/api/pagos', pagosRoutes);
 
+  app.use((req, res) => {
+    res.status(404).json({ error: 'Ruta pagos no encontrada' });
+  });
+
   app.use((err, _req, res, _next) => {
     console.error('Error en API pagos:', err);
     res.status(err.status || 500).json({
