@@ -7,6 +7,9 @@ import { Input } from '../atoms/Input';
 import { Card } from '../atoms/Card';
 import { Building2 } from 'lucide-react';
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export const Login = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -21,29 +24,16 @@ export const Login = () => {
     setLoading(true);
 
     try {
-      await pagosAuthService.signIn(email, password);
-      navigate('/pagos/reports');
-      return;
-    } catch (pagosError) {
-      const pagosStatus =
-        pagosError instanceof Error
-          ? (pagosError as Error & { status?: number }).status
-          : undefined;
-      const pagosMessage =
-        pagosError instanceof Error ? pagosError.message : 'Credenciales inválidas';
-
-      if (pagosStatus && pagosStatus !== 401) {
-        setError(pagosMessage);
-        return;
-      }
-
       const { error: infraError } = await signIn(email, password);
       if (!infraError) {
         navigate('/dashboard');
         return;
       }
 
-      setError(pagosMessage);
+      await pagosAuthService.signIn(email, password);
+      navigate('/pagos/reports');
+    } catch (pagosError) {
+      setError(getErrorMessage(pagosError, 'Credenciales inválidas'));
     } finally {
       setLoading(false);
     }

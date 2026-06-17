@@ -20,7 +20,7 @@ const getToken = () => {
 const setToken = (token: string) => localStorage.setItem(TOKEN_KEY, token);
 const removeToken = () => localStorage.removeItem(TOKEN_KEY);
 
-const LOGIN_TIMEOUT_MS = 12_000;
+const LOGIN_TIMEOUT_MS = 8_000;
 
 const fetchWithTimeout = async (url: string, options: RequestInit) => {
   const controller = new AbortController();
