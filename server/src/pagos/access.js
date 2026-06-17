@@ -28,7 +28,7 @@ const getInfraProfileByUser = async (pagosUser) => {
 export const isInfraAdminProfile = (profile) => profile?.role === 'admin';
 
 export const enrichPagosUserIfInfraAdmin = async (pagosUser) => {
-  if (!pagosUser || pagosUser.infraAdmin) {
+  if (!pagosUser || pagosUser.infraAdmin || pagosUser.pagos) {
     return pagosUser;
   }
 
@@ -49,12 +49,15 @@ export const enrichPagosUserIfInfraAdmin = async (pagosUser) => {
 export const resolveActorRole = async (pagosUser) => {
   if (!pagosUser) return null;
   if (pagosUser.infraAdmin) return 'area_coordinator';
+  if (pagosUser.pagos && pagosUser.role) return pagosUser.role;
   if (isCoordinator(pagosUser.role)) return pagosUser.role;
 
   const infraProfile = await getInfraProfileByUser(pagosUser);
   if (isInfraAdminProfile(infraProfile)) {
     return 'area_coordinator';
   }
+
+  if (!pagosUser.id) return null;
 
   const { data } = await supabase
     .from('pagos_profiles')
@@ -65,7 +68,21 @@ export const resolveActorRole = async (pagosUser) => {
   return data?.role ?? null;
 };
 
+const canViewAllBillsFromToken = (pagosUser) => {
+  if (!pagosUser) return false;
+  if (pagosUser.infraAdmin) return true;
+  if (pagosUser.pagos && pagosUser.role) {
+    return isCoordinator(pagosUser.role);
+  }
+  return null;
+};
+
 export const canViewAllBills = async (pagosUser) => {
+  const fromToken = canViewAllBillsFromToken(pagosUser);
+  if (fromToken !== null) {
+    return fromToken;
+  }
+
   const role = await resolveActorRole(pagosUser);
   return isCoordinator(role);
 };

@@ -6,9 +6,13 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 30
+    },
+    "api/pagos.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
+    { "source": "/api/pagos/:path*", "destination": "/api/pagos" },
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],

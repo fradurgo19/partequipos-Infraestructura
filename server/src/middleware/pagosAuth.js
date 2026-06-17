@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabaseClient.js';
-import { enrichPagosUserIfInfraAdmin, isInfraAdminProfile } from '../pagos/access.js';
-import { getPagosJwtSecret, signPagosToken, verifyPagosToken } from '../pagos/jwt.js';
+import { isInfraAdminProfile } from '../pagos/access.js';
+import { getPagosJwtSecret, verifyPagosToken } from '../pagos/jwt.js';
 
-export { signPagosToken };
+export { signPagosToken } from '../pagos/jwt.js';
 
 const JWT_SECRET = getPagosJwtSecret();
 
@@ -36,8 +36,8 @@ const attachInfraAdminAsPagosCoordinator = async (req, res, next, token) => {
   return next();
 };
 
-const applyPagosJwtUser = async (req, res, next, decoded) => {
-  req.pagosUser = await enrichPagosUserIfInfraAdmin(decoded);
+const applyPagosJwtUser = (req, res, next, decoded) => {
+  req.pagosUser = decoded;
   return next();
 };
 
@@ -70,14 +70,8 @@ export const authenticatePagosToken = async (req, res, next) => {
   }
 };
 
-export const requirePagosCoordinator = async (req, res, next) => {
+export const requirePagosCoordinator = (req, res, next) => {
   if (req.pagosUser?.infraAdmin || req.pagosUser?.role === 'area_coordinator') {
-    return next();
-  }
-
-  const enriched = await enrichPagosUserIfInfraAdmin(req.pagosUser);
-  if (enriched?.infraAdmin || enriched?.role === 'area_coordinator') {
-    req.pagosUser = enriched;
     return next();
   }
 

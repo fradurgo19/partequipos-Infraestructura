@@ -23,6 +23,8 @@ export const Login = () => {
     setError('');
     setLoading(true);
 
+    const pagosLoginPromise = pagosAuthService.signIn(email, password);
+
     try {
       const { error: infraError } = await signIn(email, password);
       if (!infraError) {
@@ -30,7 +32,7 @@ export const Login = () => {
         return;
       }
 
-      await pagosAuthService.signIn(email, password);
+      await pagosLoginPromise;
       navigate('/pagos/reports');
     } catch (pagosError) {
       setError(getErrorMessage(pagosError, 'Credenciales inválidas'));
