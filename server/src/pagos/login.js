@@ -40,21 +40,11 @@ export const authenticatePagosCredentials = async (email, password) => {
 
   const trimmedEmail = email.trim();
 
-  let { data: user, error: userError } = await supabase
+  const { data: user, error: userError } = await supabase
     .from(PAGOS_TABLE)
     .select(PROFILE_FIELDS)
-    .eq('email', trimmedEmail)
+    .ilike('email', trimmedEmail)
     .maybeSingle();
-
-  if (!user && !userError) {
-    const fallback = await supabase
-      .from(PAGOS_TABLE)
-      .select(PROFILE_FIELDS)
-      .ilike('email', trimmedEmail)
-      .maybeSingle();
-    user = fallback.data;
-    userError = fallback.error;
-  }
 
   if (userError) {
     console.error('Error al buscar usuario pagos:', userError);

@@ -10,6 +10,27 @@ import { Building2 } from 'lucide-react';
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
+const INFRA_SIGN_IN_TIMEOUT_MS = 5_000;
+
+const signInWithTimeout = (
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>,
+  email: string,
+  password: string
+) =>
+  Promise.race([
+    signIn(email, password),
+    new Promise<{ error: Error }>((resolve) => {
+      globalThis.setTimeout(
+        () => resolve({ error: new Error('Infra login timeout') }),
+        INFRA_SIGN_IN_TIMEOUT_MS
+      );
+    }),
+  ]);
+
+const isInfraSignInSuccess = (
+  result: PromiseSettledResult<{ error: Error | null }>
+) => result.status === 'fulfilled' && !result.value.error;
+
 export const Login = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -23,19 +44,27 @@ export const Login = () => {
     setError('');
     setLoading(true);
 
-    const pagosLoginPromise = pagosAuthService.signIn(email, password);
-
     try {
-      const { error: infraError } = await signIn(email, password);
-      if (!infraError) {
+      const [infraResult, pagosResult] = await Promise.allSettled([
+        signInWithTimeout(signIn, email, password),
+        pagosAuthService.signIn(email, password),
+      ]);
+
+      if (isInfraSignInSuccess(infraResult)) {
         navigate('/dashboard');
         return;
       }
 
-      await pagosLoginPromise;
-      navigate('/pagos/reports');
-    } catch (pagosError) {
-      setError(getErrorMessage(pagosError, 'Credenciales inválidas'));
+      if (pagosResult.status === 'fulfilled') {
+        navigate('/pagos/reports');
+        return;
+      }
+
+      const pagosError = pagosResult.status === 'rejected' ? pagosResult.reason : null;
+      const infraError =
+        infraResult.status === 'fulfilled' ? infraResult.value.error : infraResult.reason;
+
+      setError(getErrorMessage(pagosError ?? infraError, 'Credenciales inválidas'));
     } finally {
       setLoading(false);
     }
