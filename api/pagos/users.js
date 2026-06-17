@@ -1,5 +1,8 @@
 import { resolvePagosUserFromRequest } from '../../server/src/pagos/vercelAuth.js';
-import { listPagosBills } from '../../server/src/pagos/handlers/listBills.js';
+import {
+  assertPagosCoordinator,
+  listPagosUsers,
+} from '../../server/src/pagos/handlers/listUsers.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -9,14 +12,15 @@ export default async function handler(req, res) {
 
   try {
     const pagosUser = await resolvePagosUserFromRequest(req);
-    const bills = await listPagosBills(pagosUser, req.query || {});
+    assertPagosCoordinator(pagosUser);
+    const users = await listPagosUsers();
 
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(200).json(bills);
+    return res.status(200).json(users);
   } catch (error) {
     const status = error?.statusCode || 500;
     return res.status(status).json({
-      error: error instanceof Error ? error.message : 'Error al obtener facturas',
+      error: error instanceof Error ? error.message : 'Error al obtener usuarios',
     });
   }
 }
