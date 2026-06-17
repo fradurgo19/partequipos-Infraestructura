@@ -9,6 +9,9 @@
     },
     "api/pagos/[...path].js": {
       "maxDuration": 30
+    },
+    "api/pagos/auth/login.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [

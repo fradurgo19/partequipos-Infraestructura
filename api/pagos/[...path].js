@@ -13,8 +13,29 @@ const logPagosHandler = (phase, data) => {
   // #endregion
 };
 
+const restorePagosRequestPath = (req) => {
+  try {
+    const baseUrl = 'http://localhost';
+    const url = new URL(req.url || '/api/pagos', baseUrl);
+    const pathParam = url.searchParams.get('path');
+    if (!pathParam) {
+      return;
+    }
+
+    url.searchParams.delete('path');
+    const queryString = url.searchParams.toString();
+    req.url = `/api/pagos/${pathParam}${queryString ? `?${queryString}` : ''}`;
+    if (typeof req.originalUrl === 'string') {
+      req.originalUrl = req.url;
+    }
+  } catch (error) {
+    console.error('[debug-41f171] pagos-path-restore-error', error);
+  }
+};
+
 export default async function handler(req, res) {
   const startedAt = Date.now();
+  restorePagosRequestPath(req);
   logPagosHandler('entry', {
     url: req.url,
     method: req.method,
