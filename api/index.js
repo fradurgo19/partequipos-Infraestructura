@@ -42,6 +42,14 @@ const restoreCollapsedApiPath = (req) => {
 
 export default async function handler(req, res) {
   const startedAt = Date.now();
+
+  if (typeof req.url === 'string' && req.url.includes('/api/pagos')) {
+    // #region agent log
+    console.log('[debug-41f171] api-index-skip-pagos', JSON.stringify({ url: req.url }));
+    // #endregion
+    return res.status(404).json({ error: 'Ruta pagos no disponible en api/index' });
+  }
+
   restoreCollapsedApiPath(req);
   logApiHandler('entry', {
     url: req.url,

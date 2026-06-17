@@ -12,11 +12,17 @@
     },
     "api/pagos/auth/login.js": {
       "maxDuration": 30
+    },
+    "api/pagos/auth/profile.js": {
+      "maxDuration": 30
+    },
+    "api/pagos/bills.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
     { "source": "/api/pagos/:path*", "destination": "/api/pagos/:path*" },
-    { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/api/:path((?!pagos$)(?!pagos/).*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "framework": null
