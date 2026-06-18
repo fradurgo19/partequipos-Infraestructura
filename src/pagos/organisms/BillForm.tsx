@@ -220,6 +220,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.', label: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.' }
     ],
     sewer: [
+      { value: 'ASACUHAN', label: 'ASACUHAN (ASOCIACION DE SUSCRIPTORES DEL ACUEDUCTO HONDITA HOJAS ANCHAS)' },
       { value: 'EAAB', label: 'Empresa de Acueducto y Alcantarillado de Bogotá-ESP' },
       { value: 'EPM', label: 'EPM (Medellín y municipios de Antioquia)' },
       { value: 'EMCALI', label: 'EMCALI (Empresas Municipales de Cali E.I.C.E. E.S.P.)' },
