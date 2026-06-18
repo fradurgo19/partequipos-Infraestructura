@@ -422,7 +422,16 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   };
 
   const handleFileSelect = (file: File | null) => {
-    setFormData(prev => ({ ...prev, attachedDocument: file }));
+    setFormData((prev) => ({ ...prev, attachedDocument: file }));
+  };
+
+  const handleExistingDocumentRemove = () => {
+    setFormData((prev) => ({
+      ...prev,
+      attachedDocument: null,
+      existingDocumentUrl: undefined,
+      existingDocumentName: undefined,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -438,14 +447,19 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     setLoading(true);
 
     try {
-      let documentUrl = '';
-      let documentName = '';
+      let documentUrl: string | undefined;
+      let documentName: string | undefined;
 
-      // Subir archivo si existe
       if (formData.attachedDocument) {
         const uploadData = await uploadBillDocument(formData.attachedDocument);
         documentUrl = uploadData.url;
         documentName = uploadData.filename;
+      } else if (formData.existingDocumentUrl) {
+        documentUrl = formData.existingDocumentUrl;
+        documentName = formData.existingDocumentName;
+      } else if (isEditMode) {
+        documentUrl = '';
+        documentName = '';
       }
 
       const mappedConsumptions = formData.consumptions.map((c) => ({
@@ -469,8 +483,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
         businessGroup: formData.businessGroup,
         location: formData.location,
         dueDate: formData.dueDate,
-        documentUrl: documentUrl || undefined,
-        documentName: documentName || undefined,
+        ...(documentUrl !== undefined ? { documentUrl, documentName } : {}),
         status: 'pending' as const,
         notes: formData.notes,
         consumptions: mappedConsumptions
@@ -696,7 +709,16 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           <FileUpload
             label="Cargar Factura (PDF, JPG, PNG)"
             currentFile={formData.attachedDocument}
+            existingFile={
+              formData.existingDocumentUrl
+                ? {
+                    url: formData.existingDocumentUrl,
+                    name: formData.existingDocumentName || 'Documento adjunto',
+                  }
+                : null
+            }
             onFileSelect={handleFileSelect}
+            onExistingFileRemove={handleExistingDocumentRemove}
           />
 
           <Textarea

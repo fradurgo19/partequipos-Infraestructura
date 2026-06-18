@@ -63,6 +63,8 @@ export interface UtilityBillFormData {
   location: string;
   dueDate: string;
   attachedDocument: File | null;
+  existingDocumentUrl?: string;
+  existingDocumentName?: string;
   status: BillStatus;
   notes: string;
   consumptions: Array<{
