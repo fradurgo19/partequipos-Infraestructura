@@ -1,7 +1,7 @@
-import { resolvePagosUserFromRequest } from '../../server/src/pagos/vercelAuth.js';
-import { listPagosBills } from '../../server/src/pagos/handlers/listBills.js';
-import { createPagosBill } from '../../server/src/pagos/handlers/createBill.js';
-import { readJsonBody } from '../../server/src/pagos/vercelRequest.js';
+import { resolvePagosUserFromRequest } from '../../../server/src/pagos/vercelAuth.js';
+import { listPagosBills } from '../../../server/src/pagos/handlers/listBills.js';
+import { createPagosBill } from '../../../server/src/pagos/handlers/createBill.js';
+import { readJsonBody } from '../../../server/src/pagos/vercelRequest.js';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {

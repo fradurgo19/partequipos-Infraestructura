@@ -41,12 +41,12 @@ export const billService = {
     const response = await fetch(`${PAGOS_API}/bills/${id}`, {
       headers: await pagosAuthService.getPagosApiAuthHeaders(),
     });
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      throw new Error('Respuesta inválida del servidor al cargar la factura');
+    }
     if (!response.ok) {
       if (response.status === 404) return null;
-      const contentType = response.headers.get('content-type') ?? '';
-      if (!contentType.includes('application/json')) {
-        throw new Error('Respuesta inválida del servidor al cargar la factura');
-      }
       const error = await response.json();
       throw new Error(error.error || 'Error al obtener factura');
     }

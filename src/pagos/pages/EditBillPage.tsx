@@ -3,11 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { BillForm } from '../organisms/BillForm';
 import { billService } from '../services/billService';
 import { billToFormData } from '../utils/billFormUtils';
+import { canEditPagosBill } from '../utils/billPermissions';
+import { usePagosAuth } from '../context/PagosAuthContext';
 import type { UtilityBillFormData } from '../types';
 
 export const EditBillPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { profile } = usePagosAuth();
   const [initialData, setInitialData] = useState<UtilityBillFormData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +32,10 @@ export const EditBillPage: React.FC = () => {
           setError('Factura no encontrada');
           return;
         }
+        if (!canEditPagosBill(bill, profile)) {
+          setError('No tienes permisos para modificar esta factura');
+          return;
+        }
         setInitialData(billToFormData(bill));
       } catch (err) {
         if (!cancelled) {
@@ -43,7 +50,7 @@ export const EditBillPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, profile]);
 
   if (loading) {
     return (

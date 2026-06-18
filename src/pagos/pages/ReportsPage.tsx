@@ -7,6 +7,7 @@ import { usePagosAuth } from '../context/PagosAuthContext';
 import { billService } from '../services/billService';
 import { UtilityBill, BillStatus } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { canEditPagosBill } from '../utils/billPermissions';
 import { BillDetailsModal } from '../molecules/BillDetailsModal';
 import { PAGOS_API } from '../config';
 import { pagosAuthService } from '../services/authService';
@@ -450,14 +451,16 @@ export const ReportsPage: React.FC = () => {
                             <File className="w-4 h-4" />
                           </a>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/pagos/reports/edit/${bill.id}`)}
-                          title="Modificar factura"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
+                        {canEditPagosBill(bill, profile) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/pagos/reports/edit/${bill.id}`)}
+                            title="Modificar factura"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
