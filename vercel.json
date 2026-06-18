@@ -19,7 +19,7 @@
     "api/pagos/bills/index.js": {
       "maxDuration": 30
     },
-    "api/pagos/bills/[id].js": {
+    "api/pagos/bill-by-id.js": {
       "maxDuration": 30
     },
     "api/pagos/users.js": {
@@ -33,6 +33,7 @@
     }
   },
   "rewrites": [
+    { "source": "/api/pagos/bills/:id", "destination": "/api/pagos/bill-by-id?id=:id" },
     { "source": "/api/pagos/:path*", "destination": "/api/pagos/:path*" },
     { "source": "/api/:path((?!pagos$)(?!pagos/).*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }

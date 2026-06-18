@@ -1,8 +1,8 @@
-import { resolvePagosUserFromRequest } from '../../../server/src/pagos/vercelAuth.js';
-import { getPagosBillById } from '../../../server/src/pagos/handlers/getBillById.js';
-import { updatePagosBill } from '../../../server/src/pagos/handlers/updateBill.js';
-import { deletePagosBill } from '../../../server/src/pagos/handlers/deleteBill.js';
-import { readJsonBody } from '../../../server/src/pagos/vercelRequest.js';
+import { resolvePagosUserFromRequest } from '../../server/src/pagos/vercelAuth.js';
+import { getPagosBillById } from '../../server/src/pagos/handlers/getBillById.js';
+import { updatePagosBill } from '../../server/src/pagos/handlers/updateBill.js';
+import { deletePagosBill } from '../../server/src/pagos/handlers/deleteBill.js';
+import { readJsonBody } from '../../server/src/pagos/vercelRequest.js';
 
 const resolveBillId = (req) => {
   const rawId = req.query?.id;
