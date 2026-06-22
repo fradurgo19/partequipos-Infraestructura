@@ -22,6 +22,12 @@
     "api/pagos/bill-by-id.js": {
       "maxDuration": 30
     },
+    "api/pagos/bill-status.js": {
+      "maxDuration": 30
+    },
+    "api/pagos/bill-approve.js": {
+      "maxDuration": 30
+    },
     "api/pagos/users.js": {
       "maxDuration": 30
     },
@@ -33,6 +39,8 @@
     }
   },
   "rewrites": [
+    { "source": "/api/pagos/bills/:id/approve", "destination": "/api/pagos/bill-approve?id=:id" },
+    { "source": "/api/pagos/bills/:id/status", "destination": "/api/pagos/bill-status?id=:id" },
     { "source": "/api/pagos/bills/:id", "destination": "/api/pagos/bill-by-id?id=:id" },
     { "source": "/api/pagos/:path*", "destination": "/api/pagos/:path*" },
     { "source": "/api/:path((?!pagos$)(?!pagos/).*)", "destination": "/api" },

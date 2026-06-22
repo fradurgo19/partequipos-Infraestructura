@@ -1,6 +1,6 @@
 import express from 'express';
 import { supabase } from '../../lib/supabaseClient.js';
-import { authenticatePagosToken, requirePagosCoordinator } from '../../middleware/pagosAuth.js';
+import { authenticatePagosToken } from '../../middleware/pagosAuth.js';
 import {
   transformBillToFrontend,
   transformConsumptionToFrontend,
@@ -11,6 +11,8 @@ import { createPagosBill } from '../../pagos/handlers/createBill.js';
 import { getPagosBillById } from '../../pagos/handlers/getBillById.js';
 import { updatePagosBill } from '../../pagos/handlers/updateBill.js';
 import { deletePagosBill } from '../../pagos/handlers/deleteBill.js';
+import { approvePagosBill, updatePagosBillStatus } from '../../pagos/handlers/updateBillStatus.js';
+import { assertPagosCoordinator } from '../../pagos/handlers/coordinatorAccess.js';
 
 const router = express.Router();
 
@@ -152,59 +154,27 @@ router.post('/bulk-delete', authenticatePagosToken, async (req, res) => {
   }
 });
 
-router.post('/:id/approve', authenticatePagosToken, requirePagosCoordinator, async (req, res) => {
+router.post('/:id/approve', authenticatePagosToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { data, error } = await supabase
-      .from('utility_bills')
-      .update({
-        status: 'approved',
-        approved_by: req.pagosUser.id,
-        approved_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({ error: 'Factura no encontrada' });
-    }
-    res.json(transformBillToFrontend(data));
+    await assertPagosCoordinator(req.pagosUser);
+    const bill = await approvePagosBill(req.params.id, req.pagosUser);
+    res.json(bill);
   } catch (error) {
     console.error('Error al aprobar factura:', error);
-    res.status(500).json({ error: 'Error al aprobar factura' });
+    const status = error?.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al aprobar factura' });
   }
 });
 
-router.patch('/:id/status', authenticatePagosToken, requirePagosCoordinator, async (req, res) => {
+router.patch('/:id/status', authenticatePagosToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
-    const validStatuses = ['pending', 'approved'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: 'Estado inválido. Solo pending o approved' });
-    }
-
-    const updateData = { status };
-    if (status === 'approved') {
-      updateData.approved_by = req.pagosUser.id;
-      updateData.approved_at = new Date().toISOString();
-    }
-
-    const { data, error } = await supabase
-      .from('utility_bills')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({ error: 'Factura no encontrada' });
-    }
-    res.json(transformBillToFrontend(data));
+    await assertPagosCoordinator(req.pagosUser);
+    const bill = await updatePagosBillStatus(req.params.id, req.body.status, req.pagosUser);
+    res.json(bill);
   } catch (error) {
     console.error('Error al actualizar estado de factura:', error);
-    res.status(500).json({ error: 'Error al actualizar estado' });
+    const status = error?.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al actualizar estado' });
   }
 });
 

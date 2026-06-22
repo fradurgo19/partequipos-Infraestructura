@@ -4,6 +4,32 @@ import { PAGOS_API } from '../config';
 
 const mapDbRowToBill = (row: Record<string, unknown>): UtilityBill => row as unknown as UtilityBill;
 
+const readJsonResponse = async (response: Response) => {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Respuesta inválida del servidor');
+  }
+
+  const raw = await response.text();
+  if (!raw.trim()) {
+    throw new Error('Respuesta vacía del servidor');
+  }
+
+  return JSON.parse(raw) as Record<string, unknown>;
+};
+
+const readErrorMessage = async (response: Response, fallback: string) => {
+  try {
+    const payload = await readJsonResponse(response);
+    if (typeof payload.error === 'string') {
+      return payload.error;
+    }
+  } catch {
+    // Mantener mensaje genérico si la respuesta no es JSON válido
+  }
+  return fallback;
+};
+
 export const billService = {
   async getAll(filters?: FilterOptions): Promise<UtilityBill[]> {
     const params = new URLSearchParams();
@@ -112,10 +138,9 @@ export const billService = {
       headers: await pagosAuthService.getPagosApiAuthHeaders(),
     });
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error al aprobar factura');
+      throw new Error(await readErrorMessage(response, 'Error al aprobar factura'));
     }
-    return mapDbRowToBill(await response.json());
+    return mapDbRowToBill(await readJsonResponse(response));
   },
 
   async updateStatus(id: string, status: string): Promise<UtilityBill> {
@@ -125,10 +150,9 @@ export const billService = {
       body: JSON.stringify({ status }),
     });
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error al actualizar estado de factura');
+      throw new Error(await readErrorMessage(response, 'Error al actualizar estado de factura'));
     }
-    return mapDbRowToBill(await response.json());
+    return mapDbRowToBill(await readJsonResponse(response));
   },
 };
 

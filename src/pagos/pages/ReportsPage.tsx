@@ -36,18 +36,15 @@ export const ReportsPage: React.FC = () => {
     try {
       setLoading(true);
       const data = await billService.getAll();
-      const filteredBills = isAdmin
-        ? data
-        : data.filter((bill) => bill.user_id === profile?.id);
-      filteredBills.sort((a, b) => b.period.localeCompare(a.period));
-      setAllBills(filteredBills);
-      setBills(filteredBills);
+      const sortedBills = [...data].sort((a, b) => b.period.localeCompare(a.period));
+      setAllBills(sortedBills);
+      setBills(sortedBills);
     } catch (error) {
       console.error('Error al cargar facturas:', error);
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, profile?.id, authLoading]);
+  }, [authLoading]);
 
   const loadUsers = useCallback(async () => {
     try {

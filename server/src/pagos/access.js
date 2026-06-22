@@ -49,6 +49,19 @@ export const enrichPagosUserIfInfraAdmin = async (pagosUser) => {
 export const resolveActorRole = async (pagosUser) => {
   if (!pagosUser) return null;
   if (pagosUser.infraAdmin) return 'area_coordinator';
+
+  if (pagosUser.id) {
+    const { data } = await supabase
+      .from('pagos_profiles')
+      .select('role')
+      .eq('id', pagosUser.id)
+      .maybeSingle();
+
+    if (data?.role) {
+      return data.role;
+    }
+  }
+
   if (pagosUser.pagos && pagosUser.role) return pagosUser.role;
   if (isCoordinator(pagosUser.role)) return pagosUser.role;
 
@@ -57,23 +70,12 @@ export const resolveActorRole = async (pagosUser) => {
     return 'area_coordinator';
   }
 
-  if (!pagosUser.id) return null;
-
-  const { data } = await supabase
-    .from('pagos_profiles')
-    .select('role')
-    .eq('id', pagosUser.id)
-    .maybeSingle();
-
-  return data?.role ?? null;
+  return null;
 };
 
 const canViewAllBillsFromToken = (pagosUser) => {
   if (!pagosUser) return false;
   if (pagosUser.infraAdmin) return true;
-  if (pagosUser.pagos && pagosUser.role) {
-    return isCoordinator(pagosUser.role);
-  }
   return null;
 };
 
