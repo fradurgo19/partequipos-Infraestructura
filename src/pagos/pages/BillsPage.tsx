@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PlusCircle, Download } from 'lucide-react';
+import { PlusCircle, Download, FilterX } from 'lucide-react';
+import { Button } from '../../atoms/Button';
 import { SearchBar } from '../molecules/SearchBar';
 import { FilterBar } from '../molecules/FilterBar';
 import { BillsTable } from '../organisms/BillsTable';
@@ -10,10 +11,29 @@ import { translateServiceType, translateStatus } from '../utils/formatters';
 import { billService } from '../services/billService';
 import { usePagosAuth } from '../context/PagosAuthContext';
 
+const DEFAULT_FILTERS: FilterOptions = {
+  period: 'all',
+  serviceType: 'all',
+  city: 'all',
+  businessGroup: 'all',
+  location: 'all',
+  status: 'all',
+  search: '',
+};
+
 const sortUnique = (values: Array<string | undefined>) =>
   Array.from(new Set(values.filter((value): value is string => Boolean(value?.trim())))).sort(
     (a, b) => a.localeCompare(b, 'es')
   );
+
+const hasActiveFilters = (filters: FilterOptions) =>
+  (filters.period && filters.period !== 'all') ||
+  (filters.serviceType && filters.serviceType !== 'all') ||
+  (filters.city && filters.city !== 'all') ||
+  (filters.businessGroup && filters.businessGroup !== 'all') ||
+  (filters.location && filters.location !== 'all') ||
+  (filters.status && filters.status !== 'all') ||
+  Boolean(filters.search?.trim());
 
 const matchesFilterOptions = (bill: UtilityBill, filters: FilterOptions) => {
   if (filters.period && filters.period !== 'all' && bill.period !== filters.period) {
@@ -44,14 +64,8 @@ const matchesFilterOptions = (bill: UtilityBill, filters: FilterOptions) => {
 
 export const BillsPage: React.FC = () => {
   const { loading: authLoading } = usePagosAuth();
-  const [filters, setFilters] = useState<FilterOptions>({
-    serviceType: 'all',
-    city: 'all',
-    businessGroup: 'all',
-    location: 'all',
-    status: 'all',
-    search: '',
-  });
+  const [filters, setFilters] = useState<FilterOptions>(DEFAULT_FILTERS);
+  const [searchResetKey, setSearchResetKey] = useState(0);
   const [filterSourceBills, setFilterSourceBills] = useState<UtilityBill[]>([]);
 
   const { bills, loading, refresh } = useBills(filters);
@@ -117,6 +131,11 @@ export const BillsPage: React.FC = () => {
 
   const handleSearch = (query: string) => {
     setFilters((prev) => ({ ...prev, search: query }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setSearchResetKey((key) => key + 1);
   };
 
   const handleExport = () => {
@@ -193,15 +212,35 @@ export const BillsPage: React.FC = () => {
       </div>
 
       <div className="space-y-4">
-        <SearchBar placeholder="Buscar facturas..." onSearch={handleSearch} />
-        <FilterBar
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          cities={uniqueCities}
-          businessGroups={uniqueBusinessGroups}
-          locations={uniqueLocations}
-          periods={uniquePeriods}
+        <SearchBar
+          key={searchResetKey}
+          placeholder="Buscar facturas..."
+          onSearch={handleSearch}
         />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex-1 min-w-0">
+            <FilterBar
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              cities={uniqueCities}
+              businessGroups={uniqueBusinessGroups}
+              locations={uniqueLocations}
+              periods={uniquePeriods}
+            />
+          </div>
+          {hasActiveFilters(filters) && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleClearFilters}
+              className="flex items-center justify-center gap-2 shrink-0"
+            >
+              <FilterX className="w-4 h-4" />
+              <span>Eliminar filtros</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       <BillsTable bills={bills} onBillUpdated={refresh} onBillDeleted={refresh} />

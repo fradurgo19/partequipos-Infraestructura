@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Calendar, DollarSign, Package, Eye, Download, File, Users as UsersIcon, Pencil } from 'lucide-react';
+import { FileText, Calendar, DollarSign, Package, Eye, Download, File, Users as UsersIcon, Pencil, FilterX } from 'lucide-react';
 import { Card } from '../../atoms/Card';
 import { Button } from '../../atoms/Button';
 import { usePagosAuth } from '../context/PagosAuthContext';
@@ -28,6 +28,12 @@ export const ReportsPage: React.FC = () => {
   const [users, setUsers] = useState<Array<{ id: string; fullName: string; email: string }>>([]);
 
   const isAdmin = profile?.role === 'area_coordinator';
+  const hasActiveFilters = selectedPeriod !== 'all' || selectedUser !== 'all';
+
+  const handleClearFilters = () => {
+    setSelectedPeriod('all');
+    setSelectedUser('all');
+  };
 
   const loadBills = useCallback(async () => {
     if (authLoading) {
@@ -344,6 +350,21 @@ export const ReportsPage: React.FC = () => {
               ))}
             </select>
           </div>
+
+          {hasActiveFilters && (
+            <div className="flex justify-end pt-2 border-t border-gray-100">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleClearFilters}
+                className="flex items-center gap-2"
+              >
+                <FilterX className="w-4 h-4" />
+                <span>Eliminar filtros</span>
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
 
