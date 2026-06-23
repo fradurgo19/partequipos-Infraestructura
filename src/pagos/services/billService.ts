@@ -33,7 +33,9 @@ const readErrorMessage = async (response: Response, fallback: string) => {
 export const billService = {
   async getAll(filters?: FilterOptions): Promise<UtilityBill[]> {
     const params = new URLSearchParams();
-    if (filters?.period) params.append('period', filters.period);
+    if (filters?.period && filters.period !== 'all') {
+      params.append('period', filters.period);
+    }
     if (filters?.serviceType && filters.serviceType !== 'all') {
       params.append('serviceType', filters.serviceType);
     }
