@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Download, CheckCircle, Camera, X } from 'lucide-react';
+import { Plus, Download, CheckCircle, Camera, X, Pencil } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -9,9 +9,128 @@ import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Measurement, Site } from '../types';
+import { Measurement, Site, Contract } from '../types';
 
 type TaskOption = { id: string; title: string; site_id: string };
+type ContractOption = Pick<Contract, 'id' | 'contract_number' | 'description' | 'site_id'> & {
+  contractor?: { company_name: string };
+};
+
+const INITIAL_FORM_STATE = {
+  title: '',
+  site_id: '',
+  task_id: '',
+  contract_id: '',
+  measurement_unit: 'm' as 'm' | 'm²' | 'm³',
+  length: '',
+  height: '',
+  width: '',
+  depth: '',
+  activities: '',
+  globales: '',
+  admin_hours: '',
+  observations: '',
+  how_to_do: '',
+  cut_value: '',
+  photo_height: null as File | null,
+  photo_length: null as File | null,
+  photo_width: null as File | null,
+  photo_general: null as File | null,
+};
+
+const EMPTY_PHOTO_URLS = {
+  height: '',
+  length: '',
+  width: '',
+  general: '',
+};
+
+const calculateMeasurementValues = (
+  measurementUnit: 'm' | 'm²' | 'm³',
+  length: number | null,
+  height: number | null,
+  width: number | null,
+  depth: number | null
+) => {
+  let calculated_area = null;
+  let calculated_volume = null;
+
+  if (measurementUnit === 'm²') {
+    if (length && width) {
+      calculated_area = length * width;
+    } else if (length && height) {
+      calculated_area = length * height;
+    }
+  } else if (measurementUnit === 'm³') {
+    if (length && width && depth) {
+      calculated_volume = length * width * depth;
+      calculated_area = length * width;
+    } else if (length && height && depth) {
+      calculated_volume = length * height * depth;
+      calculated_area = length * height;
+    }
+  }
+
+  return { calculated_area, calculated_volume };
+};
+
+const buildMeasurementPayload = (
+  formData: typeof INITIAL_FORM_STATE,
+  photoUrls: typeof EMPTY_PHOTO_URLS,
+  profileId: string,
+  isEdit: boolean
+): Record<string, string | number | string[] | null> => {
+  const length = formData.length ? Number.parseFloat(formData.length) : null;
+  const height = formData.height ? Number.parseFloat(formData.height) : null;
+  const width = formData.width ? Number.parseFloat(formData.width) : null;
+  const depth = formData.depth ? Number.parseFloat(formData.depth) : null;
+  const { calculated_area, calculated_volume } = calculateMeasurementValues(
+    formData.measurement_unit,
+    length,
+    height,
+    width,
+    depth
+  );
+
+  const payload: Record<string, string | number | string[] | null> = {
+    title: formData.title,
+    site_id: formData.site_id || null,
+    task_id: formData.task_id || null,
+    contract_id: formData.contract_id || null,
+    measurement_unit: formData.measurement_unit,
+    length,
+    height,
+    width,
+    depth,
+    calculated_area,
+    calculated_volume,
+    activities: formData.activities || null,
+    globales: formData.globales || null,
+    admin_hours: formData.admin_hours ? Number.parseFloat(formData.admin_hours) : null,
+    observations: formData.observations || null,
+    how_to_do: formData.how_to_do || null,
+    cut_value: formData.cut_value ? Number.parseFloat(formData.cut_value) : null,
+    photo_height_url: photoUrls.height || null,
+    photo_length_url: photoUrls.length || null,
+    photo_width_url: photoUrls.width || null,
+    photo_general_url: photoUrls.general || null,
+    photo_urls: [photoUrls.height, photoUrls.length, photoUrls.width, photoUrls.general].filter(Boolean),
+  };
+
+  if (!isEdit) {
+    payload.created_by = profileId;
+    payload.status = 'pending';
+    payload.submitted_at = new Date().toISOString();
+  }
+
+  return payload;
+};
+
+const formatContractLabel = (contract: ContractOption) => {
+  const summary = contract.description?.trim() || contract.contractor?.company_name || 'Sin descripción';
+  const truncatedSummary = summary.length > 48 ? `${summary.slice(0, 48)}…` : summary;
+  return `${contract.contract_number} — ${truncatedSummary}`;
+};
 import { addWatermarkToImage } from '../services/watermark';
 import { generateCutPDF } from '../services/pdfGenerator';
 
@@ -20,34 +139,12 @@ export const Measurements = () => {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [tasks, setTasks] = useState<TaskOption[]>([]);
-  const [formData, setFormData] = useState({
-    title: '',
-    site_id: '',
-    task_id: '',
-    measurement_unit: 'm' as 'm' | 'm²' | 'm³',
-    length: '',
-    height: '',
-    width: '',
-    depth: '',
-    activities: '',
-    globales: '',
-    admin_hours: '',
-    observations: '',
-    how_to_do: '',
-    cut_value: '',
-    photo_height: null as File | null,
-    photo_length: null as File | null,
-    photo_width: null as File | null,
-    photo_general: null as File | null,
-  });
-  const [photoUrls, setPhotoUrls] = useState({
-    height: '',
-    length: '',
-    width: '',
-    general: '',
-  });
+  const [contracts, setContracts] = useState<ContractOption[]>([]);
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+  const [photoUrls, setPhotoUrls] = useState(EMPTY_PHOTO_URLS);
 
   useEffect(() => {
     loadData();
@@ -55,13 +152,20 @@ export const Measurements = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const [measurementsResult, sitesResult, tasksResult] = await Promise.all([
+    const [measurementsResult, sitesResult, tasksResult, contractsResult] = await Promise.all([
       supabase
         .from('measurements')
-        .select('*, site:sites(id, name, location), task:tasks(id, title)')
+        .select(
+          '*, site:sites(id, name, location), task:tasks(id, title), contract:contracts(id, contract_number, description, site_id)'
+        )
         .order('created_at', { ascending: false }),
       supabase.from('sites').select('*').order('name'),
       supabase.from('tasks').select('id, title, site_id').order('created_at', { ascending: false }),
+      supabase
+        .from('contracts')
+        .select('id, contract_number, description, site_id, contractor:contractors(company_name)')
+        .neq('status', 'cancelled')
+        .order('contract_number'),
     ]);
 
     if (!measurementsResult.error && measurementsResult.data) {
@@ -73,7 +177,66 @@ export const Measurements = () => {
     if (!tasksResult.error && tasksResult.data) {
       setTasks(tasksResult.data as TaskOption[]);
     }
+    if (!contractsResult.error && contractsResult.data) {
+      setContracts(contractsResult.data as ContractOption[]);
+    }
     setLoading(false);
+  };
+
+  const availableContracts = contracts.filter(
+    (contract) => !formData.site_id || !contract.site_id || contract.site_id === formData.site_id
+  );
+
+  const canEditMeasurement = (measurement: Measurement) =>
+    measurement.status === 'pending' &&
+    (measurement.created_by === profile?.id ||
+      profile?.role === 'admin' ||
+      profile?.role === 'infrastructure' ||
+      profile?.role === 'supervision');
+
+  const handleSiteChange = (siteId: string) => {
+    setFormData((prev) => {
+      const next = { ...prev, site_id: siteId };
+      if (prev.contract_id && siteId) {
+        const selectedContract = contracts.find((contract) => contract.id === prev.contract_id);
+        if (selectedContract?.site_id && selectedContract.site_id !== siteId) {
+          next.contract_id = '';
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleEdit = (measurement: Measurement) => {
+    setEditingMeasurement(measurement);
+    setFormData({
+      title: measurement.title,
+      site_id: measurement.site_id || '',
+      task_id: measurement.task_id || '',
+      contract_id: measurement.contract_id || '',
+      measurement_unit: measurement.measurement_unit || 'm',
+      length: measurement.length?.toString() || '',
+      height: measurement.height?.toString() || '',
+      width: measurement.width?.toString() || '',
+      depth: measurement.depth?.toString() || '',
+      activities: measurement.activities || '',
+      globales: measurement.globales || '',
+      admin_hours: measurement.admin_hours?.toString() || '',
+      observations: measurement.observations || '',
+      how_to_do: measurement.how_to_do || '',
+      cut_value: measurement.cut_value?.toString() || '',
+      photo_height: null,
+      photo_length: null,
+      photo_width: null,
+      photo_general: null,
+    });
+    setPhotoUrls({
+      height: measurement.photo_height_url || '',
+      length: measurement.photo_length_url || '',
+      width: measurement.photo_width_url || '',
+      general: measurement.photo_general_url || '',
+    });
+    setShowModal(true);
   };
 
   const handlePhotoUpload = async (file: File, type: 'height' | 'length' | 'width' | 'general') => {
@@ -96,62 +259,26 @@ export const Measurements = () => {
     e.preventDefault();
     if (!profile) return;
 
-    const length = formData.length ? Number.parseFloat(formData.length) : null;
-    const height = formData.height ? Number.parseFloat(formData.height) : null;
-    const width = formData.width ? Number.parseFloat(formData.width) : null;
-    const depth = formData.depth ? Number.parseFloat(formData.depth) : null;
+    const isEdit = Boolean(editingMeasurement);
+    const measurementData = buildMeasurementPayload(formData, photoUrls, profile.id, isEdit);
 
-    let calculated_area = null;
-    let calculated_volume = null;
+    if (isEdit && editingMeasurement) {
+      const { error } = await supabase
+        .from('measurements')
+        .update(measurementData)
+        .eq('id', editingMeasurement.id);
 
-    // Calcular según unidad de medida
-    if (formData.measurement_unit === 'm') {
-      // Metros lineales: solo longitud
-      // No hay cálculo adicional
-    } else if (formData.measurement_unit === 'm²') {
-      // Metros cuadrados: largo x ancho
-      if (length && width) {
-        calculated_area = length * width;
-      } else if (length && height) {
-        calculated_area = length * height;
+      if (error) {
+        console.error('Error updating measurement:', error);
+        alert('Error al actualizar el corte');
+        return;
       }
-    } else if (formData.measurement_unit === 'm³') {
-      // Metros cúbicos: largo x ancho x profundidad
-      if (length && width && depth) {
-        calculated_volume = length * width * depth;
-        calculated_area = length * width;
-      } else if (length && height && depth) {
-        calculated_volume = length * height * depth;
-        calculated_area = length * height;
-      }
+
+      setShowModal(false);
+      resetForm();
+      loadData();
+      return;
     }
-
-    const measurementData: Record<string, string | number | string[] | null> = {
-      title: formData.title,
-      site_id: formData.site_id || null,
-      task_id: formData.task_id || null,
-      measurement_unit: formData.measurement_unit,
-      length,
-      height,
-      width,
-      depth,
-      calculated_area,
-      calculated_volume,
-      activities: formData.activities || null,
-      globales: formData.globales || null,
-      admin_hours: formData.admin_hours ? Number.parseFloat(formData.admin_hours) : null,
-      observations: formData.observations || null,
-      how_to_do: formData.how_to_do || null,
-      cut_value: formData.cut_value ? Number.parseFloat(formData.cut_value) : null,
-      photo_height_url: photoUrls.height || null,
-      photo_length_url: photoUrls.length || null,
-      photo_width_url: photoUrls.width || null,
-      photo_general_url: photoUrls.general || null,
-      photo_urls: [photoUrls.height, photoUrls.length, photoUrls.width, photoUrls.general].filter(Boolean),
-      created_by: profile.id,
-      status: 'pending',
-      submitted_at: new Date().toISOString(),
-    };
 
     const { data: insertedData, error } = await supabase
       .from('measurements')
@@ -170,6 +297,7 @@ export const Measurements = () => {
       ...insertedData,
       site: sites.find((s) => s.id === formData.site_id),
       task: tasks.find((t) => t.id === formData.task_id),
+      contract: contracts.find((c) => c.id === formData.contract_id),
     };
 
     try {
@@ -296,32 +424,9 @@ export const Measurements = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      site_id: '',
-      task_id: '',
-      measurement_unit: 'm',
-      length: '',
-      height: '',
-      width: '',
-      depth: '',
-      activities: '',
-      globales: '',
-      admin_hours: '',
-      observations: '',
-      how_to_do: '',
-      cut_value: '',
-      photo_height: null,
-      photo_length: null,
-      photo_width: null,
-      photo_general: null,
-    });
-    setPhotoUrls({
-      height: '',
-      length: '',
-      width: '',
-      general: '',
-    });
+    setEditingMeasurement(null);
+    setFormData(INITIAL_FORM_STATE);
+    setPhotoUrls(EMPTY_PHOTO_URLS);
   };
 
   const handleDownloadPDF = async (measurement: Measurement) => {
@@ -333,6 +438,7 @@ export const Measurements = () => {
         ...measurement,
         site: sites.find((s) => s.id === measurement.site_id),
         task: tasks.find((t) => t.id === measurement.task_id),
+        contract: contracts.find((c) => c.id === measurement.contract_id) || measurement.contract,
       };
       const pdfBlob = await generateCutPDF(measurementWithRelations);
       const url = URL.createObjectURL(pdfBlob);
@@ -361,7 +467,13 @@ export const Measurements = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Cortes de Obra</h1>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">Registro de cortes con medidas y evidencias fotográficas</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+        <Button
+          onClick={() => {
+            resetForm();
+            setShowModal(true);
+          }}
+          className="w-full sm:w-auto"
+        >
           <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           <span className="text-sm sm:text-base">Nuevo Corte</span>
         </Button>
@@ -429,6 +541,16 @@ export const Measurements = () => {
                     </div>
                   )}
 
+                  {measurement.contract && (
+                    <div className="mb-3">
+                      <p className="text-gray-500 text-xs">Contrato</p>
+                      <p className="font-medium text-[#50504f]">
+                        {measurement.contract.contract_number}
+                        {measurement.contract.description ? ` — ${measurement.contract.description}` : ''}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     {measurement.approved_by_edison && measurement.approved_at_edison && (
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
@@ -449,6 +571,12 @@ export const Measurements = () => {
                 </div>
 
                 <div className="flex gap-2">
+                  {canEditMeasurement(measurement) && (
+                    <Button size="sm" variant="ghost" onClick={() => handleEdit(measurement)}>
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Editar
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="secondary"
@@ -500,7 +628,12 @@ export const Measurements = () => {
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay cortes registrados</h3>
             <p className="text-gray-500 mb-4">Crea tu primer corte para comenzar</p>
-            <Button onClick={() => setShowModal(true)}>
+            <Button
+              onClick={() => {
+                resetForm();
+                setShowModal(true);
+              }}
+            >
               <Plus className="w-5 h-5 mr-2" />
               Nuevo Corte
             </Button>
@@ -514,7 +647,7 @@ export const Measurements = () => {
           setShowModal(false);
           resetForm();
         }}
-        title="Nuevo Corte de Obra"
+        title={editingMeasurement ? 'Editar Corte de Obra' : 'Nuevo Corte de Obra'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -529,13 +662,28 @@ export const Measurements = () => {
           <Select
             label="Sede *"
             value={formData.site_id}
-            onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
+            onChange={(e) => handleSiteChange(e.target.value)}
             options={[
               { value: '', label: 'Seleccione una sede' },
               ...sites.map((site) => ({ value: site.id, label: site.name })),
             ]}
             fullWidth
             required
+          />
+
+          <Select
+            label="Contrato (Opcional)"
+            value={formData.contract_id}
+            onChange={(e) => setFormData({ ...formData, contract_id: e.target.value })}
+            options={[
+              { value: '', label: 'Sin contrato asociado' },
+              ...availableContracts.map((contract) => ({
+                value: contract.id,
+                label: formatContractLabel(contract),
+                title: formatContractLabel(contract),
+              })),
+            ]}
+            fullWidth
           />
 
           <Select
@@ -822,7 +970,7 @@ export const Measurements = () => {
               Cancelar
             </Button>
             <Button type="submit" fullWidth>
-              Registrar Corte
+              {editingMeasurement ? 'Guardar Cambios' : 'Registrar Corte'}
             </Button>
           </div>
         </form>

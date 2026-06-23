@@ -418,6 +418,16 @@ export const generateCutPDF = async (cutData: any): Promise<Blob> => {
     doc.text(`Tarea Asociada: ${cutData.task.title || 'N/A'}`, 15, yPos);
     yPos += 7;
   }
+
+  if (cutData.contract) {
+    doc.text(`Contrato: ${cutData.contract.contract_number || 'N/A'}`, 15, yPos);
+    yPos += 7;
+    if (cutData.contract.description) {
+      const contractLines = doc.splitTextToSize(`Descripción del contrato: ${cutData.contract.description}`, 180);
+      doc.text(contractLines, 15, yPos);
+      yPos += contractLines.length * 7;
+    }
+  }
   
   // Medidas
   yPos += 5;

@@ -120,6 +120,7 @@ export interface Measurement {
   title: string;
   site_id?: string;
   task_id?: string;
+  contract_id?: string;
   length?: number;
   height?: number;
   depth?: number;
@@ -153,6 +154,7 @@ export interface Measurement {
   updated_at: string;
   site?: Site;
   task?: Task;
+  contract?: Pick<Contract, 'id' | 'contract_number' | 'description' | 'site_id'>;
 }
 
 export interface InternalRequest {
