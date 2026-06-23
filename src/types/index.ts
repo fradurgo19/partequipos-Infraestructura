@@ -259,15 +259,19 @@ export interface Maintenance {
   site_id: string;
   component_type: string;
   component_id: string;
+  component_name?: string;
+  contractor_id?: string;
   maintenance_kind: MaintenanceKind;
   last_maintenance_date: string;
   next_maintenance_date: string;
+  last_maintenance_cost?: number;
   component_status: ComponentStatus;
   notes?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
   site?: Pick<Site, 'id' | 'name' | 'city'>;
+  contractor?: Pick<Contractor, 'id' | 'company_name' | 'contact_name'>;
 }
 
 export interface PurchaseOrder {

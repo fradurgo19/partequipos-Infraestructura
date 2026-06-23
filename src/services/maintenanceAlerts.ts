@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { getComponentLabel } from '../constants/siteComponents';
+import { getMaintenanceComponentLabel } from '../constants/siteComponents';
 
 const ALERT_DAYS_BEFORE = 10;
 
@@ -17,6 +17,7 @@ interface MaintenanceRow {
   id: string;
   component_type: string;
   component_id: string;
+  component_name?: string | null;
   next_maintenance_date: string;
   site?: { name?: string } | null;
 }
@@ -37,7 +38,7 @@ const createAlertIfMissing = async (
 
   if (existing) return;
 
-  const componentLabel = getComponentLabel(maintenance.component_type);
+  const componentLabel = getMaintenanceComponentLabel(maintenance);
   const siteName = maintenance.site?.name ?? 'Sede';
   const dayLabel = daysUntil === 0 ? 'hoy' : `en ${daysUntil} día(s)`;
 
@@ -64,7 +65,7 @@ export const syncMaintenanceAlerts = async (): Promise<void> => {
 
   const { data: maintenances, error } = await supabase
     .from('maintenances')
-    .select('id, component_type, component_id, next_maintenance_date, site:sites(name)')
+    .select('id, component_type, component_id, component_name, next_maintenance_date, site:sites(name)')
     .eq('component_status', 'active');
 
   if (error || !maintenances?.length) return;

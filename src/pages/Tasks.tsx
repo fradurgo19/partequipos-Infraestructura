@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Filter, Search, Camera, Clock, CheckCircle, FileText, Calendar, Eye, Edit } from 'lucide-react';
+import { Plus, Filter, Search, Camera, Clock, CheckCircle, FileText, Calendar, Eye, Edit, RotateCcw } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -271,7 +271,7 @@ export const Tasks = () => {
     if (!profile) return;
 
     const task = tasks.find(t => t.id === taskId);
-    const updateData: Record<string, string> = { status: newStatus };
+    const updateData: Record<string, string | null> = { status: newStatus };
 
     if (newStatus === 'in_progress' && !task?.start_date) {
       updateData.start_date = new Date().toISOString().split('T')[0];
@@ -294,13 +294,55 @@ export const Tasks = () => {
         {
           task_id: taskId,
           event_type: eventType,
-          description: `Estado cambiado a ${newStatus}`,
+          description: `Estado cambiado a ${STATUS_LABELS[newStatus]}`,
           user_id: uid,
         },
       ]);
 
       loadData();
     }
+  };
+
+  const handleRevertCompletedTask = async (taskId: string, closeModalAfter = false) => {
+    if (!profile) return;
+
+    const confirmed = globalThis.confirm(
+      '¿Revertir esta tarea completada a pendiente? Podrá iniciarla nuevamente desde el flujo habitual.'
+    );
+    if (!confirmed) return;
+
+    const updateData: Record<string, string | null> = {
+      status: 'pending',
+      completion_date: null,
+      completed_at: null,
+      start_date: null,
+      started_at: null,
+    };
+
+    const { error } = await supabase.from('tasks').update(updateData).eq('id', taskId);
+
+    if (error) {
+      console.error('Error al revertir tarea:', error);
+      alert('No se pudo revertir la tarea');
+      return;
+    }
+
+    const uid = session?.user?.id ?? profile.id;
+    await supabase.from('task_timeline').insert([
+      {
+        task_id: taskId,
+        event_type: 'updated',
+        description: `Tarea revertida a ${STATUS_LABELS.pending} por ${profile.full_name}`,
+        user_id: uid,
+      },
+    ]);
+
+    if (closeModalAfter) {
+      setShowModal(false);
+      resetForm();
+    }
+
+    loadData();
   };
 
   const resetForm = () => {
@@ -616,6 +658,18 @@ export const Tasks = () => {
               </div>
             )}
             <div className="flex justify-end gap-2 pt-2">
+              {canEdit && selectedTask.status === 'completed' && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowViewModal(false);
+                    openEditModal(selectedTask);
+                  }}
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Revertir e iniciar
+                </Button>
+              )}
               {canEdit && (
                 <Button
                   variant="secondary"
@@ -644,6 +698,22 @@ export const Tasks = () => {
         size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {editingTask?.status === 'completed' && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm text-amber-900">
+                Esta tarea está completada. Puede editarla y revertirla a pendiente para iniciar el flujo nuevamente.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => handleRevertCompletedTask(editingTask.id, true)}
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Revertir e iniciar
+              </Button>
+            </div>
+          )}
+
           <Input
             label="Título de la Tarea"
             placeholder="Ingrese el título de la tarea"

@@ -31,3 +31,9 @@ export const getSiteComponentOptions = (site: Site | null): { value: string; lab
 
 export const getComponentLabel = (componentType: string): string =>
   COMPONENT_LABELS[componentType] ?? componentType;
+
+export const getMaintenanceComponentLabel = (maintenance: {
+  component_name?: string | null;
+  component_type?: string | null;
+}): string =>
+  maintenance.component_name?.trim() || getComponentLabel(maintenance.component_type ?? '');

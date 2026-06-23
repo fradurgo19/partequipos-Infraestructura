@@ -9,8 +9,8 @@ import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Maintenance, Site } from '../types';
-import { getComponentLabel, getSiteComponentOptions } from '../constants/siteComponents';
+import { Maintenance, Site, Contractor } from '../types';
+import { getMaintenanceComponentLabel } from '../constants/siteComponents';
 import { syncMaintenanceAlerts } from '../services/maintenanceAlerts';
 
 const MAINTENANCE_KIND_OPTIONS = [
@@ -25,13 +25,25 @@ const COMPONENT_STATUS_OPTIONS = [
 
 const emptyForm = {
   site_id: '',
-  component_type: '',
+  component_name: '',
   component_id: '',
+  contractor_id: '',
   maintenance_kind: 'preventive' as const,
   last_maintenance_date: '',
   next_maintenance_date: '',
+  last_maintenance_cost: '',
   component_status: 'active' as const,
   notes: '',
+};
+
+const formatCurrency = (value?: number | null): string =>
+  value == null ? '—' : `$${value.toLocaleString('es-CO')}`;
+
+const parseOptionalCost = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number.parseFloat(trimmed);
+  return Number.isNaN(parsed) ? null : parsed;
 };
 
 const daysUntilDate = (dateStr: string): number => {
@@ -59,19 +71,13 @@ export const Mantenimientos = () => {
   const { profile } = useAuth();
   const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Maintenance | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [filterSite, setFilterSite] = useState('');
   const [filterKind, setFilterKind] = useState('');
-
-  const selectedSite = useMemo(
-    () => sites.find((s) => s.id === formData.site_id) ?? null,
-    [sites, formData.site_id]
-  );
-
-  const componentOptions = useMemo(() => getSiteComponentOptions(selectedSite), [selectedSite]);
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -81,12 +87,18 @@ export const Mantenimientos = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const [maintenancesResult, sitesResult] = await Promise.all([
+    const [maintenancesResult, sitesResult, contractorsResult] = await Promise.all([
       supabase
         .from('maintenances')
-        .select('*, site:sites(id, name, city)')
+        .select(
+          '*, site:sites(id, name, city), contractor:contractors(id, company_name, contact_name)'
+        )
         .order('next_maintenance_date', { ascending: true }),
-      supabase.from('sites').select('id, name, city, air_conditioners_count, water_tanks_count, water_pumps_count, rci_pumps_count, electrical_plants_count, bathrooms_count, urinals_count').order('name'),
+      supabase.from('sites').select('id, name, city').order('name'),
+      supabase
+        .from('contractors')
+        .select('id, company_name, contact_name, is_active')
+        .order('company_name'),
     ]);
 
     if (!maintenancesResult.error && maintenancesResult.data) {
@@ -94,6 +106,11 @@ export const Mantenimientos = () => {
     }
     if (!sitesResult.error && sitesResult.data) {
       setSites(sitesResult.data as Site[]);
+    }
+    if (!contractorsResult.error && contractorsResult.data) {
+      setContractors(
+        (contractorsResult.data as Contractor[]).filter((contractor) => contractor.is_active !== false)
+      );
     }
     await syncMaintenanceAlerts();
     setLoading(false);
@@ -105,11 +122,14 @@ export const Mantenimientos = () => {
 
     const payload = {
       site_id: formData.site_id,
-      component_type: formData.component_type,
+      component_type: 'manual',
+      component_name: formData.component_name.trim(),
       component_id: formData.component_id.trim(),
+      contractor_id: formData.contractor_id || null,
       maintenance_kind: formData.maintenance_kind,
       last_maintenance_date: formData.last_maintenance_date,
       next_maintenance_date: formData.next_maintenance_date,
+      last_maintenance_cost: parseOptionalCost(formData.last_maintenance_cost),
       component_status: formData.component_status,
       notes: formData.notes.trim() || null,
     };
@@ -135,11 +155,13 @@ export const Mantenimientos = () => {
     setEditingItem(item);
     setFormData({
       site_id: item.site_id,
-      component_type: item.component_type,
+      component_name: item.component_name ?? getMaintenanceComponentLabel(item),
       component_id: item.component_id,
+      contractor_id: item.contractor_id ?? '',
       maintenance_kind: item.maintenance_kind,
       last_maintenance_date: item.last_maintenance_date,
       next_maintenance_date: item.next_maintenance_date,
+      last_maintenance_cost: item.last_maintenance_cost?.toString() ?? '',
       component_status: item.component_status,
       notes: item.notes ?? '',
     });
@@ -158,16 +180,22 @@ export const Mantenimientos = () => {
   };
 
   const handleSiteChange = (siteId: string) => {
-    const site = sites.find((s) => s.id === siteId) ?? null;
-    const options = getSiteComponentOptions(site);
     setFormData((prev) => ({
       ...prev,
       site_id: siteId,
-      component_type: options.some((o) => o.value === prev.component_type)
-        ? prev.component_type
-        : (options[0]?.value ?? ''),
     }));
   };
+
+  const contractorOptions = useMemo(
+    () => [
+      { value: '', label: 'Sin contratista asignado' },
+      ...contractors.map((contractor) => ({
+        value: contractor.id,
+        label: contractor.company_name,
+      })),
+    ],
+    [contractors]
+  );
 
   const filteredMaintenances = maintenances.filter((m) => {
     if (filterSite && m.site_id !== filterSite) return false;
@@ -276,8 +304,13 @@ export const Mantenimientos = () => {
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-700 font-medium">
-                      {getComponentLabel(item.component_type)} · ID: {item.component_id}
+                      {getMaintenanceComponentLabel(item)} · ID: {item.component_id}
                     </p>
+                    {item.contractor && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Contratista: {item.contractor.company_name}
+                      </p>
+                    )}
                     <p className="text-sm text-gray-500 mt-1">{kindLabel}</p>
                     <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
                       <div className="flex items-center gap-1">
@@ -288,6 +321,11 @@ export const Mantenimientos = () => {
                         <AlertTriangle className="w-3.5 h-3.5" />
                         <span>Próximo: {item.next_maintenance_date}</span>
                       </div>
+                      {item.last_maintenance_cost != null && (
+                        <div className="col-span-2 text-[#50504f] font-medium">
+                          Costo último mtto (ref. próximo): {formatCurrency(item.last_maintenance_cost)}
+                        </div>
+                      )}
                     </div>
                     {item.notes && (
                       <p className="text-xs text-gray-500 mt-2 line-clamp-2">{item.notes}</p>
@@ -326,17 +364,12 @@ export const Mantenimientos = () => {
             fullWidth
           />
 
-          <Select
+          <Input
             label="Componente *"
-            options={
-              componentOptions.length > 0
-                ? componentOptions
-                : [{ value: '', label: 'Seleccione una sede primero' }]
-            }
-            value={formData.component_type}
-            onChange={(e) => setFormData({ ...formData, component_type: e.target.value })}
+            value={formData.component_name}
+            onChange={(e) => setFormData({ ...formData, component_name: e.target.value })}
+            placeholder="Ej: Aire acondicionado split, Bomba hidráulica"
             required
-            disabled={!formData.site_id}
             fullWidth
           />
 
@@ -348,6 +381,34 @@ export const Mantenimientos = () => {
             required
             fullWidth
           />
+
+          <Select
+            label="Contratista"
+            options={contractorOptions}
+            value={formData.contractor_id}
+            onChange={(e) => setFormData({ ...formData, contractor_id: e.target.value })}
+            fullWidth
+          />
+
+          <Input
+            label="Valor último mantenimiento (COP)"
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.last_maintenance_cost}
+            onChange={(e) => setFormData({ ...formData, last_maintenance_cost: e.target.value })}
+            placeholder="0.00"
+            fullWidth
+          />
+
+          {formData.last_maintenance_cost.trim() && (
+            <p className="text-sm text-gray-600 -mt-2">
+              Referencia para el próximo mantenimiento ({formData.next_maintenance_date || 'sin fecha'}):{' '}
+              <span className="font-semibold text-[#50504f]">
+                {formatCurrency(parseOptionalCost(formData.last_maintenance_cost))}
+              </span>
+            </p>
+          )}
 
           <Select
             label="Tipo de mantenimiento *"
@@ -372,14 +433,21 @@ export const Mantenimientos = () => {
               required
               fullWidth
             />
-            <Input
-              label="Fecha próximo mantenimiento *"
-              type="date"
-              value={formData.next_maintenance_date}
-              onChange={(e) => setFormData({ ...formData, next_maintenance_date: e.target.value })}
-              required
-              fullWidth
-            />
+            <div>
+              <Input
+                label="Fecha próximo mantenimiento *"
+                type="date"
+                value={formData.next_maintenance_date}
+                onChange={(e) => setFormData({ ...formData, next_maintenance_date: e.target.value })}
+                required
+                fullWidth
+              />
+              {formData.last_maintenance_cost.trim() && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Costo referencia último mtto: {formatCurrency(parseOptionalCost(formData.last_maintenance_cost))}
+                </p>
+              )}
+            </div>
           </div>
 
           <Select
