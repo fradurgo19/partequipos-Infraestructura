@@ -18,6 +18,7 @@ export const transformConsumptionToFrontend = (row) => ({
 export const transformBillToFrontend = (row, consumptions = []) => ({
   id: row.id,
   user_id: row.user_id,
+  siteId: row.site_id,
   serviceType: row.service_type,
   provider: row.provider,
   description: row.description,

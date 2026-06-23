@@ -40,6 +40,7 @@ export interface UtilityBill {
   city?: string;
   businessGroup?: string;
   location: string;
+  siteId?: string;
   dueDate: Date | string;
   documentUrl?: string;
   documentName?: string;
@@ -61,6 +62,7 @@ export interface UtilityBillFormData {
   city: string;
   businessGroup: string;
   location: string;
+  siteId?: string;
   dueDate: string;
   attachedDocument: File | null;
   existingDocumentUrl?: string;

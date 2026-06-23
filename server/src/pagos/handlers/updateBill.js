@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { normalizeBillBody } from '../billBody.js';
 import { canViewAllBills } from '../access.js';
+import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 
 export const updatePagosBill = async (pagosUser, billId, updates) => {
@@ -23,6 +24,21 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
     normalizedUpdates.unitOfMeasure = normalized.unitOfMeasure;
   }
 
+  const shouldResolveSite =
+    normalizedUpdates.siteId !== undefined ||
+    normalizedUpdates.location !== undefined ||
+    normalizedUpdates.city !== undefined ||
+    normalizedUpdates.businessGroup !== undefined;
+
+  const resolvedSiteId = shouldResolveSite
+    ? await resolveBillSiteId({
+        siteId: normalizedUpdates.siteId,
+        city: normalizedUpdates.city,
+        businessGroup: normalizedUpdates.businessGroup,
+        location: normalizedUpdates.location,
+      })
+    : undefined;
+
   const rawPayload = {
     service_type: normalizedUpdates.serviceType,
     provider: normalizedUpdates.provider,
@@ -38,6 +54,7 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
     city: normalizedUpdates.city,
     business_group: normalizedUpdates.businessGroup,
     location: normalizedUpdates.location,
+    site_id: resolvedSiteId,
     due_date: normalizedUpdates.dueDate,
     document_url: normalizedUpdates.documentUrl,
     document_name: normalizedUpdates.documentName,

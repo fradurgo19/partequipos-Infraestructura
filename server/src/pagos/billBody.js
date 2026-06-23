@@ -19,6 +19,7 @@ export const normalizeBillBody = (bill, consumptions) => {
     city: bill.city,
     businessGroup: bill.businessGroup || bill.business_group,
     location: bill.location,
+    siteId: bill.siteId || bill.site_id,
     dueDate: bill.dueDate || bill.due_date,
     documentUrl: bill.documentUrl || bill.document_url,
     documentName: bill.documentName || bill.document_name,

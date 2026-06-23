@@ -86,7 +86,7 @@ export const resolveBillLocationFromStored = (
   businessGroup?: string,
   siteCatalog: BillLocationEntry[] = [],
   legacyCatalog: BillLocationEntry[] = LEGACY_BILL_LOCATION_CATALOG
-): Pick<BillLocationEntry, 'city' | 'address' | 'businessGroup'> => {
+): Pick<BillLocationEntry, 'city' | 'address' | 'businessGroup' | 'siteId'> => {
   const catalog = mergeCatalogs(siteCatalog, legacyCatalog);
 
   if (city && businessGroup && location) {
@@ -109,5 +109,6 @@ export const resolveBillLocationFromStored = (
     city: city ?? '',
     address: location,
     businessGroup: businessGroup ?? '',
+    siteId: undefined,
   };
 };

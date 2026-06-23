@@ -65,6 +65,7 @@ export function billToFormData(bill: UtilityBill): UtilityBillFormData {
     city: resolved.city,
     businessGroup: resolved.businessGroup,
     location: resolved.address,
+    siteId: bill.siteId ?? resolved.siteId,
     dueDate: toDateString(bill.dueDate) ?? '',
     attachedDocument: null,
     existingDocumentUrl: bill.documentUrl,

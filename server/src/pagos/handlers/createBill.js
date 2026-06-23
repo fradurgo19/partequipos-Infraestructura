@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { normalizeBillBody } from '../billBody.js';
+import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 
 export const createPagosBill = async (pagosUser, bill) => {
@@ -11,11 +12,18 @@ export const createPagosBill = async (pagosUser, bill) => {
   }
 
   const normalized = normalizeBillBody(bill, consumptions);
+  const siteId = await resolveBillSiteId({
+    siteId: normalized.siteId,
+    city: normalized.city,
+    businessGroup: normalized.businessGroup,
+    location: normalized.location,
+  });
 
   const { data: createdBill, error } = await supabase
     .from('utility_bills')
     .insert({
       user_id: pagosUser.id,
+      site_id: siteId,
       service_type: normalized.serviceType,
       provider: normalized.provider,
       description: normalized.description,

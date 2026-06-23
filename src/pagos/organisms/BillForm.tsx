@@ -12,7 +12,7 @@ import { validateBillForm, hasValidationErrors, ValidationErrors } from '../util
 import { parseCurrencyInput, getCurrentPeriod, formatCurrency } from '../utils/formatters';
 import { billService, uploadBillDocument } from '../services/billService';
 import { useBillSiteLocations } from '../hooks/useBillSiteLocations';
-import { resolveBillLocationFromStored } from '../constants/billLocations';
+import { resolveBillLocationFromStored, findBillLocationEntry } from '../constants/billLocations';
 
 const initialFormData: UtilityBillFormData = {
   description: '',
@@ -23,6 +23,7 @@ const initialFormData: UtilityBillFormData = {
   city: '',
   businessGroup: '',
   location: '',
+  siteId: undefined,
   dueDate: '',
   attachedDocument: null,
   status: 'draft',
@@ -142,6 +143,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       city: resolved.city,
       businessGroup: resolved.businessGroup,
       location: resolved.address,
+      siteId: resolved.siteId ?? initialData?.siteId,
     }));
   }, [catalog, locationsLoading, isEditMode, initialData]);
 
@@ -305,7 +307,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       ...prev,
       city: value,
       businessGroup: '',
-      location: ''
+      location: '',
+      siteId: undefined,
     }));
     setErrors((prev) => {
       const next = { ...prev };
@@ -320,7 +323,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     setFormData((prev) => ({
       ...prev,
       businessGroup: value,
-      location: ''
+      location: '',
+      siteId: undefined,
     }));
     setErrors((prev) => {
       const next = { ...prev };
@@ -328,6 +332,22 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       delete next.location;
       return next;
     });
+  };
+
+  const handleLocationChange = (value: string) => {
+    const entry = findBillLocationEntry(formData.city, formData.businessGroup, value, catalog);
+    setFormData((prev) => ({
+      ...prev,
+      location: value,
+      siteId: entry?.siteId,
+    }));
+    if (errors.location) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.location;
+        return next;
+      });
+    }
   };
 
   const handleConsumptionChange = (index: number, field: keyof UtilityBillFormData['consumptions'][number], value: string) => {
@@ -484,6 +504,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
         city: formData.city,
         businessGroup: formData.businessGroup,
         location: formData.location,
+        siteId: formData.siteId,
         dueDate: formData.dueDate,
         ...(documentUrl !== undefined ? { documentUrl, documentName } : {}),
         status: 'pending' as const,
@@ -680,7 +701,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
             label="Ubicación *"
             value={formData.location}
             options={locationAddressOptions}
-            onChange={(e) => handleInputChange('location', e.target.value)}
+            onChange={(e) => handleLocationChange(e.target.value)}
             placeholder={
               formData.businessGroup ? 'Seleccione una ubicación' : 'Primero seleccione un grupo'
             }
