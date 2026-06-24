@@ -1,17 +1,8 @@
 import express from 'express';
-import nodemailer from 'nodemailer';
 import { authenticateToken } from '../middleware/auth.js';
+import { formatMailFrom, sendMailWithTimeout } from '../lib/mailTransporter.js';
 
 const router = express.Router();
-
-// Configurar transporter de nodemailer con Gmail
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: 'fradurgo19@gmail.com',
-    pass: 'ehfmrpxlugpsqhzd', // Clave de aplicación
-  },
-});
 
 // Endpoint para enviar notificaciones por email
 router.post('/email', authenticateToken, async (req, res) => {
@@ -23,14 +14,14 @@ router.post('/email', authenticateToken, async (req, res) => {
     }
 
     const mailOptions = {
-      from: 'fradurgo19@gmail.com',
+      from: formatMailFrom(),
       to,
       subject,
       text: message,
       html: html || message.replaceAll('\n', '<br>'),
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMailWithTimeout(mailOptions);
 
     res.json({
       success: true,
@@ -44,14 +35,6 @@ router.post('/email', authenticateToken, async (req, res) => {
 });
 
 // Timeout para envío de un solo email (evitar colgar la función)
-const EMAIL_SEND_TIMEOUT_MS = 8000;
-
-function sendMailWithTimeout(options) {
-  return Promise.race([
-    transporter.sendMail(options),
-    new Promise((_, rej) => setTimeout(() => rej(new Error('Email send timeout')), EMAIL_SEND_TIMEOUT_MS)),
-  ]);
-}
 
 // Endpoint para enviar notificaciones de tareas según presupuesto.
 // Responde 202 de inmediato y envía correos en segundo plano para evitar timeout 504.
@@ -108,7 +91,7 @@ router.post('/task-budget', authenticateToken, async (req, res) => {
 
     // Enviar correos en segundo plano (sin bloquear la respuesta)
     const baseOptions = {
-      from: 'fradurgo19@gmail.com',
+      from: formatMailFrom(),
       subject,
       text: message,
       html: message.replaceAll('\n', '<br>'),
@@ -172,8 +155,8 @@ router.post('/cut-approval', authenticateToken, async (req, res) => {
         ${photosHTML}
       `;
 
-      await transporter.sendMail({
-        from: 'fradurgo19@gmail.com',
+      await sendMailWithTimeout({
+        from: formatMailFrom(),
         to: edisonEmail,
         subject: edisonSubject,
         text: edisonMessage.replaceAll(/<[^>]*>/g, ''),
@@ -246,8 +229,8 @@ router.post('/cut-edison-approved', authenticateToken, async (req, res) => {
     const results = [];
     for (const recipient of recipients) {
       try {
-        const info = await transporter.sendMail({
-          from: 'fradurgo19@gmail.com',
+        const info = await sendMailWithTimeout({
+          from: formatMailFrom(),
           to: recipient.email,
           subject,
           text: message,
@@ -372,8 +355,8 @@ router.post('/quotation-comparative', authenticateToken, async (req, res) => {
       </div>
     `;
 
-    const info = await transporter.sendMail({
-      from: 'fradurgo19@gmail.com',
+    const info = await sendMailWithTimeout({
+      from: formatMailFrom(),
       to: felipeEmail,
       subject,
       text: message,

@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabaseClient.js';
 import { normalizeBillBody } from '../billBody.js';
 import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
+import { notifyNewBillRegistered } from '../billNotificationEmail.js';
 
 export const createPagosBill = async (pagosUser, bill) => {
   const consumptions = Array.isArray(bill.consumptions) ? bill.consumptions : [];
@@ -75,6 +76,12 @@ export const createPagosBill = async (pagosUser, bill) => {
     dbError.statusCode = 500;
     throw dbError;
   }
+
+  setImmediate(() => {
+    notifyNewBillRegistered(createdBill, pagosUser).catch((error) => {
+      console.error('Error enviando notificación de nueva factura:', error);
+    });
+  });
 
   return transformBillToFrontend(
     createdBill,
