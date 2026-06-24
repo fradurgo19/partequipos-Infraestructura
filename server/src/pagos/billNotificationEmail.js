@@ -12,6 +12,8 @@ const BILL_NOTIFICATION_CC = [
   'analista.contabilidad1@partequipos.com',
 ];
 
+const BILL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
+
 const EMAIL_SEND_TIMEOUT_WITH_ATTACHMENT_MS = 25000;
 
 const SERVICE_TYPE_LABELS = {
@@ -279,6 +281,7 @@ const buildBillEmailContent = (bill, registrar, attachment) => {
     from: formatMailFrom(),
     to: BILL_NOTIFICATION_TO.join(', '),
     cc: BILL_NOTIFICATION_CC.join(', '),
+    bcc: BILL_NOTIFICATION_BCC.join(', '),
     subject,
     text,
     html,
