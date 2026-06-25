@@ -70,7 +70,10 @@ export const parseColombianNumber = (value: string): number => {
   return Number.parseFloat(val.replaceAll(/[^0-9.]/g, '')) || 0;
 };
 
-export const parseCurrencyInput = (value: string): number => {
+export const parseCurrencyInput = (value: string | number): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
   const val = value?.trim() ?? '';
   if (!val) return 0;
   if (val.includes(',')) {

@@ -1,5 +1,5 @@
 import { UtilityBillFormData } from '../types';
-import { parseCurrencyInput } from './formatters';
+import { parseCurrencyInput, parseColombianNumber } from './formatters';
 
 export interface ValidationErrors {
   [key: string]: string;
@@ -22,7 +22,7 @@ export const validateBillForm = (formData: UtilityBillFormData): ValidationError
       if (!c.value || parseCurrencyInput(c.value) <= 0) {
         errors[`consumptions.${idx}.value`] = 'El monto debe ser mayor a 0';
       }
-      if (c.consumption && parseFloat(c.consumption) < 0) {
+      if (c.consumption && parseColombianNumber(String(c.consumption)) < 0) {
         errors[`consumptions.${idx}.consumption`] = 'No puede ser negativo';
       }
     });

@@ -1,7 +1,9 @@
+import { parseNumericOrZero } from './parseNumeric.js';
+
 export const normalizeBillBody = (bill, consumptions) => {
-  const totalValue = consumptions.reduce((sum, c) => sum + (Number.parseFloat(c.value) || 0), 0);
-  const totalAmount = consumptions.reduce((sum, c) => sum + (Number.parseFloat(c.totalAmount) || 0), 0);
-  const totalConsumption = consumptions.reduce((sum, c) => sum + (Number.parseFloat(c.consumption) || 0), 0);
+  const totalValue = consumptions.reduce((sum, c) => sum + parseNumericOrZero(c.value), 0);
+  const totalAmount = consumptions.reduce((sum, c) => sum + parseNumericOrZero(c.totalAmount), 0);
+  const totalConsumption = consumptions.reduce((sum, c) => sum + parseNumericOrZero(c.consumption), 0);
   const first = consumptions[0];
 
   return {

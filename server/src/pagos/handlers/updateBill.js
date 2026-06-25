@@ -3,6 +3,7 @@ import { normalizeBillBody } from '../billBody.js';
 import { canViewAllBills } from '../access.js';
 import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
+import { buildConsumptionPayload } from '../consumptionPayload.js';
 
 export const updatePagosBill = async (pagosUser, billId, updates) => {
   const incomingConsumptions = Array.isArray(updates.consumptions) ? updates.consumptions : null;
@@ -86,19 +87,19 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
   }
 
   await supabase.from('bill_consumptions').delete().eq('bill_id', billId);
-  const payload = incomingConsumptions.map((consumption) => ({
-    bill_id: billId,
-    service_type: consumption.serviceType || consumption.service_type,
-    provider: consumption.provider,
-    period_from: consumption.periodFrom || consumption.period_from,
-    period_to: consumption.periodTo || consumption.period_to,
-    value: Number.parseFloat(consumption.value),
-    total_amount: Number.parseFloat(consumption.totalAmount),
-    consumption: consumption.consumption ? Number.parseFloat(consumption.consumption) : null,
-    unit_of_measure: consumption.unitOfMeasure || consumption.unit_of_measure,
-  }));
+  const payload = incomingConsumptions.map((consumption) => buildConsumptionPayload(billId, consumption));
 
-  const { data: newConsumptions } = await supabase.from('bill_consumptions').insert(payload).select();
+  const { data: newConsumptions, error: consumptionsError } = await supabase
+    .from('bill_consumptions')
+    .insert(payload)
+    .select();
+
+  if (consumptionsError) {
+    console.error('Error al actualizar consumos en bill_consumptions:', consumptionsError);
+    const dbError = new Error('Error al actualizar consumos');
+    dbError.statusCode = 500;
+    throw dbError;
+  }
   const consumptions = (newConsumptions || []).map(transformConsumptionToFrontend);
   return transformBillToFrontend(updatedRow, consumptions);
 };

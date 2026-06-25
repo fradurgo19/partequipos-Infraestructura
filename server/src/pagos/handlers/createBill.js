@@ -3,6 +3,7 @@ import { normalizeBillBody } from '../billBody.js';
 import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 import { notifyNewBillRegistered } from '../billNotificationEmail.js';
+import { buildConsumptionPayload } from '../consumptionPayload.js';
 
 export const createPagosBill = async (pagosUser, bill) => {
   const consumptions = Array.isArray(bill.consumptions) ? bill.consumptions : [];
@@ -49,22 +50,13 @@ export const createPagosBill = async (pagosUser, bill) => {
     .single();
 
   if (error) {
+    console.error('Error al crear factura en utility_bills:', error);
     const dbError = new Error('Error al crear factura');
     dbError.statusCode = 500;
     throw dbError;
   }
 
-  const consumptionsPayload = consumptions.map((c) => ({
-    bill_id: createdBill.id,
-    service_type: c.serviceType || c.service_type,
-    provider: c.provider,
-    period_from: c.periodFrom || c.period_from,
-    period_to: c.periodTo || c.period_to,
-    value: Number.parseFloat(c.value),
-    total_amount: Number.parseFloat(c.totalAmount),
-    consumption: c.consumption ? Number.parseFloat(c.consumption) : null,
-    unit_of_measure: c.unitOfMeasure || c.unit_of_measure,
-  }));
+  const consumptionsPayload = consumptions.map((c) => buildConsumptionPayload(createdBill.id, c));
 
   const { data: createdConsumptions, error: consumptionsError } = await supabase
     .from('bill_consumptions')
@@ -72,6 +64,8 @@ export const createPagosBill = async (pagosUser, bill) => {
     .select();
 
   if (consumptionsError) {
+    console.error('Error al crear consumos en bill_consumptions:', consumptionsError);
+    await supabase.from('utility_bills').delete().eq('id', createdBill.id);
     const dbError = new Error('Error al crear consumos');
     dbError.statusCode = 500;
     throw dbError;

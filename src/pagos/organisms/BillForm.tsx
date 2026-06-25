@@ -9,7 +9,7 @@ import { Card } from '../../atoms/Card';
 import { FileUpload } from '../molecules/FileUpload';
 import { UtilityBillFormData, ServiceType } from '../types';
 import { validateBillForm, hasValidationErrors, ValidationErrors } from '../utils/validators';
-import { parseCurrencyInput, getCurrentPeriod, formatCurrency } from '../utils/formatters';
+import { parseCurrencyInput, parseColombianNumber, getCurrentPeriod, formatCurrency } from '../utils/formatters';
 import { billService, uploadBillDocument } from '../services/billService';
 import { useBillSiteLocations } from '../hooks/useBillSiteLocations';
 import { resolveBillLocationFromStored, findBillLocationEntry } from '../constants/billLocations';
@@ -490,8 +490,11 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
         periodFrom: c.periodFrom,
         periodTo: c.periodTo,
         value: parseCurrencyInput(c.value),
-        totalAmount: parseCurrencyInput(c.totalAmount),
-        consumption: c.consumption ? Number.parseFloat(c.consumption) : undefined,
+        totalAmount: parseCurrencyInput(c.totalAmount || c.value),
+        consumption:
+          c.consumption && String(c.consumption).trim()
+            ? parseColombianNumber(String(c.consumption))
+            : undefined,
         unitOfMeasure: c.unitOfMeasure
       }));
 
