@@ -32,6 +32,13 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'BARRANQUILLA', address: 'CRA 51 NRO.96A-79 ED FENIX', businessGroup: 'WACONDA S.A.S.' },
 ];
 
+/** Grupos empresariales disponibles en el formulario de facturas (independiente de la ciudad). */
+export const STANDARD_BILL_BUSINESS_GROUPS = [
+  'PARTEQUIPOS MAQUINARIA S.A.S.',
+  'PARTEQUIPOS S.A.S.',
+  'WACONDA S.A.S.',
+] as const;
+
 const sortLabels = (items: string[]) =>
   [...new Set(items)].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
@@ -57,8 +64,10 @@ export const mergeBillLocationCatalogs = (
 export const getBillLocationCities = (catalog: BillLocationEntry[]): string[] =>
   sortLabels(catalog.map((entry) => entry.city));
 
-export const getBillLocationBusinessGroups = (city: string, catalog: BillLocationEntry[]): string[] =>
-  sortLabels(catalog.filter((entry) => entry.city === city).map((entry) => entry.businessGroup));
+export const getBillLocationBusinessGroups = (
+  _city: string,
+  _catalog: BillLocationEntry[] = []
+): string[] => [...STANDARD_BILL_BUSINESS_GROUPS];
 
 export const getBillLocationAddresses = (
   city: string,
