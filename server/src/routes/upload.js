@@ -1,14 +1,66 @@
 import express from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
+import rateLimit from 'express-rate-limit';
 import { supabase } from '../index.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (por debajo del límite de Vercel)
+const PUBLIC_UPLOAD_FOLDERS = new Set(['internal-requests', 'designs', 'public-internal-requests']);
+
+const publicUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas subidas. Intente más tarde.' },
+});
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE },
+});
+
+router.post('/public/file', publicUploadLimiter, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const bucket = req.body.bucket || 'general';
+    const folder = req.body.folder || 'public-internal-requests';
+
+    if (bucket !== 'general' || !PUBLIC_UPLOAD_FOLDERS.has(folder)) {
+      return res.status(400).json({ error: 'Destino de archivo no permitido' });
+    }
+
+    const fileExt = req.file.originalname.split('.').pop();
+    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    const { error } = await supabase.storage.from(bucket).upload(fileName, req.file.buffer, {
+      contentType: req.file.mimetype,
+      upsert: false,
+    });
+
+    if (error) {
+      console.error('Public upload error:', error);
+      return res.status(500).json({ error: 'Failed to upload file' });
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(fileName);
+
+    res.json({
+      url: publicUrl,
+      path: fileName,
+      bucket,
+    });
+  } catch (error) {
+    console.error('Public upload error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Upload file to Supabase Storage

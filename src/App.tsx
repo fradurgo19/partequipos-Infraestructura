@@ -12,6 +12,7 @@ import { Contractors } from './pages/Contractors';
 import { Contracts } from './pages/Contracts';
 import { Measurements } from './pages/Measurements';
 import { InternalRequests } from './pages/InternalRequests';
+import { PublicInternalRequest } from './pages/PublicInternalRequest';
 import { Quotations } from './pages/Quotations';
 import { Users } from './pages/Users';
 import { ContractTracking } from './pages/ContractTracking';
@@ -24,6 +25,7 @@ function App() {
       <Routes>
         <Route path="/pagos/*" element={<PagosApp />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/solicitud-interna" element={<PublicInternalRequest />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

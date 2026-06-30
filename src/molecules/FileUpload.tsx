@@ -2,6 +2,7 @@ import { useState, useRef, useId } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Button } from '../atoms/Button';
 import { uploadFiles } from '../services/supabaseStorage';
+import { uploadPublicInternalRequestFile } from '../services/publicInternalRequestApi';
 import { isImageFile } from '../services/imageCompression';
 
 interface FileUploadProps {
@@ -12,6 +13,7 @@ interface FileUploadProps {
   /** Solo aplica si compressImages es false */
   maxSize?: number;
   compressImages?: boolean;
+  uploadMode?: 'authenticated' | 'public';
   onUploadComplete?: (urls: string[]) => void;
   existingFiles?: string[];
   onRemove?: (url: string) => void;
@@ -46,6 +48,22 @@ const getHintText = (compressImages: boolean, maxSize: number, multiple: boolean
 
 const isImageUrl = (url: string): boolean => /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
 
+const uploadSelectedFiles = async (
+  files: File[],
+  bucket: string,
+  folder: string,
+  uploadMode: 'authenticated' | 'public',
+  compressImages: boolean
+): Promise<string[]> => {
+  if (uploadMode === 'public') {
+    const uploads = await Promise.all(
+      files.map((file) => uploadPublicInternalRequestFile(file, bucket, folder))
+    );
+    return uploads.filter(Boolean);
+  }
+  return uploadFiles(bucket, files, folder, { compressImages });
+};
+
 export const FileUpload = ({
   bucket = 'general',
   folder = 'uploads',
@@ -53,6 +71,7 @@ export const FileUpload = ({
   accept = '*/*',
   maxSize = 10,
   compressImages = false,
+  uploadMode = 'authenticated',
   onUploadComplete,
   existingFiles = [],
   onRemove,
@@ -80,7 +99,7 @@ export const FileUpload = ({
 
     setUploading(true);
     try {
-      const urls = await uploadFiles(bucket, files, folder, { compressImages });
+      const urls = await uploadSelectedFiles(files, bucket, folder, uploadMode, compressImages);
       if (urls.length === 0) {
         alert('No se pudieron subir los archivos. Inténtalo de nuevo.');
         return;

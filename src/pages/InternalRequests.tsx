@@ -2,27 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, TrendingUp, MapPin, DollarSign, Calendar } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
-import { Input } from '../atoms/Input';
-import { Textarea } from '../atoms/Textarea';
-import { Select } from '../atoms/Select';
 import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
-import { FileUpload } from '../molecules/FileUpload';
+import { InternalRequestForm } from '../organisms/InternalRequestForm';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { InternalRequest, Site } from '../types';
-
-// Departamentos externos
-const DEPARTMENTS = [
-  'Comercial',
-  'TI',
-  'Servicio',
-  'Abastecimientos',
-  'Compras',
-  'Recursos Humanos',
-  'Contabilidad',
-  'Otro'
-];
+import { createEmptyInternalRequestForm } from '../types/internalRequestForm';
 
 interface Indicators {
   requestsBySite: Array<{ site_name: string; count: number }>;
@@ -49,19 +35,12 @@ export const InternalRequests = () => {
     totalRequests: 0,
     totalInvestment: 0,
   });
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    site_id: '',
-    department: profile?.department || '',
-    requester_name: profile?.full_name || '',
-    request_date: new Date().toISOString().split('T')[0],
-    measurement_length: '',
-    measurement_height: '',
-    measurement_depth: '',
-    photo_urls: [] as string[],
-    design_urls: [] as string[],
-  });
+  const [formData, setFormData] = useState(() =>
+    createEmptyInternalRequestForm({
+      department: profile?.department || '',
+      requester_name: profile?.full_name || '',
+    })
+  );
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -318,19 +297,12 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
   };
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      site_id: '',
-      department: profile?.department || '',
-      requester_name: profile?.full_name || '',
-      request_date: new Date().toISOString().split('T')[0],
-      measurement_length: '',
-      measurement_height: '',
-      measurement_depth: '',
-      photo_urls: [],
-      design_urls: [],
-    });
+    setFormData(
+      createEmptyInternalRequestForm({
+        department: profile?.department || '',
+        requester_name: profile?.full_name || '',
+      })
+    );
   };
 
   if (loading) {
@@ -566,154 +538,16 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
         }}
         title="Nueva Solicitud Interna"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Título"
-            placeholder="Título de la solicitud"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            fullWidth
-            required
-          />
-
-          <Select
-            label="Sede *"
-            value={formData.site_id}
-            onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
-            options={[
-              { value: '', label: 'Seleccione una sede' },
-              ...sites.map((site) => ({ value: site.id, label: site.name })),
-            ]}
-            fullWidth
-            required
-          />
-
-          <Input
-            label="Fecha Solicitud"
-            type="date"
-            value={formData.request_date}
-            onChange={(e) => setFormData({ ...formData, request_date: e.target.value })}
-            fullWidth
-            required
-          />
-
-          <Select
-            label="Departamento *"
-            value={formData.department}
-            onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-            options={[
-              { value: '', label: 'Seleccione un departamento' },
-              ...DEPARTMENTS.map((dept) => ({ value: dept, label: dept })),
-            ]}
-            fullWidth
-            required
-          />
-
-          <Input
-            label="Nombre de quien solicita *"
-            placeholder="Nombre de quien solicita"
-            value={formData.requester_name}
-            onChange={(e) => setFormData({ ...formData, requester_name: e.target.value })}
-            fullWidth
-            required
-          />
-
-          <Textarea
-            label="Descripción *"
-            placeholder="Describe tu solicitud en detalle"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            fullWidth
-            required
-            rows={4}
-          />
-
-          <div className="grid grid-cols-3 gap-4">
-            <Input
-              label="Alto (m)"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={formData.measurement_height}
-              onChange={(e) => setFormData({ ...formData, measurement_height: e.target.value })}
-              fullWidth
-            />
-            <Input
-              label="Ancho (m)"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={formData.measurement_length}
-              onChange={(e) => setFormData({ ...formData, measurement_length: e.target.value })}
-              fullWidth
-            />
-            <Input
-              label="Profundo (m)"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={formData.measurement_depth}
-              onChange={(e) => setFormData({ ...formData, measurement_depth: e.target.value })}
-              fullWidth
-            />
-          </div>
-
-          <fieldset className="border-0 p-0 m-0">
-            <legend className="block text-sm font-medium text-gray-700 mb-2">Fotos</legend>
-            <FileUpload
-              bucket="general"
-              folder="internal-requests"
-              multiple
-              accept="image/*"
-              onUploadComplete={(urls) => {
-                setFormData({ ...formData, photo_urls: [...formData.photo_urls, ...urls] });
-              }}
-              existingFiles={formData.photo_urls}
-              onRemove={(url) => {
-                setFormData({
-                  ...formData,
-                  photo_urls: formData.photo_urls.filter((u) => u !== url),
-                });
-              }}
-            />
-          </fieldset>
-
-          <fieldset className="border-0 p-0 m-0">
-            <legend className="block text-sm font-medium text-gray-700 mb-2">Subida de Diseño</legend>
-            <FileUpload
-              bucket="general"
-              folder="designs"
-              multiple
-              onUploadComplete={(urls) => {
-                setFormData({ ...formData, design_urls: [...formData.design_urls, ...urls] });
-              }}
-              existingFiles={formData.design_urls}
-              onRemove={(url) => {
-                setFormData({
-                  ...formData,
-                  design_urls: formData.design_urls.filter((u) => u !== url),
-                });
-              }}
-            />
-          </fieldset>
-
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              fullWidth
-              onClick={() => {
-                setShowModal(false);
-                resetForm();
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" fullWidth>
-              Enviar Solicitud
-            </Button>
-          </div>
-        </form>
+        <InternalRequestForm
+          sites={sites}
+          formData={formData}
+          onChange={setFormData}
+          onSubmit={handleSubmit}
+          onCancel={() => {
+            setShowModal(false);
+            resetForm();
+          }}
+        />
       </Modal>
     </div>
   );
