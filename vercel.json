@@ -36,6 +36,12 @@
     },
     "api/pagos/upload.js": {
       "maxDuration": 30
+    },
+    "api/internal-requests-public.js": {
+      "maxDuration": 30
+    },
+    "api/upload-public.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -43,6 +49,8 @@
     { "source": "/api/pagos/bills/:id/status", "destination": "/api/pagos/bill-status?id=:id" },
     { "source": "/api/pagos/bills/:id", "destination": "/api/pagos/bill-by-id?id=:id" },
     { "source": "/api/pagos/:path*", "destination": "/api/pagos/:path*" },
+    { "source": "/api/internal-requests/public", "destination": "/api/internal-requests-public" },
+    { "source": "/api/upload/public/file", "destination": "/api/upload-public" },
     { "source": "/api/:path((?!pagos$)(?!pagos/).*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],

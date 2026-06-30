@@ -67,6 +67,30 @@ const resolveFallbackProfileId = async () => {
   return adminUser?.id ?? null;
 };
 
+let cachedFallbackProfileId = null;
+
+const getFallbackProfileId = async () => {
+  if (cachedFallbackProfileId) {
+    return cachedFallbackProfileId;
+  }
+  cachedFallbackProfileId = await resolveFallbackProfileId();
+  return cachedFallbackProfileId;
+};
+
+const fetchInfrastructureTeam = async () => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email')
+    .eq('role', 'infrastructure');
+
+  if (error) {
+    console.error('Error fetching infrastructure team:', error);
+    return [];
+  }
+
+  return data || [];
+};
+
 const buildMeasuresText = (payload) => {
   const parts = [];
   if (payload.measurement_length) parts.push(`- Longitud: ${payload.measurement_length}m`);
@@ -83,17 +107,12 @@ const buildMeasuresHtml = (payload) => {
   return items.length ? `<div style="margin: 20px 0;"><h3>Medidas:</h3><ul>${items.join('')}</ul></div>` : '';
 };
 
-const sendInternalRequestNotificationEmail = async ({ payload, siteName, isPublic }) => {
-  const { data: infrastructureTeam } = await supabase
-    .from('profiles')
-    .select('email')
-    .eq('role', 'infrastructure');
+const sendInternalRequestNotificationEmail = async ({ payload, siteName, isPublic, infrastructureTeam }) => {
+  const emails = (infrastructureTeam || [])
+    .map((member) => member.email)
+    .filter(Boolean)
+    .join(', ');
 
-  if (!infrastructureTeam?.length) {
-    return;
-  }
-
-  const emails = infrastructureTeam.map((member) => member.email).filter(Boolean).join(', ');
   if (!emails) {
     return;
   }
@@ -147,12 +166,7 @@ Se ha generado automáticamente una tarea en el sistema para su seguimiento.`,
   });
 };
 
-const insertInfrastructureNotifications = async (requestId, title, requesterName) => {
-  const { data: infrastructureTeam } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('role', 'infrastructure');
-
+const insertInfrastructureNotifications = async (requestId, title, requesterName, infrastructureTeam) => {
   if (!infrastructureTeam?.length) {
     return;
   }
@@ -170,7 +184,7 @@ const insertInfrastructureNotifications = async (requestId, title, requesterName
 
 export const createInternalRequestWithTask = async (rawPayload, options = {}) => {
   const payload = validateInternalRequestPayload(rawPayload);
-  const profileId = options.profileId ?? (await resolveFallbackProfileId());
+  const profileId = options.profileId ?? (await getFallbackProfileId());
 
   if (!profileId) {
     const error = new Error('No hay usuario del sistema configurado para registrar solicitudes públicas');
@@ -215,6 +229,8 @@ export const createInternalRequestWithTask = async (rawPayload, options = {}) =>
     throw error;
   }
 
+  const infrastructureTeam = await fetchInfrastructureTeam();
+
   const taskData = {
     title: `Solicitud: ${payload.title}`,
     description: `Solicitud interna de ${payload.department}:\n\n${payload.description}`,
@@ -229,14 +245,8 @@ export const createInternalRequestWithTask = async (rawPayload, options = {}) =>
     created_by: profileId,
   };
 
-  const { data: infrastructureUsers } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('role', 'infrastructure')
-    .limit(1);
-
-  if (infrastructureUsers?.length) {
-    taskData.assignee_id = infrastructureUsers[0].id;
+  if (infrastructureTeam.length > 0) {
+    taskData.assignee_id = infrastructureTeam[0].id;
     taskData.assigned_to = 'Infraestructura';
   }
 
@@ -254,22 +264,32 @@ export const createInternalRequestWithTask = async (rawPayload, options = {}) =>
     await supabase.from('internal_requests').update({ task_id: createdTask.id }).eq('id', insertedRequest.id);
   }
 
-  await insertInfrastructureNotifications(insertedRequest.id, payload.title, payload.requester_name);
-
-  try {
-    await sendInternalRequestNotificationEmail({
-      payload,
-      siteName: site.name,
-      isPublic: Boolean(options.isPublic),
-    });
-  } catch (emailError) {
-    console.error('Error sending internal request email:', emailError);
-  }
-
-  return {
+  const result = {
     request: insertedRequest,
     task: linkedTask,
   };
+
+  setImmediate(() => {
+    insertInfrastructureNotifications(
+      insertedRequest.id,
+      payload.title,
+      payload.requester_name,
+      infrastructureTeam
+    ).catch((notificationError) => {
+      console.error('Error inserting internal request notifications:', notificationError);
+    });
+
+    sendInternalRequestNotificationEmail({
+      payload,
+      siteName: site.name,
+      isPublic: Boolean(options.isPublic),
+      infrastructureTeam,
+    }).catch((emailError) => {
+      console.error('Error sending internal request email:', emailError);
+    });
+  });
+
+  return result;
 };
 
 export const listPublicInternalRequestSites = async () => {

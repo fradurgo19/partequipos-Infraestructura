@@ -18,6 +18,7 @@ interface InternalRequestFormProps {
   onChange: (data: InternalRequestFormData) => void;
   onSubmit: (event: React.FormEvent) => void;
   submitting?: boolean;
+  sitesLoading?: boolean;
   uploadMode?: 'authenticated' | 'public';
   onCancel?: () => void;
   submitLabel?: string;
@@ -30,6 +31,7 @@ export const InternalRequestForm = ({
   onChange,
   onSubmit,
   submitting = false,
+  sitesLoading = false,
   uploadMode = 'authenticated',
   onCancel,
   submitLabel = 'Enviar Solicitud',
@@ -54,12 +56,17 @@ export const InternalRequestForm = ({
         label="Sede *"
         value={formData.site_id}
         onChange={(e) => updateField('site_id', e.target.value)}
-        options={[
-          { value: '', label: 'Seleccione una sede' },
-          ...sites.map((site) => ({ value: site.id, label: site.name })),
-        ]}
+        options={
+          sitesLoading
+            ? [{ value: '', label: 'Cargando sedes...' }]
+            : [
+                { value: '', label: 'Seleccione una sede' },
+                ...sites.map((site) => ({ value: site.id, label: site.name })),
+              ]
+        }
         fullWidth
         required
+        disabled={sitesLoading}
       />
 
       <Input

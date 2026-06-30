@@ -9,25 +9,12 @@ export interface PublicSiteOption {
   name: string;
 }
 
-const fetchSitesFromSupabase = async (): Promise<PublicSiteOption[]> => {
+export const fetchPublicInternalRequestSites = async (): Promise<PublicSiteOption[]> => {
   const { data, error } = await supabase.from('sites').select('id, name').order('name');
   if (error || !data) {
     throw new Error('No se pudieron cargar las sedes');
   }
   return data;
-};
-
-export const fetchPublicInternalRequestSites = async (): Promise<PublicSiteOption[]> => {
-  try {
-    const response = await fetch(`${getApiBaseUrl()}/internal-requests/public/sites`);
-    if (response.ok) {
-      return response.json();
-    }
-  } catch (error) {
-    console.warn('API de sedes públicas no disponible, usando Supabase:', error);
-  }
-
-  return fetchSitesFromSupabase();
 };
 
 export const submitPublicInternalRequest = async (payload: InternalRequestFormData): Promise<void> => {

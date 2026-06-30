@@ -12,6 +12,9 @@ import {
   submitPublicInternalRequest,
 } from '../services/publicInternalRequestApi';
 
+const PARTEQUIPOS_LOGO_URL =
+  'https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png';
+
 export const PublicInternalRequest = () => {
   const [sites, setSites] = useState<PublicSiteOption[]>([]);
   const [loadingSites, setLoadingSites] = useState(true);
@@ -51,6 +54,11 @@ export const PublicInternalRequest = () => {
     event.preventDefault();
     setError('');
 
+    if (loadingSites) {
+      setError('Espere a que se carguen las sedes');
+      return;
+    }
+
     if (!formData.requester_name.trim()) {
       setError('Ingrese el nombre de quien solicita');
       return;
@@ -69,23 +77,11 @@ export const PublicInternalRequest = () => {
     }
   };
 
-  if (loadingSites) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#cf1b22]" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-          <img
-            src="https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png"
-            alt="Partequipos"
-            className="h-10 w-auto mb-4"
-          />
+          <img src={PARTEQUIPOS_LOGO_URL} alt="Logo oficial Partequipos" className="h-10 w-auto mb-4" />
           <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Solicitud Interna</h1>
           <p className="text-gray-600 mt-2 text-sm sm:text-base">
             Complete el formulario para enviar su solicitud al equipo de infraestructura. No requiere inicio de sesión.
@@ -122,6 +118,7 @@ export const PublicInternalRequest = () => {
               onChange={setFormData}
               onSubmit={handleSubmit}
               submitting={submitting}
+              sitesLoading={loadingSites}
               uploadMode="public"
               submitLabel="Enviar Solicitud"
             />
