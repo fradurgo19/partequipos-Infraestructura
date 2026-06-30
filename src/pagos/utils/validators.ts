@@ -37,6 +37,14 @@ export const validateBillForm = (formData: UtilityBillFormData): ValidationError
     }
   }
 
+  if (!formData.invoiceNumber?.trim()) {
+    errors.invoiceNumber = 'El número de factura es requerido';
+  }
+
+  if (!formData.contractNumber?.trim()) {
+    errors.contractNumber = 'El número de contrato es requerido';
+  }
+
   if (!formData.city.trim()) {
     errors.city = 'La ciudad es requerida';
   }

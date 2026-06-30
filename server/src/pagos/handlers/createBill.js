@@ -4,6 +4,7 @@ import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 import { notifyNewBillRegistered } from '../billNotificationEmail.js';
 import { buildConsumptionPayload } from '../consumptionPayload.js';
+import { assertBillNotDuplicate } from '../duplicateBill.js';
 
 export const createPagosBill = async (pagosUser, bill) => {
   const consumptions = Array.isArray(bill.consumptions) ? bill.consumptions : [];
@@ -14,6 +15,14 @@ export const createPagosBill = async (pagosUser, bill) => {
   }
 
   const normalized = normalizeBillBody(bill, consumptions);
+
+  await assertBillNotDuplicate({
+    invoiceNumber: normalized.invoiceNumber,
+    contractNumber: normalized.contractNumber,
+    totalAmount: normalized.totalAmount,
+    consumptions,
+  });
+
   const siteId = await resolveBillSiteId({
     siteId: normalized.siteId,
     city: normalized.city,

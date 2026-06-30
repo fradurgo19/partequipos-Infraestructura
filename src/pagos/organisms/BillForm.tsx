@@ -549,7 +549,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           />
 
           <Input
-            label="Número de Factura"
+            label="Número de Factura *"
             value={formData.invoiceNumber}
             onChange={(e) => handleInputChange('invoiceNumber', e.target.value)}
             placeholder="FAC-12345"
@@ -557,7 +557,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           />
 
           <Input
-            label="Número de Contrato"
+            label="Número de Contrato *"
             value={formData.contractNumber}
             onChange={(e) => handleInputChange('contractNumber', e.target.value)}
             placeholder="CTR-12345"

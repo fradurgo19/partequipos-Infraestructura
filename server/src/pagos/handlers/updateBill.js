@@ -4,6 +4,7 @@ import { canViewAllBills } from '../access.js';
 import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 import { buildConsumptionPayload } from '../consumptionPayload.js';
+import { assertBillNotDuplicate } from '../duplicateBill.js';
 
 export const updatePagosBill = async (pagosUser, billId, updates) => {
   const incomingConsumptions = Array.isArray(updates.consumptions) ? updates.consumptions : null;
@@ -23,6 +24,16 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
     normalizedUpdates.totalAmount = normalized.totalAmount;
     normalizedUpdates.consumption = normalized.consumption;
     normalizedUpdates.unitOfMeasure = normalized.unitOfMeasure;
+    normalizedUpdates.invoiceNumber = normalized.invoiceNumber ?? updates.invoiceNumber ?? updates.invoice_number;
+    normalizedUpdates.contractNumber = normalized.contractNumber ?? updates.contractNumber ?? updates.contract_number;
+
+    await assertBillNotDuplicate({
+      invoiceNumber: normalizedUpdates.invoiceNumber,
+      contractNumber: normalizedUpdates.contractNumber,
+      totalAmount: normalized.totalAmount,
+      consumptions: incomingConsumptions,
+      excludeBillId: billId,
+    });
   }
 
   const shouldResolveSite =
