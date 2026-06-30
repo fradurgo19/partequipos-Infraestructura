@@ -5,7 +5,7 @@ import { pagosAuthService } from '../pagos/services/authService';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
 import { Card } from '../atoms/Card';
-import { Building2 } from 'lucide-react';
+import { Building2, Send } from 'lucide-react';
 
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
@@ -114,6 +114,18 @@ export const Login = () => {
             {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </Button>
         </form>
+
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            onClick={() => navigate('/solicitud-interna')}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Solicitud interna (sin inicio de sesión)
+          </Button>
+        </div>
 
         <div className="mt-6 text-center text-sm text-gray-600">
           <p>Contacta al administrador para acceso a la cuenta</p>
