@@ -54,6 +54,7 @@ export const InternalRequests = () => {
     description: '',
     site_id: '',
     department: profile?.department || '',
+    requester_name: profile?.full_name || '',
     request_date: new Date().toISOString().split('T')[0],
     measurement_length: '',
     measurement_height: '',
@@ -86,6 +87,14 @@ export const InternalRequests = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const openNewRequestModal = () => {
+    setFormData((prev) => ({
+      ...prev,
+      requester_name: profile?.full_name || prev.requester_name || '',
+    }));
+    setShowModal(true);
+  };
 
   const calculateIndicators = (requestsData: InternalRequestWithRelations[]) => {
     const requestsBySiteMap = new Map<string, number>();
@@ -130,6 +139,12 @@ export const InternalRequests = () => {
     e.preventDefault();
     if (!profile) return;
 
+    const requesterName = formData.requester_name.trim();
+    if (!requesterName) {
+      alert('Ingrese el nombre de quien solicita');
+      return;
+    }
+
     const requestDate = formData.request_date || new Date().toISOString().split('T')[0];
 
     const requestData: Record<string, unknown> = {
@@ -138,6 +153,7 @@ export const InternalRequests = () => {
       department: formData.department,
       site_id: formData.site_id || null,
       request_date: requestDate,
+      requester_name: requesterName,
       photo_urls: formData.photo_urls,
       measurement_length: formData.measurement_length ? Number.parseFloat(formData.measurement_length) : null,
       measurement_height: formData.measurement_height ? Number.parseFloat(formData.measurement_height) : null,
@@ -170,7 +186,7 @@ export const InternalRequests = () => {
       task_type: 'Mantenimiento General',
       requesting_area: 'Bienes inmuebles',
       site_id: formData.site_id || null,
-      requester_name: profile.full_name,
+      requester_name: requesterName,
       requester_id: profile.id,
       request_date: requestDate,
       status: 'pending',
@@ -231,7 +247,7 @@ export const InternalRequests = () => {
 Solicitud: ${formData.title}
 Departamento: ${formData.department}
 Sede: ${sites.find((s) => s.id === formData.site_id)?.name || 'N/A'}
-Solicitante: ${profile.full_name}
+Solicitante: ${requesterName}
 
 Descripción:
 ${formData.description}
@@ -260,7 +276,7 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
                     <li><strong>Solicitud:</strong> ${formData.title}</li>
                     <li><strong>Departamento:</strong> ${formData.department}</li>
                     <li><strong>Sede:</strong> ${sites.find((s) => s.id === formData.site_id)?.name || 'N/A'}</li>
-                    <li><strong>Solicitante:</strong> ${profile.full_name}</li>
+                    <li><strong>Solicitante:</strong> ${requesterName}</li>
                     <li><strong>Fecha:</strong> ${new Date(requestDate).toLocaleDateString('es-CO')}</li>
                   </ul>
                 </div>
@@ -307,6 +323,7 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
       description: '',
       site_id: '',
       department: profile?.department || '',
+      requester_name: profile?.full_name || '',
       request_date: new Date().toISOString().split('T')[0],
       measurement_length: '',
       measurement_height: '',
@@ -331,7 +348,7 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
           <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Solicitudes Internas</h1>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">Solicitudes de clientes internos - Maquinaria, Repuestos y Bienes inmuebles</p>
         </div>
-        <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+        <Button onClick={openNewRequestModal} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           <span className="text-sm sm:text-base">Nueva Solicitud</span>
         </Button>
@@ -463,7 +480,9 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Solicitante</p>
-                      <p className="font-medium text-[#50504f]">{request.requester?.full_name || 'N/A'}</p>
+                      <p className="font-medium text-[#50504f]">
+                        {request.requester_name || request.requester?.full_name || 'N/A'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Fecha Solicitud</p>
@@ -531,7 +550,7 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay solicitudes</h3>
             <p className="text-gray-500 mb-4">Crea tu primera solicitud</p>
-            <Button onClick={() => setShowModal(true)}>
+            <Button onClick={openNewRequestModal}>
               <Plus className="w-5 h-5 mr-2" />
               Nueva Solicitud
             </Button>
@@ -586,6 +605,15 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
               { value: '', label: 'Seleccione un departamento' },
               ...DEPARTMENTS.map((dept) => ({ value: dept, label: dept })),
             ]}
+            fullWidth
+            required
+          />
+
+          <Input
+            label="Nombre de quien solicita *"
+            placeholder="Nombre de quien solicita"
+            value={formData.requester_name}
+            onChange={(e) => setFormData({ ...formData, requester_name: e.target.value })}
             fullWidth
             required
           />

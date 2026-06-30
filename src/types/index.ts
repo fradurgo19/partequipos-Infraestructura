@@ -172,6 +172,7 @@ export interface InternalRequest {
   status: TaskStatus;
   assigned_to?: string;
   requester_id?: string;
+  requester_name?: string;
   task_id?: string;
   created_by: string;
   created_at: string;
