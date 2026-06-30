@@ -11,6 +11,14 @@ const LOGIN_BACKGROUND_URL =
 const PARTEQUIPOS_LOGO_URL =
   'https://res.cloudinary.com/dbufrzoda/image/upload/v1750457354/Captura_de_pantalla_2025-06-20_170819_wzmyli.png';
 
+const PartequiposLogo = ({ className = 'h-10 w-auto' }: { className?: string }) => (
+  <img
+    src={PARTEQUIPOS_LOGO_URL}
+    alt="Logo oficial Partequipos"
+    className={`object-contain ${className}`}
+  />
+);
+
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
@@ -88,11 +96,9 @@ export const Login = () => {
 
       <div className="relative z-10 flex min-h-screen flex-col lg:flex-row">
         <section className="hidden lg:flex lg:w-[52%] flex-col justify-between p-10 xl:p-14 text-white">
-          <img
-            src={PARTEQUIPOS_LOGO_URL}
-            alt="Partequipos"
-            className="h-12 w-auto brightness-0 invert"
-          />
+          <div className="inline-flex rounded-xl bg-white px-5 py-3 shadow-lg">
+            <PartequiposLogo className="h-11 w-auto max-w-[220px]" />
+          </div>
 
           <div className="max-w-lg space-y-5">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-sm font-medium backdrop-blur-sm">
@@ -114,11 +120,7 @@ export const Login = () => {
         <section className="flex flex-1 items-center justify-center px-4 py-10 sm:px-8 lg:px-12">
           <div className="w-full max-w-md rounded-2xl border border-white/30 bg-white/95 p-7 sm:p-8 shadow-2xl backdrop-blur-xl">
             <div className="mb-8 text-center lg:text-left">
-              <img
-                src={PARTEQUIPOS_LOGO_URL}
-                alt="Partequipos"
-                className="mx-auto lg:mx-0 h-10 w-auto mb-5"
-              />
+              <PartequiposLogo className="mx-auto lg:mx-0 h-12 w-auto max-w-[240px] mb-5" />
               <h2 className="text-2xl font-bold text-[#50504f]">Bienvenido</h2>
               <p className="mt-1 text-gray-600">Inicia sesión en tu cuenta</p>
             </div>

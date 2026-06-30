@@ -28,6 +28,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const USE_LOCAL_DB = process.env.USE_LOCAL_DB === 'true';
 
+if (process.env.VERCEL === '1') {
+  app.set('trust proxy', 1);
+}
+
 // Initialize database connection
 if (USE_LOCAL_DB) {
   console.log('📦 Usando PostgreSQL local');

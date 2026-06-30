@@ -273,8 +273,15 @@ export const createInternalRequestWithTask = async (rawPayload, options = {}) =>
 };
 
 export const listPublicInternalRequestSites = async () => {
+  if (!supabase) {
+    const error = new Error('Supabase no configurado en el servidor');
+    error.statusCode = 500;
+    throw error;
+  }
+
   const { data, error } = await supabase.from('sites').select('id, name').order('name');
   if (error) {
+    console.error('listPublicInternalRequestSites error:', error);
     throw error;
   }
   return data || [];
