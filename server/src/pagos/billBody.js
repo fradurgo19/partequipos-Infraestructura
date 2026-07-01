@@ -2,9 +2,11 @@ import { parseNumericOrZero } from './parseNumeric.js';
 
 export const normalizeBillBody = (bill, consumptions) => {
   const totalValue = consumptions.reduce((sum, c) => sum + parseNumericOrZero(c.value), 0);
-  const totalAmount = consumptions.reduce((sum, c) => sum + parseNumericOrZero(c.totalAmount), 0);
+  const summedTotalAmount = consumptions.reduce((sum, c) => sum + parseNumericOrZero(c.totalAmount), 0);
   const totalConsumption = consumptions.reduce((sum, c) => sum + parseNumericOrZero(c.consumption), 0);
   const first = consumptions[0];
+  const resolvedTotalAmount =
+    parseNumericOrZero(bill.totalAmount ?? bill.total_amount) || summedTotalAmount || totalValue;
 
   return {
     serviceType: bill.serviceType || bill.service_type || first?.serviceType,
@@ -14,7 +16,7 @@ export const normalizeBillBody = (bill, consumptions) => {
     period: bill.period,
     invoiceNumber: bill.invoiceNumber || bill.invoice_number,
     contractNumber: bill.contractNumber || bill.contract_number,
-    totalAmount: bill.totalAmount || bill.total_amount || totalAmount,
+    totalAmount: resolvedTotalAmount,
     consumption: totalConsumption || null,
     unitOfMeasure: bill.unitOfMeasure || bill.unit_of_measure || first?.unitOfMeasure,
     costCenter: bill.costCenter || bill.cost_center,

@@ -1,13 +1,28 @@
 import { supabase } from '../lib/supabaseClient.js';
-import { fetchConsumptionsByBillIds } from './storage.js';
 import { parseNumeric, parseNumericOrZero } from './parseNumeric.js';
+
+const AMOUNT_TOLERANCE = 0.01;
 
 const normalizeBillText = (value) => {
   if (value === null || value === undefined) {
     return '';
   }
-  return String(value).trim().toLowerCase();
+  return String(value).trim().replaceAll(/\s+/g, ' ').toLowerCase();
 };
+
+const escapeIlike = (value) => value.replaceAll(/[%_\\]/g, String.raw`\$&`);
+
+const amountsEquivalent = (left, right) => {
+  const a = parseNumericOrZero(left);
+  const b = parseNumericOrZero(right);
+  return Math.abs(a - b) <= AMOUNT_TOLERANCE;
+};
+
+const rowMatchesAmounts = (row, totalAmount, value) =>
+  amountsEquivalent(row.total_amount, totalAmount) ||
+  amountsEquivalent(row.total_amount, value) ||
+  amountsEquivalent(row.value, totalAmount) ||
+  amountsEquivalent(row.value, value);
 
 const formatNumericFingerprint = (value) => {
   const parsed = parseNumeric(value);
@@ -17,11 +32,14 @@ const formatNumericFingerprint = (value) => {
 const consumptionEntryFingerprint = (consumption) => {
   const serviceType = normalizeBillText(consumption.serviceType ?? consumption.service_type);
   const provider = normalizeBillText(consumption.provider);
+  const periodFrom = normalizeBillText(consumption.periodFrom ?? consumption.period_from);
+  const periodTo = normalizeBillText(consumption.periodTo ?? consumption.period_to);
   const value = formatNumericFingerprint(consumption.value ?? consumption.total_amount);
   const totalAmount = formatNumericFingerprint(consumption.totalAmount ?? consumption.total_amount ?? consumption.value);
   const consumptionAmount = formatNumericFingerprint(consumption.consumption);
+  const unit = normalizeBillText(consumption.unitOfMeasure ?? consumption.unit_of_measure);
 
-  return [serviceType, provider, value, totalAmount, consumptionAmount].join('|');
+  return [serviceType, provider, periodFrom, periodTo, value, totalAmount, consumptionAmount, unit].join('|');
 };
 
 export const buildConsumptionsFingerprint = (consumptions) =>
@@ -30,27 +48,17 @@ export const buildConsumptionsFingerprint = (consumptions) =>
     .sort((a, b) => a.localeCompare(b))
     .join(';;');
 
-const groupConsumptionsByBillId = (rows) => {
-  const grouped = new Map();
-  for (const row of rows) {
-    const current = grouped.get(row.bill_id) || [];
-    current.push(row);
-    grouped.set(row.bill_id, current);
-  }
-  return grouped;
-};
-
-const matchesBillIdentity = (row, invoiceNorm, contractNorm, totalAmount, excludeBillId) =>
+const matchesBillIdentity = (row, invoiceNorm, contractNorm, totalAmount, value, excludeBillId) =>
   row.id !== excludeBillId &&
   normalizeBillText(row.invoice_number) === invoiceNorm &&
   normalizeBillText(row.contract_number) === contractNorm &&
-  parseNumericOrZero(row.total_amount) === parseNumericOrZero(totalAmount);
+  rowMatchesAmounts(row, totalAmount, value);
 
 export const findDuplicateBill = async ({
   invoiceNumber,
   contractNumber,
   totalAmount,
-  consumptions,
+  value,
   excludeBillId = null,
 }) => {
   const invoiceNorm = normalizeBillText(invoiceNumber);
@@ -60,11 +68,20 @@ export const findDuplicateBill = async ({
     return null;
   }
 
+  if (!supabase) {
+    const error = new Error('Supabase no configurado en el servidor');
+    error.statusCode = 500;
+    throw error;
+  }
+
   const amount = parseNumericOrZero(totalAmount);
+  const billValue = parseNumericOrZero(value ?? totalAmount);
+
   const { data: candidates, error } = await supabase
     .from('utility_bills')
-    .select('id, invoice_number, contract_number, total_amount')
-    .eq('total_amount', amount);
+    .select('id, invoice_number, contract_number, total_amount, value')
+    .ilike('invoice_number', escapeIlike(invoiceNorm))
+    .ilike('contract_number', escapeIlike(contractNorm));
 
   if (error) {
     console.error('Error al buscar facturas duplicadas:', error);
@@ -73,23 +90,10 @@ export const findDuplicateBill = async ({
     throw dbError;
   }
 
-  const matchingBills = (candidates || []).filter((row) =>
-    matchesBillIdentity(row, invoiceNorm, contractNorm, amount, excludeBillId)
-  );
-
-  if (matchingBills.length === 0) {
-    return null;
-  }
-
-  const targetFingerprint = buildConsumptionsFingerprint(consumptions);
-  const existingConsumptions = await fetchConsumptionsByBillIds(matchingBills.map((bill) => bill.id));
-  const consumptionsByBillId = groupConsumptionsByBillId(existingConsumptions);
-
   return (
-    matchingBills.find((bill) => {
-      const billConsumptions = consumptionsByBillId.get(bill.id) || [];
-      return buildConsumptionsFingerprint(billConsumptions) === targetFingerprint;
-    }) ?? null
+    (candidates || []).find((row) =>
+      matchesBillIdentity(row, invoiceNorm, contractNorm, amount, billValue, excludeBillId)
+    ) ?? null
   );
 };
 
@@ -100,8 +104,12 @@ export const assertBillNotDuplicate = async (params) => {
   }
 
   const error = new Error(
-    'Ya existe una factura con el mismo número de factura, contrato, montos y consumos. No se puede registrar duplicada.'
+    'Ya existe una factura con el mismo número de factura, contrato y monto. No se puede registrar duplicada.'
   );
   error.statusCode = 409;
   throw error;
 };
+
+export const isDuplicateBillDbError = (error) =>
+  error?.code === '23505' &&
+  String(error?.message || error?.details || '').toLowerCase().includes('utility_bills');

@@ -31,6 +31,7 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
       invoiceNumber: normalizedUpdates.invoiceNumber,
       contractNumber: normalizedUpdates.contractNumber,
       totalAmount: normalized.totalAmount,
+      value: normalized.value,
       consumptions: incomingConsumptions,
       excludeBillId: billId,
     });

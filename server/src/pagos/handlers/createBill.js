@@ -4,7 +4,7 @@ import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 import { notifyNewBillRegistered } from '../billNotificationEmail.js';
 import { buildConsumptionPayload } from '../consumptionPayload.js';
-import { assertBillNotDuplicate } from '../duplicateBill.js';
+import { assertBillNotDuplicate, isDuplicateBillDbError } from '../duplicateBill.js';
 
 export const createPagosBill = async (pagosUser, bill) => {
   const consumptions = Array.isArray(bill.consumptions) ? bill.consumptions : [];
@@ -20,6 +20,7 @@ export const createPagosBill = async (pagosUser, bill) => {
     invoiceNumber: normalized.invoiceNumber,
     contractNumber: normalized.contractNumber,
     totalAmount: normalized.totalAmount,
+    value: normalized.value,
     consumptions,
   });
 
@@ -60,6 +61,13 @@ export const createPagosBill = async (pagosUser, bill) => {
 
   if (error) {
     console.error('Error al crear factura en utility_bills:', error);
+    if (isDuplicateBillDbError(error)) {
+      const dupError = new Error(
+        'Ya existe una factura con el mismo número de factura, contrato y monto. No se puede registrar duplicada.'
+      );
+      dupError.statusCode = 409;
+      throw dupError;
+    }
     const dbError = new Error('Error al crear factura');
     dbError.statusCode = 500;
     throw dbError;
