@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { normalizeBillBody } from '../billBody.js';
+import { resolvePagosProfileId } from '../ensurePagosProfile.js';
 import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 import { notifyNewBillRegistered } from '../billNotificationEmail.js';
@@ -31,10 +32,12 @@ export const createPagosBill = async (pagosUser, bill) => {
     location: normalized.location,
   });
 
+  const ownerProfileId = await resolvePagosProfileId(pagosUser);
+
   const { data: createdBill, error } = await supabase
     .from('utility_bills')
     .insert({
-      user_id: pagosUser.id,
+      user_id: ownerProfileId,
       site_id: siteId,
       service_type: normalized.serviceType,
       provider: normalized.provider,

@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabaseClient.js';
+import { resolvePagosProfileId } from '../ensurePagosProfile.js';
 import { transformBillToFrontend } from '../transforms.js';
 
 export const updatePagosBillStatus = async (billId, status, pagosUser) => {
@@ -11,7 +12,7 @@ export const updatePagosBillStatus = async (billId, status, pagosUser) => {
 
   const updateData = { status };
   if (status === 'approved') {
-    updateData.approved_by = pagosUser.id;
+    updateData.approved_by = await resolvePagosProfileId(pagosUser);
     updateData.approved_at = new Date().toISOString();
   }
 

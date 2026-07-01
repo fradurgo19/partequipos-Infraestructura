@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { isInfraAdminProfile } from './access.js';
+import { attachPagosProfileId } from './ensurePagosProfile.js';
 import { getPagosJwtSecret, verifyPagosToken } from './jwt.js';
 
 const JWT_SECRET = getPagosJwtSecret();
@@ -63,7 +64,7 @@ export const resolvePagosUserFromRequest = async (req) => {
 
   const infraAdmin = await resolveInfraAdminUser(token);
   if (infraAdmin) {
-    return infraAdmin;
+    return attachPagosProfileId(infraAdmin);
   }
 
   const error = new Error('Token inválido');

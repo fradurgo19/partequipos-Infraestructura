@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { isInfraAdminProfile } from '../pagos/access.js';
+import { attachPagosProfileId } from '../pagos/ensurePagosProfile.js';
 import { getPagosJwtSecret, verifyPagosToken } from '../pagos/jwt.js';
 
 export { signPagosToken } from '../pagos/jwt.js';
@@ -26,13 +27,13 @@ const attachInfraAdminAsPagosCoordinator = async (req, res, next, token) => {
     return res.status(403).json({ error: 'Token inválido' });
   }
 
-  req.pagosUser = {
+  req.pagosUser = await attachPagosProfileId({
     id: user.id,
     email: user.email,
     role: 'area_coordinator',
     infraAdmin: true,
     fullName: profile.full_name,
-  };
+  });
   return next();
 };
 
