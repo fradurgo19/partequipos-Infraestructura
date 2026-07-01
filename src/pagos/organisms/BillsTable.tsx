@@ -4,6 +4,7 @@ import { UtilityBill, SortState } from '../types';
 import { BillStatusBadge } from '../atoms/BillStatusBadge';
 import { Button } from '../../atoms/Button';
 import { formatCurrency, formatDate, translateServiceType } from '../utils/formatters';
+import { sortBills } from '../utils/billSort';
 import { usePagosAuth } from '../context/PagosAuthContext';
 import { billService } from '../services/billService';
 import { BillDetailsModal } from '../molecules/BillDetailsModal';
@@ -43,18 +44,7 @@ export const BillsTable: React.FC<BillsTableProps> = ({ bills, onBillUpdated, on
     }));
   };
 
-  const sortedBills = [...bills].sort((a, b) => {
-    const aVal = a[sortState.column];
-    const bVal = b[sortState.column];
-
-    if (aVal === undefined || aVal === null) return 1;
-    if (bVal === undefined || bVal === null) return -1;
-
-    let comparison = 0;
-    if (aVal < bVal) comparison = -1;
-    else if (aVal > bVal) comparison = 1;
-    return sortState.direction === 'asc' ? comparison : -comparison;
-  });
+  const sortedBills = sortBills(bills, sortState.column, sortState.direction);
 
   // Calcular total de montos
   const totalAmount = bills.reduce((sum, bill) => sum + bill.totalAmount, 0);

@@ -2,7 +2,13 @@ import { UtilityBill, FilterOptions } from '../types';
 import { pagosAuthService } from './authService';
 import { PAGOS_API } from '../config';
 
-const mapDbRowToBill = (row: Record<string, unknown>): UtilityBill => row as unknown as UtilityBill;
+const mapDbRowToBill = (row: Record<string, unknown>): UtilityBill => {
+  const bill = row as unknown as UtilityBill;
+  if (!bill.createdAt && row.created_at) {
+    return { ...bill, createdAt: String(row.created_at) };
+  }
+  return bill;
+};
 
 const readJsonResponse = async (response: Response) => {
   const contentType = response.headers.get('content-type') ?? '';

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { UtilityBill, FilterOptions } from '../types';
 import { billService } from '../services/billService';
 import { usePagosAuth } from '../context/PagosAuthContext';
+import { sortBillsByNewest } from '../utils/billSort';
 
 export const useBills = (filters?: FilterOptions) => {
   const { loading: authLoading } = usePagosAuth();
@@ -14,7 +15,7 @@ export const useBills = (filters?: FilterOptions) => {
       setLoading(true);
       setError(null);
       const data = await billService.getAll(filters);
-      setBills(data);
+      setBills(sortBillsByNewest(data));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to fetch bills';
       setError(message);
