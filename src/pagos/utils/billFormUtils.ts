@@ -1,5 +1,27 @@
 import { UtilityBill, UtilityBillFormData, BillConsumption } from '../types';
 import { resolveBillLocationFromStored } from '../constants/billLocations';
+import { getBillFormFieldDomId } from './validators';
+
+const CONSUMPTIONS_SECTION_ID = 'bill-form-section-consumptions';
+
+export const focusBillFormValidationField = (errorKey: string) => {
+  const targetId =
+    errorKey === 'consumptions' ? CONSUMPTIONS_SECTION_ID : getBillFormFieldDomId(errorKey);
+  const fieldEl = document.getElementById(targetId);
+  if (!fieldEl) {
+    return;
+  }
+
+  fieldEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const focusable = fieldEl.querySelector('input, select, textarea');
+  if (focusable instanceof HTMLElement) {
+    focusable.focus({ preventScroll: true });
+  }
+};
+
+export const scrollBillFormAlertIntoView = (element: HTMLElement | null) => {
+  element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
 
 function toDateString(value: Date | string | null | undefined): string {
   if (value === null || value === undefined) return '';

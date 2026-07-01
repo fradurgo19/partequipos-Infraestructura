@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../atoms/Input';
@@ -7,9 +7,18 @@ import { Textarea } from '../../atoms/Textarea';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
 import { FileUpload } from '../molecules/FileUpload';
+import { FormValidationBanner } from '../molecules/FormValidationBanner';
 import { UtilityBillFormData, ServiceType } from '../types';
-import { validateBillForm, hasValidationErrors, ValidationErrors } from '../utils/validators';
+import {
+  validateBillForm,
+  hasValidationErrors,
+  ValidationErrors,
+  getValidationErrorMessages,
+  getFirstValidationErrorKey,
+  getBillFormFieldDomId,
+} from '../utils/validators';
 import { parseCurrencyInput, parseColombianNumber, getCurrentPeriod, formatCurrency } from '../utils/formatters';
+import { focusBillFormValidationField, scrollBillFormAlertIntoView } from '../utils/billFormUtils';
 import { billService, uploadBillDocument } from '../services/billService';
 import { useBillSiteLocations } from '../hooks/useBillSiteLocations';
 import { resolveBillLocationFromStored, findBillLocationEntry } from '../constants/billLocations';
@@ -49,6 +58,11 @@ const sortSelectOptions = <T extends SelectOption>(options: T[]): T[] =>
     a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
   );
 
+const BillFormField: React.FC<{ fieldKey: string; children: React.ReactNode }> = ({
+  fieldKey,
+  children,
+}) => <div id={getBillFormFieldDomId(fieldKey)}>{children}</div>;
+
 export interface BillFormProps {
   billId?: string;
   initialData?: UtilityBillFormData;
@@ -59,6 +73,9 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [formSubmitAttempted, setFormSubmitAttempted] = useState(false);
+  const topAlertRef = useRef<HTMLDivElement>(null);
+  const submitValidationBannerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const isEditMode = Boolean(billId);
   const { catalog, loading: locationsLoading, cities, getBusinessGroups, getAddresses } =
@@ -456,16 +473,35 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     }));
   };
 
+  const validationMessages = useMemo(() => getValidationErrorMessages(errors), [errors]);
+  const showValidationBanner = formSubmitAttempted && validationMessages.length > 0;
+
+  const revealValidationIssues = (validationErrors: ValidationErrors) => {
+    setErrors(validationErrors);
+    setFormSubmitAttempted(true);
+
+    const firstKey = getFirstValidationErrorKey(validationErrors);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollBillFormAlertIntoView(submitValidationBannerRef.current);
+        if (firstKey) {
+          globalThis.setTimeout(() => focusBillFormValidationField(firstKey), 350);
+        }
+      });
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
 
     const validationErrors = validateBillForm(formData);
     if (hasValidationErrors(validationErrors)) {
-      setErrors(validationErrors);
+      revealValidationIssues(validationErrors);
       return;
     }
 
+    setFormSubmitAttempted(false);
     setLoading(true);
 
     try {
@@ -524,6 +560,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al guardar la factura';
       setSubmitError(message);
+      requestAnimationFrame(() => scrollBillFormAlertIntoView(topAlertRef.current));
     } finally {
       setLoading(false);
     }
@@ -531,38 +568,53 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
 
   return (
     <div className="space-y-6">
-      {submitError && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600" role="alert">
-          {submitError}
-        </div>
-      )}
+      <div ref={topAlertRef} className="space-y-4">
+        {submitError && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600" role="alert">
+            {submitError}
+          </div>
+        )}
+
+        {showValidationBanner && (
+          <FormValidationBanner
+            title="No se puede enviar la factura"
+            messages={validationMessages}
+          />
+        )}
+      </div>
 
       <Card>
         <h2 className="text-xl font-semibold text-gray-900 mb-6">Información de la Factura</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Input
-            label="Período (AAAA-MM) *"
-            type="month"
-            value={formData.period}
-            onChange={(e) => handleInputChange('period', e.target.value)}
-            error={errors.period}
-          />
+          <BillFormField fieldKey="period">
+            <Input
+              label="Período (AAAA-MM) *"
+              type="month"
+              value={formData.period}
+              onChange={(e) => handleInputChange('period', e.target.value)}
+              error={errors.period}
+            />
+          </BillFormField>
 
-          <Input
-            label="Número de Factura *"
-            value={formData.invoiceNumber}
-            onChange={(e) => handleInputChange('invoiceNumber', e.target.value)}
-            placeholder="FAC-12345"
-            error={errors.invoiceNumber}
-          />
+          <BillFormField fieldKey="invoiceNumber">
+            <Input
+              label="Número de Factura *"
+              value={formData.invoiceNumber}
+              onChange={(e) => handleInputChange('invoiceNumber', e.target.value)}
+              placeholder="FAC-12345"
+              error={errors.invoiceNumber}
+            />
+          </BillFormField>
 
-          <Input
-            label="Número de Contrato *"
-            value={formData.contractNumber}
-            onChange={(e) => handleInputChange('contractNumber', e.target.value)}
-            placeholder="CTR-12345"
-            error={errors.contractNumber}
-          />
+          <BillFormField fieldKey="contractNumber">
+            <Input
+              label="Número de Contrato *"
+              value={formData.contractNumber}
+              onChange={(e) => handleInputChange('contractNumber', e.target.value)}
+              placeholder="CTR-12345"
+              error={errors.contractNumber}
+            />
+          </BillFormField>
 
           <Input
             label="Descripción (generada automáticamente)"
@@ -574,6 +626,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
         </div>
       </Card>
 
+      <div id="bill-form-section-consumptions">
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900">Montos y Consumos</h2>
@@ -583,6 +636,11 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           </Button>
         </div>
         <div className="space-y-6">
+          {errors.consumptions && (
+            <p className="text-sm text-red-600" role="alert">
+              {errors.consumptions}
+            </p>
+          )}
           {formData.consumptions.map((consumption, idx) => {
             const providers = consumption.serviceType === 'other'
               ? allProviderOptions
@@ -602,57 +660,69 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
                   )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Select
-                    label="Tipo de Servicio *"
-                    value={consumption.serviceType}
-                    options={serviceTypeOptions}
-                    onChange={(e) => handleConsumptionChange(idx, 'serviceType', e.target.value)}
-                    error={errors[`consumptions.${idx}.serviceType`]}
-                  />
-                  <Select
-                    label="Proveedor *"
-                    value={consumption.provider}
-                    options={providers}
-                    onChange={(e) => handleConsumptionChange(idx, 'provider', e.target.value)}
-                    placeholder="Seleccione un proveedor"
-                    error={errors[`consumptions.${idx}.provider`]}
-                  />
-                  <Input
-                    label="Período de consumo (Desde) *"
-                    type="date"
-                    value={consumption.periodFrom}
-                    onChange={(e) => handleConsumptionChange(idx, 'periodFrom', e.target.value)}
-                    error={errors[`consumptions.${idx}.periodFrom`]}
-                  />
-                  <Input
-                    label="Período de consumo (Hasta) *"
-                    type="date"
-                    value={consumption.periodTo}
-                    onChange={(e) => handleConsumptionChange(idx, 'periodTo', e.target.value)}
-                    error={errors[`consumptions.${idx}.periodTo`]}
-                  />
-                  <Input
-                    label="Monto *"
-                    type="text"
-                    inputMode="decimal"
-                    value={consumption.value}
-                    onChange={(e) => handleConsumptionChange(idx, 'value', e.target.value)}
-                    onBlur={() => handleConsumptionBlur(idx, 'value', 2)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
-                    placeholder="0.00"
-                    error={errors[`consumptions.${idx}.value`]}
-                  />
-                  <Input
-                    label="Consumo"
-                    type="text"
-                    inputMode="decimal"
-                    value={consumption.consumption}
-                    onChange={(e) => handleConsumptionChange(idx, 'consumption', e.target.value)}
-                    onBlur={() => handleConsumptionBlur(idx, 'consumption', 3)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
-                    placeholder="0.00"
-                    error={errors[`consumptions.${idx}.consumption`]}
-                  />
+                  <BillFormField fieldKey={`consumptions.${idx}.serviceType`}>
+                    <Select
+                      label="Tipo de Servicio *"
+                      value={consumption.serviceType}
+                      options={serviceTypeOptions}
+                      onChange={(e) => handleConsumptionChange(idx, 'serviceType', e.target.value)}
+                      error={errors[`consumptions.${idx}.serviceType`]}
+                    />
+                  </BillFormField>
+                  <BillFormField fieldKey={`consumptions.${idx}.provider`}>
+                    <Select
+                      label="Proveedor *"
+                      value={consumption.provider}
+                      options={providers}
+                      onChange={(e) => handleConsumptionChange(idx, 'provider', e.target.value)}
+                      placeholder="Seleccione un proveedor"
+                      error={errors[`consumptions.${idx}.provider`]}
+                    />
+                  </BillFormField>
+                  <BillFormField fieldKey={`consumptions.${idx}.periodFrom`}>
+                    <Input
+                      label="Período de consumo (Desde) *"
+                      type="date"
+                      value={consumption.periodFrom}
+                      onChange={(e) => handleConsumptionChange(idx, 'periodFrom', e.target.value)}
+                      error={errors[`consumptions.${idx}.periodFrom`]}
+                    />
+                  </BillFormField>
+                  <BillFormField fieldKey={`consumptions.${idx}.periodTo`}>
+                    <Input
+                      label="Período de consumo (Hasta) *"
+                      type="date"
+                      value={consumption.periodTo}
+                      onChange={(e) => handleConsumptionChange(idx, 'periodTo', e.target.value)}
+                      error={errors[`consumptions.${idx}.periodTo`]}
+                    />
+                  </BillFormField>
+                  <BillFormField fieldKey={`consumptions.${idx}.value`}>
+                    <Input
+                      label="Monto *"
+                      type="text"
+                      inputMode="decimal"
+                      value={consumption.value}
+                      onChange={(e) => handleConsumptionChange(idx, 'value', e.target.value)}
+                      onBlur={() => handleConsumptionBlur(idx, 'value', 2)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                      placeholder="0.00"
+                      error={errors[`consumptions.${idx}.value`]}
+                    />
+                  </BillFormField>
+                  <BillFormField fieldKey={`consumptions.${idx}.consumption`}>
+                    <Input
+                      label="Consumo"
+                      type="text"
+                      inputMode="decimal"
+                      value={consumption.consumption}
+                      onChange={(e) => handleConsumptionChange(idx, 'consumption', e.target.value)}
+                      onBlur={() => handleConsumptionBlur(idx, 'consumption', 3)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                      placeholder="0.00"
+                      error={errors[`consumptions.${idx}.consumption`]}
+                    />
+                  </BillFormField>
                   <Select
                     label="Unidad de Medida"
                     value={consumption.unitOfMeasure}
@@ -677,40 +747,47 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           </div>
         )}
       </Card>
+      </div>
 
       <Card>
         <h2 className="text-xl font-semibold text-gray-900 mb-6">Ubicación y Fecha de Vencimiento</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Select
-            label="Ciudad *"
-            value={formData.city}
-            options={cityOptions}
-            onChange={(e) => handleCityChange(e.target.value)}
-            placeholder="Seleccione una ciudad"
-            error={errors.city}
-          />
+          <BillFormField fieldKey="city">
+            <Select
+              label="Ciudad *"
+              value={formData.city}
+              options={cityOptions}
+              onChange={(e) => handleCityChange(e.target.value)}
+              placeholder="Seleccione una ciudad"
+              error={errors.city}
+            />
+          </BillFormField>
 
-          <Select
-            label="Grupo *"
-            value={formData.businessGroup}
-            options={businessGroupOptions}
-            onChange={(e) => handleBusinessGroupChange(e.target.value)}
-            placeholder={formData.city ? 'Seleccione un grupo' : 'Primero seleccione ciudad'}
-            error={errors.businessGroup}
-            disabled={!formData.city || locationsLoading}
-          />
+          <BillFormField fieldKey="businessGroup">
+            <Select
+              label="Grupo *"
+              value={formData.businessGroup}
+              options={businessGroupOptions}
+              onChange={(e) => handleBusinessGroupChange(e.target.value)}
+              placeholder={formData.city ? 'Seleccione un grupo' : 'Primero seleccione ciudad'}
+              error={errors.businessGroup}
+              disabled={!formData.city || locationsLoading}
+            />
+          </BillFormField>
 
-          <Select
-            label="Ubicación *"
-            value={formData.location}
-            options={locationAddressOptions}
-            onChange={(e) => handleLocationChange(e.target.value)}
-            placeholder={
-              formData.businessGroup ? 'Seleccione una ubicación' : 'Primero seleccione un grupo'
-            }
-            error={errors.location}
-            disabled={!formData.city || !formData.businessGroup || locationsLoading}
-          />
+          <BillFormField fieldKey="location">
+            <Select
+              label="Ubicación *"
+              value={formData.location}
+              options={locationAddressOptions}
+              onChange={(e) => handleLocationChange(e.target.value)}
+              placeholder={
+                formData.businessGroup ? 'Seleccione una ubicación' : 'Primero seleccione un grupo'
+              }
+              error={errors.location}
+              disabled={!formData.city || !formData.businessGroup || locationsLoading}
+            />
+          </BillFormField>
 
           <Input
             label="Centro de Costos"
@@ -719,13 +796,15 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
             placeholder="Digita Centro de Costo"
           />
 
-          <Input
-            label="Fecha de Vencimiento *"
-            type="date"
-            value={formData.dueDate}
-            onChange={(e) => handleInputChange('dueDate', e.target.value)}
-            error={errors.dueDate}
-          />
+          <BillFormField fieldKey="dueDate">
+            <Input
+              label="Fecha de Vencimiento *"
+              type="date"
+              value={formData.dueDate}
+              onChange={(e) => handleInputChange('dueDate', e.target.value)}
+              error={errors.dueDate}
+            />
+          </BillFormField>
         </div>
       </Card>
 
@@ -758,6 +837,15 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       </Card>
 
       <form onSubmit={handleSubmit}>
+        {showValidationBanner && (
+          <div ref={submitValidationBannerRef} className="mb-4">
+            <FormValidationBanner
+              title="Complete los campos obligatorios antes de enviar"
+              messages={validationMessages}
+            />
+          </div>
+        )}
+
         <div className="flex items-center justify-end space-x-4 mt-6">
           <Button
             type="button"

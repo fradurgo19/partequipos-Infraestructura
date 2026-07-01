@@ -67,3 +67,65 @@ export const validateBillForm = (formData: UtilityBillFormData): ValidationError
 export const hasValidationErrors = (errors: ValidationErrors): boolean => {
   return Object.keys(errors).length > 0;
 };
+
+const BILL_FORM_FIELD_LABELS: Record<string, string> = {
+  period: 'Período',
+  invoiceNumber: 'Número de factura',
+  contractNumber: 'Número de contrato',
+  city: 'Ciudad',
+  businessGroup: 'Grupo',
+  location: 'Ubicación',
+  dueDate: 'Fecha de vencimiento',
+  consumptions: 'Consumos',
+  serviceType: 'Tipo de servicio',
+  provider: 'Proveedor',
+  periodFrom: 'Período desde',
+  periodTo: 'Período hasta',
+  value: 'Monto',
+  consumption: 'Consumo',
+};
+
+export const getBillFormFieldDomId = (errorKey: string): string =>
+  `bill-form-field-${errorKey.replaceAll('.', '-')}`;
+
+export const formatBillFormValidationItem = (key: string, message: string): string => {
+  const consumptionMatch = /^consumptions\.(\d+)\.(\w+)$/.exec(key);
+  if (consumptionMatch) {
+    const consumptionIndex = Number(consumptionMatch[1]) + 1;
+    const fieldLabel = BILL_FORM_FIELD_LABELS[consumptionMatch[2]] ?? consumptionMatch[2];
+    return `Consumo #${consumptionIndex} — ${fieldLabel}: ${message}`;
+  }
+
+  const fieldLabel = BILL_FORM_FIELD_LABELS[key] ?? key;
+  return `${fieldLabel}: ${message}`;
+};
+
+export const getValidationErrorMessages = (errors: ValidationErrors): string[] =>
+  Object.entries(errors)
+    .filter(([, message]) => Boolean(message))
+    .map(([key, message]) => formatBillFormValidationItem(key, message));
+
+export const getFirstValidationErrorKey = (errors: ValidationErrors): string | undefined => {
+  const headerOrder = ['period', 'invoiceNumber', 'contractNumber', 'consumptions'];
+  for (const key of headerOrder) {
+    if (errors[key]) {
+      return key;
+    }
+  }
+
+  const consumptionKeys = Object.keys(errors)
+    .filter((key) => key.startsWith('consumptions.'))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  if (consumptionKeys.length > 0) {
+    return consumptionKeys[0];
+  }
+
+  const locationOrder = ['city', 'businessGroup', 'location', 'dueDate'];
+  for (const key of locationOrder) {
+    if (errors[key]) {
+      return key;
+    }
+  }
+
+  return Object.keys(errors)[0];
+};
