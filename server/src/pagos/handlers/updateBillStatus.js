@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { resolvePagosProfileId } from '../ensurePagosProfile.js';
+import { notifyBillApproved } from '../billNotificationEmail.js';
 import { transformBillToFrontend } from '../transforms.js';
 
 export const updatePagosBillStatus = async (billId, status, pagosUser) => {
@@ -8,6 +9,18 @@ export const updatePagosBillStatus = async (billId, status, pagosUser) => {
     const error = new Error('Estado inválido. Solo pending o approved');
     error.statusCode = 400;
     throw error;
+  }
+
+  const { data: existingBill, error: existingError } = await supabase
+    .from('utility_bills')
+    .select('status')
+    .eq('id', billId)
+    .maybeSingle();
+
+  if (existingError || !existingBill) {
+    const notFound = new Error('Factura no encontrada');
+    notFound.statusCode = 404;
+    throw notFound;
   }
 
   const updateData = { status };
@@ -27,6 +40,14 @@ export const updatePagosBillStatus = async (billId, status, pagosUser) => {
     const notFound = new Error('Factura no encontrada');
     notFound.statusCode = 404;
     throw notFound;
+  }
+
+  if (status === 'approved' && existingBill.status !== 'approved') {
+    setImmediate(() => {
+      notifyBillApproved(data, pagosUser).catch((emailError) => {
+        console.error('Error enviando notificación de factura aprobada:', emailError);
+      });
+    });
   }
 
   return transformBillToFrontend(data);

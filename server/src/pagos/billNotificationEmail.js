@@ -14,6 +14,15 @@ const BILL_NOTIFICATION_CC = [
 
 const BILL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
 
+const BILL_APPROVAL_NOTIFICATION_TO = [
+  'contabilidad4@partequipos.com',
+  'contabilidad3@partequipos.com',
+  'analista.contabilidad1@partequipos.com',
+  'contabilidad1@partequipos.com',
+];
+
+const BILL_APPROVAL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
+
 const EMAIL_SEND_TIMEOUT_WITH_ATTACHMENT_MS = 25000;
 
 const SERVICE_TYPE_LABELS = {
@@ -139,39 +148,74 @@ const buildDetailRow = (label, value) => `
   </tr>
 `;
 
-const buildBillEmailContent = (bill, registrar, attachment) => {
+const buildStandardBillDetailRows = (bill, { includeGroup = false } = {}) => {
   const serviceLabel = translateServiceType(bill.service_type);
-  const contractNumber = bill.contract_number || bill.invoice_number || 'Sin número';
-  const subject = `Nueva Factura Registrada - ${contractNumber} - ${serviceLabel}`;
-  const registrarLabel = registrar.email
-    ? `${registrar.fullName} (${registrar.email})`
-    : registrar.fullName;
-  const documentUrl = bill.document_url || '';
-  const documentName = bill.document_name || 'Documento de factura';
   const consumption = formatConsumption(bill);
-  const appUrl = getAppBaseUrl();
-  const billsUrl = `${appUrl.replace(/\/$/, '')}/pagos/bills`;
-  const notes = bill.notes?.trim() || '';
-  const noteMessage = notes
-    ? `${notes}\n\nPor favor, revisa esta factura en el sistema y apruébala si corresponde.`
-    : 'Por favor, revisa esta factura en el sistema y apruébala si corresponde.';
+  const rows = [];
 
-  const detailRows = [
+  if (includeGroup) {
+    rows.push(
+      buildDetailRow('Grupo', bill.business_group || 'N/A'),
+      buildDetailRow('Ciudad', bill.city || 'N/A')
+    );
+  }
+
+  rows.push(
     buildDetailRow('Tipo de Servicio', serviceLabel),
     buildDetailRow('Proveedor', bill.provider || 'N/A'),
     buildDetailRow('Número de Factura', bill.invoice_number || 'N/A'),
+    buildDetailRow('Número de Contrato', bill.contract_number || 'N/A'),
     buildDetailRow('Periodo', bill.period || 'N/A'),
     buildDetailRow('Monto Total', formatCurrency(bill.total_amount)),
     buildDetailRow('Fecha de Vencimiento', formatLongDate(bill.due_date)),
     buildDetailRow('Ubicación', bill.location || 'N/A'),
     buildDetailRow('Centro de Costos', bill.cost_center || 'N/A'),
     buildDetailRow('Estado', translateStatus(bill.status)),
-    buildDetailRow('Descripción', bill.description || 'N/A'),
-  ];
+    buildDetailRow('Descripción', bill.description || 'N/A')
+  );
 
   if (consumption) {
-    detailRows.push(buildDetailRow('Consumo', consumption));
+    rows.push(buildDetailRow('Consumo', consumption));
   }
+
+  return rows;
+};
+
+const formatConsumptionItemSummary = (item) => {
+  if (item.consumption == null) {
+    return '';
+  }
+  const unit = item.unit_of_measure ? ` ${item.unit_of_measure}` : '';
+  return ` | Consumo: ${item.consumption}${unit}`;
+};
+
+const buildConsumptionRowsHtml = (consumptions) => {
+  if (!consumptions?.length) {
+    return '';
+  }
+
+  const items = consumptions
+    .map((item, index) => {
+      const serviceLabel = translateServiceType(item.service_type);
+      const amount = formatCurrency(item.total_amount ?? item.value);
+      const consumptionSummary = formatConsumptionItemSummary(item);
+      return `<li style="margin-bottom:8px;">
+        <strong>Consumo #${index + 1}:</strong> ${escapeHtml(serviceLabel)} — ${escapeHtml(item.provider || 'N/A')} — ${escapeHtml(amount)}${escapeHtml(consumptionSummary)}
+      </li>`;
+    })
+    .join('');
+
+  return `
+    <h3 style="font-size:16px;color:#50504f;margin:24px 0 10px;">Detalle de consumos</h3>
+    <ul style="margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#444;">
+      ${items}
+    </ul>
+  `;
+};
+
+const buildDocumentSections = (bill, attachment) => {
+  const documentUrl = bill.document_url || '';
+  const documentName = bill.document_name || 'Documento de factura';
 
   const documentLinkHtml = documentUrl
     ? `<p style="margin:18px 0 8px;font-size:15px;">
@@ -185,6 +229,36 @@ const buildBillEmailContent = (bill, registrar, attachment) => {
   const documentTextLine = documentUrl
     ? `Documento adjunto: ${documentName}\n${documentUrl}\n`
     : '';
+
+  const mailAttachments = attachment
+    ? [
+        {
+          filename: attachment.filename,
+          content: attachment.content,
+          contentType: getAttachmentContentType(attachment.filename),
+        },
+      ]
+    : undefined;
+
+  return { documentLinkHtml, documentTextLine, mailAttachments, documentName };
+};
+
+const buildBillEmailContent = (bill, registrar, attachment) => {
+  const serviceLabel = translateServiceType(bill.service_type);
+  const contractNumber = bill.contract_number || bill.invoice_number || 'Sin número';
+  const subject = `Nueva Factura Registrada - ${contractNumber} - ${serviceLabel}`;
+  const registrarLabel = registrar.email
+    ? `${registrar.fullName} (${registrar.email})`
+    : registrar.fullName;
+  const appUrl = getAppBaseUrl();
+  const billsUrl = `${appUrl.replace(/\/$/, '')}/pagos/bills`;
+  const notes = bill.notes?.trim() || '';
+  const noteMessage = notes
+    ? `${notes}\n\nPor favor, revisa esta factura en el sistema y apruébala si corresponde.`
+    : 'Por favor, revisa esta factura en el sistema y apruébala si corresponde.';
+  const { documentLinkHtml, documentTextLine, mailAttachments } = buildDocumentSections(bill, attachment);
+  const detailRows = buildStandardBillDetailRows(bill);
+  const consumption = formatConsumption(bill);
 
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:0 auto;background:#ffffff;color:#333;">
@@ -253,6 +327,7 @@ const buildBillEmailContent = (bill, registrar, attachment) => {
     `Tipo de Servicio: ${serviceLabel}`,
     `Proveedor: ${bill.provider || 'N/A'}`,
     `Número de Factura: ${bill.invoice_number || 'N/A'}`,
+    `Número de Contrato: ${bill.contract_number || 'N/A'}`,
     `Periodo: ${bill.period || 'N/A'}`,
     `Monto Total: ${formatCurrency(bill.total_amount)}`,
     `Fecha de Vencimiento: ${formatLongDate(bill.due_date)}`,
@@ -287,17 +362,170 @@ const buildBillEmailContent = (bill, registrar, attachment) => {
     html,
   };
 
-  if (attachment) {
-    mailOptions.attachments = [
-      {
-        filename: attachment.filename,
-        content: attachment.content,
-        contentType: getAttachmentContentType(attachment.filename),
-      },
-    ];
+  if (mailAttachments) {
+    mailOptions.attachments = mailAttachments;
   }
 
   return mailOptions;
+};
+
+const buildBillApprovedEmailContent = (bill, approver, attachment, consumptions = []) => {
+  const serviceLabel = translateServiceType(bill.service_type);
+  const contractNumber = bill.contract_number || bill.invoice_number || 'Sin número';
+  const businessGroup = bill.business_group || 'Sin grupo';
+  const subject = `Factura Aprobada - ${contractNumber} - ${businessGroup} - ${serviceLabel}`;
+  const approverLabel = approver.email
+    ? `${approver.fullName} (${approver.email})`
+    : approver.fullName;
+  const appUrl = getAppBaseUrl();
+  const billsUrl = `${appUrl.replace(/\/$/, '')}/pagos/bills`;
+  const noteMessage =
+    'La factura ha sido aprobada en el sistema. Se adjunta el documento y el detalle para su gestión contable.';
+  const { documentLinkHtml, documentTextLine, mailAttachments } = buildDocumentSections(bill, attachment);
+  const detailRows = buildStandardBillDetailRows(bill, { includeGroup: true });
+  const consumptionsHtml = buildConsumptionRowsHtml(consumptions);
+  const consumptionsText = consumptions.length
+    ? consumptions
+        .map((item, index) => {
+          const service = translateServiceType(item.service_type);
+          const amount = formatCurrency(item.total_amount ?? item.value);
+          return `Consumo #${index + 1}: ${service} — ${item.provider || 'N/A'} — ${amount}`;
+        })
+        .join('\n')
+    : '';
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:0 auto;background:#ffffff;color:#333;">
+      <div style="background:linear-gradient(135deg,#1f7a3b 0%,#145c2d 100%);padding:24px 28px;color:#ffffff;">
+        <h1 style="margin:0;font-size:24px;font-weight:700;">✅ Factura Aprobada</h1>
+        <p style="margin:8px 0 0;font-size:14px;opacity:0.92;">Sistema de Gestión de Facturas</p>
+      </div>
+
+      <div style="padding:28px;">
+        <p style="font-size:15px;line-height:1.6;margin-top:0;">Hola,</p>
+        <p style="font-size:15px;line-height:1.6;">
+          Se ha aprobado una factura en el sistema por <strong>${escapeHtml(approver.fullName)}</strong>.
+        </p>
+
+        <div style="background:#eef8f1;border-left:4px solid #1f7a3b;padding:14px 16px;margin:22px 0;">
+          <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#50504f;">🏢 GRUPO: ${escapeHtml(businessGroup)}</p>
+          <p style="margin:0;font-size:15px;font-weight:700;color:#50504f;">📋 CONTRATO: ${escapeHtml(contractNumber)}</p>
+        </div>
+
+        <h2 style="font-size:18px;color:#50504f;margin:0 0 12px;">📋 Detalles de la Factura</h2>
+        <table style="width:100%;border-collapse:collapse;background:#fafafa;border:1px solid #ececec;border-radius:8px;overflow:hidden;">
+          ${detailRows.join('')}
+        </table>
+
+        ${consumptionsHtml}
+
+        <p style="margin:20px 0 6px;font-size:14px;color:#50504f;">
+          <strong>Aprobado por:</strong> ${escapeHtml(approverLabel)}
+        </p>
+        <p style="margin:0 0 20px;font-size:14px;color:#50504f;">
+          <strong>Fecha de aprobación:</strong> ${escapeHtml(formatLongDate(bill.approved_at))}
+        </p>
+
+        <div style="background:#eef8f1;border:1px solid #b9dfc4;border-radius:8px;padding:14px 16px;margin-bottom:18px;">
+          <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#50504f;">Nota:</p>
+          <p style="margin:0;font-size:14px;line-height:1.5;color:#555;white-space:pre-line;">
+            ${escapeHtml(noteMessage)}
+          </p>
+        </div>
+
+        ${documentLinkHtml}
+
+        <div style="text-align:center;margin:28px 0 10px;">
+          <a href="${escapeHtml(billsUrl)}" target="_blank" rel="noopener noreferrer"
+             style="display:inline-block;background:#cf1b22;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:15px;">
+            Ver en el Sistema
+          </a>
+        </div>
+
+        <p style="margin:24px 0 0;font-size:12px;color:#888;line-height:1.5;text-align:center;">
+          Este es un correo automático del Sistema de Gestión de Facturas.<br />
+          Por favor, no responder a este correo.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = [
+    'Factura Aprobada',
+    'Sistema de Gestión de Facturas',
+    '',
+    'Hola,',
+    '',
+    `Se ha aprobado una factura en el sistema por ${approver.fullName}.`,
+    '',
+    `GRUPO: ${businessGroup}`,
+    `CONTRATO: ${contractNumber}`,
+    '',
+    'Detalles de la Factura',
+    `Grupo: ${businessGroup}`,
+    `Ciudad: ${bill.city || 'N/A'}`,
+    `Tipo de Servicio: ${serviceLabel}`,
+    `Proveedor: ${bill.provider || 'N/A'}`,
+    `Número de Factura: ${bill.invoice_number || 'N/A'}`,
+    `Número de Contrato: ${bill.contract_number || 'N/A'}`,
+    `Periodo: ${bill.period || 'N/A'}`,
+    `Monto Total: ${formatCurrency(bill.total_amount)}`,
+    `Fecha de Vencimiento: ${formatLongDate(bill.due_date)}`,
+    `Ubicación: ${bill.location || 'N/A'}`,
+    `Centro de Costos: ${bill.cost_center || 'N/A'}`,
+    `Estado: ${translateStatus(bill.status)}`,
+    `Descripción: ${bill.description || 'N/A'}`,
+    consumptionsText ? `\nDetalle de consumos:\n${consumptionsText}` : null,
+    '',
+    `Aprobado por: ${approverLabel}`,
+    `Fecha de aprobación: ${formatLongDate(bill.approved_at)}`,
+    '',
+    `Nota: ${noteMessage}`,
+    '',
+    documentTextLine,
+    `Ver en el Sistema: ${billsUrl}`,
+    '',
+    'Este es un correo automático del Sistema de Gestión de Facturas.',
+    'Por favor, no responder a este correo.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const mailOptions = {
+    from: formatMailFrom(),
+    to: BILL_APPROVAL_NOTIFICATION_TO.join(', '),
+    bcc: BILL_APPROVAL_NOTIFICATION_BCC.join(', '),
+    subject,
+    text,
+    html,
+  };
+
+  if (mailAttachments) {
+    mailOptions.attachments = mailAttachments;
+  }
+
+  return mailOptions;
+};
+
+const loadBillConsumptions = async (billId) => {
+  if (!billId || !supabase) {
+    return [];
+  }
+
+  const { data } = await supabase.from('bill_consumptions').select('*').eq('bill_id', billId);
+  return data || [];
+};
+
+export const notifyBillApproved = async (bill, pagosUser) => {
+  if (!bill) return;
+
+  const approver = await resolveRegistrarProfile(pagosUser);
+  const attachment = await fetchDocumentAttachment(bill.document_url, bill.document_name);
+  const consumptions = await loadBillConsumptions(bill.id);
+  const mailOptions = buildBillApprovedEmailContent(bill, approver, attachment, consumptions);
+  const timeoutMs = attachment ? EMAIL_SEND_TIMEOUT_WITH_ATTACHMENT_MS : undefined;
+
+  await sendMailWithTimeout(mailOptions, timeoutMs);
 };
 
 export const notifyNewBillRegistered = async (bill, pagosUser) => {
