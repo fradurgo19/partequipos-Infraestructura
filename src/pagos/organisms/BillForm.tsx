@@ -179,6 +179,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'EMSA', label: 'EMSA - Electrificadora del Meta (Meta)' },
       { value: 'ESSA', label: 'ESSA - Electrificadora de Santander (Santander, Norte de Santander)' },
       { value: 'CEDENAR', label: 'CEDENAR (Nariño)' },
+      { value: 'Dispac', label: 'Dispac' },
       { value: 'EDEQ', label: 'EDEQ - Energía del Quindío (Quindío)' }
     ],
     water: [
