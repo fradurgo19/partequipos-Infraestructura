@@ -17,6 +17,9 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'BOGOTA', address: 'CR 80 NRO.16D-54 El vergel.', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BOGOTA', address: 'CL 6 NRO. 26 -73', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BUCARAMANGA', address: 'KM 7 VIA GIRON NRO. 4-80', businessGroup: 'PARTEQUIPOS S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'PARTEQUIPOS S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'CAUCASIA', address: 'CRA 20 NRO.3 A - 29', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'ISTMINA-CHOCO', address: 'BOMBA ZEUZ LA 70 ALM ERA EN MVTO', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'IBAGUE', address: 'CRA 48 SUR Nro.88-45 local 2', businessGroup: 'PARTEQUIPOS S.A.S.' },
@@ -33,7 +36,7 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
 ];
 
 /** Ciudades adicionales disponibles en el formulario aunque no tengan sedes registradas aún. */
-export const ADDITIONAL_BILL_CITIES = ['BUENAVENTURA'] as const;
+export const ADDITIONAL_BILL_CITIES = [] as const;
 
 /** Grupos empresariales disponibles en el formulario de facturas (independiente de la ciudad). */
 export const STANDARD_BILL_BUSINESS_GROUPS = [
