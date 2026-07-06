@@ -111,25 +111,31 @@ export const ReportsPage: React.FC = () => {
   const totalBills = filteredBills.length;
   const totalAmount = filteredBills.reduce((sum, bill) => sum + bill.totalAmount, 0);
   const pendingBills = filteredBills.filter(bill => bill.status === 'pending').length;
-  const approvedBills = filteredBills.filter(bill => bill.status === 'approved' || bill.status === 'paid').length;
+  const approvedBills = filteredBills.filter(bill => bill.status === 'approved').length;
+  const paidBills = filteredBills.filter(bill => bill.status === 'paid').length;
 
   const getStatusBadge = (status: BillStatus) => {
-    // Normalizar estados: paid y approved se muestran como aprobada
-    const normalizedStatus = status === 'paid' || status === 'approved' ? 'approved' : 'pending';
-    
-    if (normalizedStatus === 'approved') {
+    if (status === 'paid') {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+          💰 Pagada
+        </span>
+      );
+    }
+
+    if (status === 'approved') {
       return (
         <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-[#f7d7da] text-[#a11217] border border-[#f3b8bc]">
           ✅ Aprobada
         </span>
       );
-    } else {
-      return (
-        <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-[#fdebec] text-[#cf1b22] border border-[#f3b8bc]">
-          ⏳ Pendiente
-        </span>
-      );
     }
+
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium bg-[#fdebec] text-[#cf1b22] border border-[#f3b8bc]">
+        ⏳ Pendiente
+      </span>
+    );
   };
 
   const getServiceTypeLabel = (type: string) => {
@@ -260,7 +266,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <div className="flex items-center space-x-3">
             <div className="p-3 bg-[#fdebec] rounded-lg">
@@ -305,6 +311,18 @@ export const ReportsPage: React.FC = () => {
             <div>
               <p className="text-sm text-gray-600">Aprobadas</p>
               <p className="text-2xl font-bold text-gray-900">{approvedBills}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <div className="flex items-center space-x-3">
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Calendar className="w-6 h-6 text-blue-800" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Pagadas</p>
+              <p className="text-2xl font-bold text-gray-900">{paidBills}</p>
             </div>
           </div>
         </Card>

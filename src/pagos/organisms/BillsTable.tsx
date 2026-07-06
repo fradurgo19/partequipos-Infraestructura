@@ -8,6 +8,11 @@ import { sortBills } from '../utils/billSort';
 import { usePagosAuth } from '../context/PagosAuthContext';
 import { billService } from '../services/billService';
 import { BillDetailsModal } from '../molecules/BillDetailsModal';
+import {
+  BILL_TABLE_STATUS_OPTIONS,
+  getBillTableStatusOption,
+  resolveBillTableStatusValue,
+} from '../utils/billStatusOptions';
 
 interface BillsTableProps {
   bills: UtilityBill[];
@@ -260,7 +265,11 @@ export const BillsTable: React.FC<BillsTableProps> = ({ bills, onBillUpdated, on
                 </td>
               </tr>
             ) : (
-              sortedBills.map((bill) => (
+              sortedBills.map((bill) => {
+                const selectedStatus = resolveBillTableStatusValue(bill.status);
+                const selectedOption = getBillTableStatusOption(selectedStatus);
+
+                return (
                 <tr key={bill.id} className="hover:bg-gray-50">
                   <td className="px-4 py-4">
                     <input
@@ -295,18 +304,25 @@ export const BillsTable: React.FC<BillsTableProps> = ({ bills, onBillUpdated, on
                   <td className="px-4 py-4 whitespace-nowrap">
                     {isAreaCoordinator ? (
                       <select
-                        value={bill.status === 'approved' || bill.status === 'paid' ? 'approved' : 'pending'}
+                        value={selectedStatus}
                         onChange={(e) => handleStatusChange(bill.id, e.target.value)}
                         disabled={loading === bill.id}
                       className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#cf1b22] disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{
-                          backgroundColor: bill.status === 'approved' || bill.status === 'paid' ? '#f7d7da' : '#fdebec',
-                          color: bill.status === 'approved' || bill.status === 'paid' ? '#7f0c12' : '#b5181d',
+                          backgroundColor: selectedOption.backgroundColor,
+                          color: selectedOption.color,
                           fontWeight: '500'
                         }}
                       >
-                        <option value="pending" style={{ backgroundColor: '#fdebec', color: '#b5181d' }}>⏳ Pendiente</option>
-                        <option value="approved" style={{ backgroundColor: '#f7d7da', color: '#7f0c12' }}>✅ Aprobada</option>
+                        {BILL_TABLE_STATUS_OPTIONS.map((option) => (
+                          <option
+                            key={option.value}
+                            value={option.value}
+                            style={{ backgroundColor: option.backgroundColor, color: option.color }}
+                          >
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     ) : (
                       <BillStatusBadge status={bill.status} />
@@ -345,7 +361,8 @@ export const BillsTable: React.FC<BillsTableProps> = ({ bills, onBillUpdated, on
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
             {/* Fila de totales */}
             {bills.length > 0 && (

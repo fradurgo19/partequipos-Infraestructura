@@ -18,7 +18,7 @@ const statusLabels: Record<BillStatus, string> = {
   pending: 'Pendiente',
   approved: 'Aprobado',
   overdue: 'Vencido',
-  paid: 'Pagado',
+  paid: 'Pagada',
 };
 
 export const BillStatusBadge = ({ status, className = '' }: BillStatusBadgeProps) => (

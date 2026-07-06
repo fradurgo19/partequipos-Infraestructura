@@ -3,10 +3,8 @@ import { resolvePagosProfileId } from '../ensurePagosProfile.js';
 import { notifyBillApproved } from '../billNotificationEmail.js';
 import { transformBillToFrontend } from '../transforms.js';
 
-const isApprovedBillStatus = (status) => status === 'approved' || status === 'paid';
-
 const shouldNotifyBillApproval = (previousStatus, nextStatus) =>
-  nextStatus === 'approved' && !isApprovedBillStatus(previousStatus);
+  nextStatus === 'approved' && previousStatus !== 'approved';
 
 const sendBillApprovalNotification = async (bill, pagosUser) => {
   try {
@@ -17,9 +15,9 @@ const sendBillApprovalNotification = async (bill, pagosUser) => {
 };
 
 export const updatePagosBillStatus = async (billId, status, pagosUser) => {
-  const validStatuses = ['pending', 'approved'];
+  const validStatuses = ['pending', 'approved', 'paid'];
   if (!validStatuses.includes(status)) {
-    const error = new Error('Estado inválido. Solo pending o approved');
+    const error = new Error('Estado inválido. Solo pending, approved o paid');
     error.statusCode = 400;
     throw error;
   }
