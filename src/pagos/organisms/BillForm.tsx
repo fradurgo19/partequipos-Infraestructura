@@ -58,6 +58,11 @@ const sortSelectOptions = <T extends SelectOption>(options: T[]): T[] =>
     a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
   );
 
+const LOGISTIC_PACIFIC_PROVIDERS = [
+  { value: 'CENTRO LOGISTICO DEL PACIFICO', label: 'CENTRO LOGISTICO DEL PACIFICO' },
+  { value: 'COPROPIEDAD CENTRO LOGISTICO DEL PACIFICO', label: 'COPROPIEDAD CENTRO LOGISTICO DEL PACIFICO' },
+];
+
 const BillFormField: React.FC<{ fieldKey: string; children: React.ReactNode }> = ({
   fieldKey,
   children,
@@ -179,6 +184,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'EMSA', label: 'EMSA - Electrificadora del Meta (Meta)' },
       { value: 'ESSA', label: 'ESSA - Electrificadora de Santander (Santander, Norte de Santander)' },
       { value: 'CEDENAR', label: 'CEDENAR (Nariño)' },
+      ...LOGISTIC_PACIFIC_PROVIDERS,
       { value: 'Dispac', label: 'Dispac' },
       { value: 'EDEQ', label: 'EDEQ - Energía del Quindío (Quindío)' }
     ],
@@ -192,7 +198,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'Metroagua', label: 'Metroagua/Veolia (Santa Marta)' },
       { value: 'Aguas de Manizales', label: 'Aguas de Manizales (Manizales)' },
       { value: 'IBAL', label: 'IBAL (Ibagué)' },
-      { value: 'Veolia Aguas de Monteria S.A. E.S.P.', label: 'Veolia Aguas de Monteria S.A. E.S.P.' }
+      { value: 'Veolia Aguas de Monteria S.A. E.S.P.', label: 'Veolia Aguas de Monteria S.A. E.S.P.' },
+      ...LOGISTIC_PACIFIC_PROVIDERS,
     ],
     gas: [
       { value: 'EPM (Empresas Públicas de Medellín)', label: 'EPM (Empresas Públicas de Medellín)' },
@@ -260,7 +267,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'Administración', label: 'Administración' }
     ],
     rent: [
-      { value: 'Arrendador', label: 'Arrendador' }
+      { value: 'Arrendador', label: 'Arrendador' },
+      ...LOGISTIC_PACIFIC_PROVIDERS,
     ],
     public_lighting: [
       { value: 'EPM (Empresas Públicas de Medellín)', label: 'EPM (Empresas Públicas de Medellín)' },
