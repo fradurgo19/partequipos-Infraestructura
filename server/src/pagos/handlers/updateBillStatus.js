@@ -3,6 +3,19 @@ import { resolvePagosProfileId } from '../ensurePagosProfile.js';
 import { notifyBillApproved } from '../billNotificationEmail.js';
 import { transformBillToFrontend } from '../transforms.js';
 
+const isApprovedBillStatus = (status) => status === 'approved' || status === 'paid';
+
+const shouldNotifyBillApproval = (previousStatus, nextStatus) =>
+  nextStatus === 'approved' && !isApprovedBillStatus(previousStatus);
+
+const sendBillApprovalNotification = async (bill, pagosUser) => {
+  try {
+    await notifyBillApproved(bill, pagosUser);
+  } catch (emailError) {
+    console.error('Error enviando notificación de factura aprobada:', emailError);
+  }
+};
+
 export const updatePagosBillStatus = async (billId, status, pagosUser) => {
   const validStatuses = ['pending', 'approved'];
   if (!validStatuses.includes(status)) {
@@ -42,12 +55,8 @@ export const updatePagosBillStatus = async (billId, status, pagosUser) => {
     throw notFound;
   }
 
-  if (status === 'approved' && existingBill.status !== 'approved') {
-    setImmediate(() => {
-      notifyBillApproved(data, pagosUser).catch((emailError) => {
-        console.error('Error enviando notificación de factura aprobada:', emailError);
-      });
-    });
+  if (shouldNotifyBillApproval(existingBill.status, status)) {
+    await sendBillApprovalNotification(data, pagosUser);
   }
 
   return transformBillToFrontend(data);

@@ -23,10 +23,10 @@
       "maxDuration": 30
     },
     "api/pagos/bill-status.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/pagos/bill-approve.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/pagos/users.js": {
       "maxDuration": 30

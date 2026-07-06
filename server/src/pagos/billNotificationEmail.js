@@ -14,14 +14,28 @@ const BILL_NOTIFICATION_CC = [
 
 const BILL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
 
-const BILL_APPROVAL_NOTIFICATION_TO = [
+const BILL_APPROVAL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
+
+const BILL_APPROVAL_BASE_TO = [
   'contabilidad4@partequipos.com',
-  'contabilidad3@partequipos.com',
-  'analista.contabilidad1@partequipos.com',
   'contabilidad1@partequipos.com',
 ];
 
-const BILL_APPROVAL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
+/** Destinatarios adicionales por grupo empresarial al aprobar una factura. */
+const BILL_APPROVAL_GROUP_RECIPIENTS = {
+  'PARTEQUIPOS MAQUINARIA S.A.S.': ['analista.contabilidad1@partequipos.com'],
+  'PARTEQUIPOS S.A.S.': ['contabilidad3@partequipos.com'],
+  'WACONDA S.A.S.': ['contabilidad3@partequipos.com'],
+};
+
+const normalizeBusinessGroupKey = (businessGroup) => businessGroup?.trim() || '';
+
+const resolveBillApprovalRecipients = (businessGroup) => {
+  const groupKey = normalizeBusinessGroupKey(businessGroup);
+  const groupRecipients = BILL_APPROVAL_GROUP_RECIPIENTS[groupKey] ?? [];
+
+  return [...new Set([...BILL_APPROVAL_BASE_TO, ...groupRecipients])];
+};
 
 const EMAIL_SEND_TIMEOUT_WITH_ATTACHMENT_MS = 25000;
 
@@ -493,7 +507,7 @@ const buildBillApprovedEmailContent = (bill, approver, attachment, consumptions 
 
   const mailOptions = {
     from: formatMailFrom(),
-    to: BILL_APPROVAL_NOTIFICATION_TO.join(', '),
+    to: resolveBillApprovalRecipients(businessGroup).join(', '),
     bcc: BILL_APPROVAL_NOTIFICATION_BCC.join(', '),
     subject,
     text,
