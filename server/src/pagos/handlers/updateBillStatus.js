@@ -1,16 +1,27 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { resolvePagosProfileId } from '../ensurePagosProfile.js';
-import { notifyBillApproved } from '../billNotificationEmail.js';
+import { notifyBillApproved, notifyBillPaid } from '../billNotificationEmail.js';
 import { transformBillToFrontend } from '../transforms.js';
 
 const shouldNotifyBillApproval = (previousStatus, nextStatus) =>
   nextStatus === 'approved' && previousStatus !== 'approved';
+
+const shouldNotifyBillPaid = (previousStatus, nextStatus) =>
+  nextStatus === 'paid' && previousStatus !== 'paid';
 
 const sendBillApprovalNotification = async (bill, pagosUser) => {
   try {
     await notifyBillApproved(bill, pagosUser);
   } catch (emailError) {
     console.error('Error enviando notificación de factura aprobada:', emailError);
+  }
+};
+
+const sendBillPaidNotification = async (bill, pagosUser) => {
+  try {
+    await notifyBillPaid(bill, pagosUser);
+  } catch (emailError) {
+    console.error('Error enviando notificación de factura pagada:', emailError);
   }
 };
 
@@ -55,6 +66,10 @@ export const updatePagosBillStatus = async (billId, status, pagosUser) => {
 
   if (shouldNotifyBillApproval(existingBill.status, status)) {
     await sendBillApprovalNotification(data, pagosUser);
+  }
+
+  if (shouldNotifyBillPaid(existingBill.status, status)) {
+    await sendBillPaidNotification(data, pagosUser);
   }
 
   return transformBillToFrontend(data);

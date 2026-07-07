@@ -16,6 +16,9 @@ const BILL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
 
 const BILL_APPROVAL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
 
+const BILL_PAID_NOTIFICATION_TO = ['cduque@partequipos.com'];
+const BILL_PAID_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
+
 const BILL_APPROVAL_BASE_TO = [
   'contabilidad4@partequipos.com',
   'contabilidad1@partequipos.com',
@@ -60,7 +63,7 @@ const STATUS_LABELS = {
   pending: 'Pendiente',
   approved: 'Aprobado',
   overdue: 'Vencido',
-  paid: 'Pagado',
+  paid: 'Pagada',
 };
 
 const escapeHtml = (value) =>
@@ -383,6 +386,20 @@ const buildBillEmailContent = (bill, registrar, attachment) => {
   return mailOptions;
 };
 
+const buildConsumptionsPlainText = (consumptions) => {
+  if (!consumptions?.length) {
+    return '';
+  }
+
+  return consumptions
+    .map((item, index) => {
+      const service = translateServiceType(item.service_type);
+      const amount = formatCurrency(item.total_amount ?? item.value);
+      return `Consumo #${index + 1}: ${service} — ${item.provider || 'N/A'} — ${amount}`;
+    })
+    .join('\n');
+};
+
 const buildBillApprovedEmailContent = (bill, approver, attachment, consumptions = []) => {
   const serviceLabel = translateServiceType(bill.service_type);
   const contractNumber = bill.contract_number || bill.invoice_number || 'Sin número';
@@ -398,15 +415,7 @@ const buildBillApprovedEmailContent = (bill, approver, attachment, consumptions 
   const { documentLinkHtml, documentTextLine, mailAttachments } = buildDocumentSections(bill, attachment);
   const detailRows = buildStandardBillDetailRows(bill, { includeGroup: true });
   const consumptionsHtml = buildConsumptionRowsHtml(consumptions);
-  const consumptionsText = consumptions.length
-    ? consumptions
-        .map((item, index) => {
-          const service = translateServiceType(item.service_type);
-          const amount = formatCurrency(item.total_amount ?? item.value);
-          return `Consumo #${index + 1}: ${service} — ${item.provider || 'N/A'} — ${amount}`;
-        })
-        .join('\n')
-    : '';
+  const consumptionsText = buildConsumptionsPlainText(consumptions);
 
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:0 auto;background:#ffffff;color:#333;">
@@ -521,6 +530,135 @@ const buildBillApprovedEmailContent = (bill, approver, attachment, consumptions 
   return mailOptions;
 };
 
+const buildBillPaidEmailContent = (bill, actor, attachment, consumptions = []) => {
+  const serviceLabel = translateServiceType(bill.service_type);
+  const contractNumber = bill.contract_number || bill.invoice_number || 'Sin número';
+  const businessGroup = bill.business_group || 'Sin grupo';
+  const subject = `Factura Pagada - ${contractNumber} - ${businessGroup} - ${serviceLabel}`;
+  const actorLabel = actor.email ? `${actor.fullName} (${actor.email})` : actor.fullName;
+  const paidAt = bill.updated_at || new Date().toISOString();
+  const appUrl = getAppBaseUrl();
+  const billsUrl = `${appUrl.replace(/\/$/, '')}/pagos/bills`;
+  const noteMessage =
+    'La factura ha sido registrada como pagada en el sistema. Se adjunta el documento y el detalle para su control.';
+  const { documentLinkHtml, documentTextLine, mailAttachments } = buildDocumentSections(bill, attachment);
+  const detailRows = buildStandardBillDetailRows(bill, { includeGroup: true });
+  const consumptionsHtml = buildConsumptionRowsHtml(consumptions);
+  const consumptionsText = buildConsumptionsPlainText(consumptions);
+
+  const html = `
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:0 auto;background:#ffffff;color:#333;">
+      <div style="background:linear-gradient(135deg,#1d4ed8 0%,#1e3a8a 100%);padding:24px 28px;color:#ffffff;">
+        <h1 style="margin:0;font-size:24px;font-weight:700;">💰 Factura Pagada</h1>
+        <p style="margin:8px 0 0;font-size:14px;opacity:0.92;">Sistema de Gestión de Facturas</p>
+      </div>
+
+      <div style="padding:28px;">
+        <p style="font-size:15px;line-height:1.6;margin-top:0;">Hola,</p>
+        <p style="font-size:15px;line-height:1.6;">
+          Se ha marcado una factura como pagada en el sistema por <strong>${escapeHtml(actor.fullName)}</strong>.
+        </p>
+
+        <div style="background:#eff6ff;border-left:4px solid #1d4ed8;padding:14px 16px;margin:22px 0;">
+          <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#50504f;">🏢 GRUPO: ${escapeHtml(businessGroup)}</p>
+          <p style="margin:0;font-size:15px;font-weight:700;color:#50504f;">📋 CONTRATO: ${escapeHtml(contractNumber)}</p>
+        </div>
+
+        <h2 style="font-size:18px;color:#50504f;margin:0 0 12px;">📋 Detalles de la Factura</h2>
+        <table style="width:100%;border-collapse:collapse;background:#fafafa;border:1px solid #ececec;border-radius:8px;overflow:hidden;">
+          ${detailRows.join('')}
+        </table>
+
+        ${consumptionsHtml}
+
+        <p style="margin:20px 0 6px;font-size:14px;color:#50504f;">
+          <strong>Registrado por:</strong> ${escapeHtml(actorLabel)}
+        </p>
+        <p style="margin:0 0 20px;font-size:14px;color:#50504f;">
+          <strong>Fecha de pago:</strong> ${escapeHtml(formatLongDate(paidAt))}
+        </p>
+
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-bottom:18px;">
+          <p style="margin:0 0 6px;font-size:14px;font-weight:700;color:#50504f;">Nota:</p>
+          <p style="margin:0;font-size:14px;line-height:1.5;color:#555;white-space:pre-line;">
+            ${escapeHtml(noteMessage)}
+          </p>
+        </div>
+
+        ${documentLinkHtml}
+
+        <div style="text-align:center;margin:28px 0 10px;">
+          <a href="${escapeHtml(billsUrl)}" target="_blank" rel="noopener noreferrer"
+             style="display:inline-block;background:#cf1b22;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:700;font-size:15px;">
+            Ver en el Sistema
+          </a>
+        </div>
+
+        <p style="margin:24px 0 0;font-size:12px;color:#888;line-height:1.5;text-align:center;">
+          Este es un correo automático del Sistema de Gestión de Facturas.<br />
+          Por favor, no responder a este correo.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = [
+    'Factura Pagada',
+    'Sistema de Gestión de Facturas',
+    '',
+    'Hola,',
+    '',
+    `Se ha marcado una factura como pagada en el sistema por ${actor.fullName}.`,
+    '',
+    `GRUPO: ${businessGroup}`,
+    `CONTRATO: ${contractNumber}`,
+    '',
+    'Detalles de la Factura',
+    `Grupo: ${businessGroup}`,
+    `Ciudad: ${bill.city || 'N/A'}`,
+    `Tipo de Servicio: ${serviceLabel}`,
+    `Proveedor: ${bill.provider || 'N/A'}`,
+    `Número de Factura: ${bill.invoice_number || 'N/A'}`,
+    `Número de Contrato: ${bill.contract_number || 'N/A'}`,
+    `Periodo: ${bill.period || 'N/A'}`,
+    `Monto Total: ${formatCurrency(bill.total_amount)}`,
+    `Fecha de Vencimiento: ${formatLongDate(bill.due_date)}`,
+    `Ubicación: ${bill.location || 'N/A'}`,
+    `Centro de Costos: ${bill.cost_center || 'N/A'}`,
+    `Estado: ${translateStatus(bill.status)}`,
+    `Descripción: ${bill.description || 'N/A'}`,
+    consumptionsText ? `\nDetalle de consumos:\n${consumptionsText}` : null,
+    '',
+    `Registrado por: ${actorLabel}`,
+    `Fecha de pago: ${formatLongDate(paidAt)}`,
+    '',
+    `Nota: ${noteMessage}`,
+    '',
+    documentTextLine,
+    `Ver en el Sistema: ${billsUrl}`,
+    '',
+    'Este es un correo automático del Sistema de Gestión de Facturas.',
+    'Por favor, no responder a este correo.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const mailOptions = {
+    from: formatMailFrom(),
+    to: BILL_PAID_NOTIFICATION_TO.join(', '),
+    bcc: BILL_PAID_NOTIFICATION_BCC.join(', '),
+    subject,
+    text,
+    html,
+  };
+
+  if (mailAttachments) {
+    mailOptions.attachments = mailAttachments;
+  }
+
+  return mailOptions;
+};
+
 const loadBillConsumptions = async (billId) => {
   if (!billId || !supabase) {
     return [];
@@ -537,6 +675,18 @@ export const notifyBillApproved = async (bill, pagosUser) => {
   const attachment = await fetchDocumentAttachment(bill.document_url, bill.document_name);
   const consumptions = await loadBillConsumptions(bill.id);
   const mailOptions = buildBillApprovedEmailContent(bill, approver, attachment, consumptions);
+  const timeoutMs = attachment ? EMAIL_SEND_TIMEOUT_WITH_ATTACHMENT_MS : undefined;
+
+  await sendMailWithTimeout(mailOptions, timeoutMs);
+};
+
+export const notifyBillPaid = async (bill, pagosUser) => {
+  if (!bill) return;
+
+  const actor = await resolveRegistrarProfile(pagosUser);
+  const attachment = await fetchDocumentAttachment(bill.document_url, bill.document_name);
+  const consumptions = await loadBillConsumptions(bill.id);
+  const mailOptions = buildBillPaidEmailContent(bill, actor, attachment, consumptions);
   const timeoutMs = attachment ? EMAIL_SEND_TIMEOUT_WITH_ATTACHMENT_MS : undefined;
 
   await sendMailWithTimeout(mailOptions, timeoutMs);
