@@ -63,6 +63,38 @@ const LOGISTIC_PACIFIC_PROVIDERS = [
   { value: 'COPROPIEDAD CENTRO LOGISTICO DEL PACIFICO', label: 'COPROPIEDAD CENTRO LOGISTICO DEL PACIFICO' },
 ];
 
+const toProviderOptions = (names: string[]) =>
+  names.map((name) => ({ value: name, label: name }));
+
+const SECURITY_SERVICE_PROVIDERS = toProviderOptions([
+  'PROSEGUR VIGILANCIA Y SEGURIDAD',
+  'ATLAS',
+  'SEGURTRONIC',
+  'VIPERS',
+  'COSMOS',
+  'Miro',
+  'Air-e S.A.S. (SS PCOS Barranquilla)',
+  'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.',
+]);
+
+const RENT_SERVICE_PROVIDERS = toProviderOptions([
+  'ANSERRA GLOBEL S.A.S.',
+  'COLTEBIENES',
+  'SOTO S.A.S',
+  'FERNANDO REINA Y CIA SAS',
+  'ARRENDAMIENTO VILLA CRUZ SAS',
+  'CIMA COMPAÑIA INMOBILIARIA SAS',
+  'SAJEAL SAS',
+  'AGRO ZETA SAS',
+  'CENTRO LOGISTICO STOCK CARIBE SAS',
+  'PROMOTORA INMOBILIARIA DEL PACIFICO COLOMBIANO SAS',
+  'WACONDA SAS',
+  'ARAUJO Y SEGOVIA DE CORDOBA SA',
+  'MARIELA SANABRIA ALDANA',
+  'Arrendador',
+  ...LOGISTIC_PACIFIC_PROVIDERS.map((provider) => provider.value),
+]);
+
 const BillFormField: React.FC<{ fieldKey: string; children: React.ReactNode }> = ({
   fieldKey,
   children,
@@ -256,20 +288,11 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'Triple AAA', label: 'Triple AAA (Barranquilla y Atlántico)' },
       { value: 'Air-e S.A.S. (SS PCOS Barranquilla)', label: 'Air-e S.A.S. (SS PCOS Barranquilla)' }
     ],
-    security: [
-      { value: 'Miro', label: 'Miro' },
-      { value: 'Prosegur', label: 'Prosegur' },
-      { value: 'Atlas', label: 'Atlas' },
-      { value: 'Air-e S.A.S. (SS PCOS Barranquilla)', label: 'Air-e S.A.S. (SS PCOS Barranquilla)' },
-      { value: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.', label: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.' }
-    ],
+    security: SECURITY_SERVICE_PROVIDERS,
     administration: [
       { value: 'Administración', label: 'Administración' }
     ],
-    rent: [
-      { value: 'Arrendador', label: 'Arrendador' },
-      ...LOGISTIC_PACIFIC_PROVIDERS,
-    ],
+    rent: RENT_SERVICE_PROVIDERS,
     public_lighting: [
       { value: 'EPM (Empresas Públicas de Medellín)', label: 'EPM (Empresas Públicas de Medellín)' },
       { value: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.', label: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.' }
