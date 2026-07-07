@@ -8,6 +8,7 @@ export interface BillLocationEntry {
 /** Catálogo legacy para facturas migradas con grupos empresariales históricos. */
 export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'ITAGUI', address: 'CL 30 NRO. 41-30', businessGroup: 'PARTEQUIPOS S.A.S.' },
+  { city: 'ITAGUI', address: 'Cll 30 41 30', businessGroup: 'MAQUITECNO SAS' },
   { city: 'MEDELLIN', address: 'CRA 50 NRO.35-32', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'MEDELLIN', address: 'CL 16 Nro.45-104 b. colombia.', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'YUMBO-CALI', address: 'CALLE 15 NRO. 38-21 LOCAL 1 y 2 yumbo', businessGroup: 'PARTEQUIPOS S.A.S.' },
@@ -40,6 +41,7 @@ export const ADDITIONAL_BILL_CITIES = [] as const;
 
 /** Grupos empresariales disponibles en el formulario de facturas (independiente de la ciudad). */
 export const STANDARD_BILL_BUSINESS_GROUPS = [
+  'MAQUITECNO SAS',
   'PARTEQUIPOS MAQUINARIA S.A.S.',
   'PARTEQUIPOS S.A.S.',
   'WACONDA S.A.S.',
