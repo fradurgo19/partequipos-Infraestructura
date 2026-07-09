@@ -5,6 +5,10 @@ import { resolveBillSiteId } from '../siteMatching.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 import { buildConsumptionPayload } from '../consumptionPayload.js';
 import { assertBillNotDuplicate } from '../duplicateBill.js';
+import {
+  assertValidConsumptionServiceTypes,
+  toConsumptionDbError,
+} from '../validateConsumptions.js';
 
 export const updatePagosBill = async (pagosUser, billId, updates) => {
   const incomingConsumptions = Array.isArray(updates.consumptions) ? updates.consumptions : null;
@@ -13,6 +17,10 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
     const error = new Error('Debe incluir al menos un consumo');
     error.statusCode = 400;
     throw error;
+  }
+
+  if (incomingConsumptions?.length) {
+    assertValidConsumptionServiceTypes(incomingConsumptions);
   }
 
   const normalizedUpdates = { ...updates };
@@ -108,9 +116,7 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
 
   if (consumptionsError) {
     console.error('Error al actualizar consumos en bill_consumptions:', consumptionsError);
-    const dbError = new Error('Error al actualizar consumos');
-    dbError.statusCode = 500;
-    throw dbError;
+    throw toConsumptionDbError(consumptionsError, 'Error al actualizar consumos');
   }
   const consumptions = (newConsumptions || []).map(transformConsumptionToFrontend);
   return transformBillToFrontend(updatedRow, consumptions);

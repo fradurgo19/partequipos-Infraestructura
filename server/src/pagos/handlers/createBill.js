@@ -6,6 +6,10 @@ import { transformBillToFrontend, transformConsumptionToFrontend } from '../tran
 import { notifyNewBillRegistered } from '../billNotificationEmail.js';
 import { buildConsumptionPayload } from '../consumptionPayload.js';
 import { assertBillNotDuplicate, isDuplicateBillDbError } from '../duplicateBill.js';
+import {
+  assertValidConsumptionServiceTypes,
+  toConsumptionDbError,
+} from '../validateConsumptions.js';
 
 export const createPagosBill = async (pagosUser, bill) => {
   const consumptions = Array.isArray(bill.consumptions) ? bill.consumptions : [];
@@ -14,6 +18,8 @@ export const createPagosBill = async (pagosUser, bill) => {
     error.statusCode = 400;
     throw error;
   }
+
+  assertValidConsumptionServiceTypes(consumptions);
 
   const normalized = normalizeBillBody(bill, consumptions);
 
@@ -86,9 +92,7 @@ export const createPagosBill = async (pagosUser, bill) => {
   if (consumptionsError) {
     console.error('Error al crear consumos en bill_consumptions:', consumptionsError);
     await supabase.from('utility_bills').delete().eq('id', createdBill.id);
-    const dbError = new Error('Error al crear consumos');
-    dbError.statusCode = 500;
-    throw dbError;
+    throw toConsumptionDbError(consumptionsError, 'Error al crear consumos');
   }
 
   setImmediate(() => {
