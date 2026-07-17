@@ -73,6 +73,7 @@ const SECURITY_SERVICE_PROVIDERS = toProviderOptions([
   'VIPERS',
   'COSMOS',
   'Miro',
+  'TASA DE SEGURIDAD (TS) GOBERNACION VALLE DEL CAUCA',
   'Air-e S.A.S. (SS PCOS Barranquilla)',
   'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.',
 ]);
