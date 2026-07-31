@@ -101,6 +101,51 @@ const BillFormField: React.FC<{ fieldKey: string; children: React.ReactNode }> =
   children,
 }) => <div id={getBillFormFieldDomId(fieldKey)}>{children}</div>;
 
+const generateConsumptionRowId = (): string => {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+
+  if (typeof globalThis.crypto?.getRandomValues === 'function') {
+    const bytes = new Uint8Array(9);
+    globalThis.crypto.getRandomValues(bytes);
+    return `consumption-${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  return `consumption-${Date.now().toString(36)}`;
+};
+
+const runAfterNextPaint = (callback: () => void) => {
+  const onSecondFrame = () => {
+    callback();
+  };
+  const onFirstFrame = () => {
+    requestAnimationFrame(onSecondFrame);
+  };
+  requestAnimationFrame(onFirstFrame);
+};
+
+const scheduleValidationReveal = (bannerEl: HTMLElement | null, firstKey?: string) => {
+  scrollBillFormAlertIntoView(bannerEl);
+  if (!firstKey) {
+    return;
+  }
+  const focusField = () => {
+    focusBillFormValidationField(firstKey);
+  };
+  globalThis.setTimeout(focusField, 350);
+};
+
+const getSubmitButtonLabel = (isSubmitting: boolean, isEditMode: boolean): string => {
+  if (isSubmitting) {
+    return 'Enviando...';
+  }
+  if (isEditMode) {
+    return 'Guardar cambios';
+  }
+  return 'Enviar Factura';
+};
+
 export interface BillFormProps {
   billId?: string;
   initialData?: UtilityBillFormData;
@@ -119,13 +164,10 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   const { catalog, loading: locationsLoading, cities, getBusinessGroups, getAddresses } =
     useBillSiteLocations();
 
-  const generateRowId = () =>
-    globalThis.crypto?.randomUUID?.() ?? `consumption-${Math.random().toString(36).slice(2, 11)}`;
-
   const [consumptionRowIds, setConsumptionRowIds] = useState<string[]>(() =>
     Array.from(
       { length: (initialData?.consumptions?.length ?? initialFormData.consumptions.length) },
-      generateRowId
+      generateConsumptionRowId
     )
   );
 
@@ -227,6 +269,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'EPM', label: 'EPM (Medellín y municipios de Antioquia)' },
       { value: 'EMCALI', label: 'EMCALI (Empresas Municipales de Cali E.I.C.E. E.S.P.)' },
       { value: 'Acuacar', label: 'Acuacar - Aguas de Cartagena (Cartagena)' },
+      { value: 'ACUEDUCTO METROPOLITANO DE BUCARAMANGA S.A', label: 'ACUEDUCTO METROPOLITANO DE BUCARAMANGA S.A' },
       { value: 'Triple AAA', label: 'Triple AAA (Barranquilla y Atlántico)' },
       { value: 'Metroagua', label: 'Metroagua/Veolia (Santa Marta)' },
       { value: 'Aguas de Manizales', label: 'Aguas de Manizales (Manizales)' },
@@ -277,6 +320,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'Ciudad Limpia', label: 'Ciudad Limpia (Bogotá, Cali, otros)' },
       { value: 'Ciudad Limpia Bogota S.A. E.S.P.', label: 'Ciudad Limpia Bogota S.A. E.S.P.' },
       { value: 'Bogotá Limpia', label: 'Bogotá Limpia (Bogotá)' },
+      { value: 'VEOLIA', label: 'VEOLIA' },
       { value: 'Air-e S.A.S. (SS PCOS Barranquilla)', label: 'Air-e S.A.S. (SS PCOS Barranquilla)' },
       { value: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.', label: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.' }
     ],
@@ -286,6 +330,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'EPM', label: 'EPM (Medellín y municipios de Antioquia)' },
       { value: 'EMCALI', label: 'EMCALI (Empresas Municipales de Cali E.I.C.E. E.S.P.)' },
       { value: 'Acuacar', label: 'Acuacar - Aguas de Cartagena (Cartagena)' },
+      { value: 'EMPAS EMPRESA PUBLICA DE ALCANTARILLADO SANTANDER', label: 'EMPAS EMPRESA PUBLICA DE ALCANTARILLADO SANTANDER' },
       { value: 'Triple AAA', label: 'Triple AAA (Barranquilla y Atlántico)' },
       { value: 'Air-e S.A.S. (SS PCOS Barranquilla)', label: 'Air-e S.A.S. (SS PCOS Barranquilla)' }
     ],
@@ -432,7 +477,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   };
 
   const addConsumption = () => {
-    setConsumptionRowIds(prev => [...prev, generateRowId()]);
+    setConsumptionRowIds(prev => [...prev, generateConsumptionRowId()]);
     setFormData(prev => ({
       ...prev,
       consumptions: [
@@ -514,13 +559,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     setFormSubmitAttempted(true);
 
     const firstKey = getFirstValidationErrorKey(validationErrors);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        scrollBillFormAlertIntoView(submitValidationBannerRef.current);
-        if (firstKey) {
-          globalThis.setTimeout(() => focusBillFormValidationField(firstKey), 350);
-        }
-      });
+    runAfterNextPaint(() => {
+      scheduleValidationReveal(submitValidationBannerRef.current, firstKey);
     });
   };
 
@@ -888,12 +928,9 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           >
             Cancelar
           </Button>
-          <Button
-            type="submit"
-            isLoading={loading}
-          >
+          <Button type="submit" disabled={loading}>
             <Send className="w-4 h-4 mr-2" />
-            {isEditMode ? 'Guardar cambios' : 'Enviar Factura'}
+            {getSubmitButtonLabel(loading, isEditMode)}
           </Button>
         </div>
       </form>
