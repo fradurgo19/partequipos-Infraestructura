@@ -186,8 +186,8 @@ export const InternalRequestForm = ({
             {cancelLabel}
           </Button>
         )}
-        <Button type="submit" fullWidth isLoading={submitting}>
-          {submitLabel}
+        <Button type="submit" fullWidth disabled={submitting}>
+          {submitting ? 'Enviando...' : submitLabel}
         </Button>
       </div>
     </form>
