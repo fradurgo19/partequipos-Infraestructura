@@ -14,6 +14,12 @@ export const pagosUploadMiddleware = multer({
   },
 }).single('file');
 
+/** Upload público (solicitud interna): imágenes y PDF hasta 4 MB. */
+export const publicUploadMiddleware = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 4 * 1024 * 1024 },
+}).single('file');
+
 export const runMiddleware = (req, res, fn) =>
   new Promise((resolve, reject) => {
     fn(req, res, (result) => {

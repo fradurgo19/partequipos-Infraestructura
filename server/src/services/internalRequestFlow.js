@@ -99,6 +99,95 @@ const buildMeasuresText = (payload) => {
   return parts.length ? `Medidas:\n${parts.join('\n')}` : '';
 };
 
+const isMissingColumnError = (error, columnName) =>
+  error?.code === 'PGRST204' &&
+  String(error?.message ?? '')
+    .toLowerCase()
+    .includes(String(columnName).toLowerCase());
+
+const buildInternalRequestRow = (payload, profileId, options = {}) => {
+  const includeMeasurements = options.includeMeasurements !== false;
+  const measuresText = buildMeasuresText(payload);
+  const description =
+    includeMeasurements || !measuresText
+      ? payload.description
+      : `${payload.description}\n\n${measuresText}`;
+
+  const row = {
+    title: payload.title,
+    description,
+    department: payload.department,
+    site_id: payload.site_id,
+    request_date: payload.request_date,
+    requester_name: payload.requester_name,
+    photo_urls: payload.photo_urls,
+    design_urls: payload.design_urls,
+    created_by: profileId,
+    requester_id: options.profileId ?? null,
+    status: 'pending',
+  };
+
+  if (includeMeasurements) {
+    row.measurement_length = payload.measurement_length;
+    row.measurement_height = payload.measurement_height;
+    row.measurement_depth = payload.measurement_depth;
+  }
+
+  return row;
+};
+
+const insertInternalRequestRow = async (payload, profileId, options = {}) => {
+  const primaryRow = buildInternalRequestRow(payload, profileId, {
+    ...options,
+    includeMeasurements: true,
+  });
+
+  const primaryResult = await supabase
+    .from('internal_requests')
+    .insert([primaryRow])
+    .select()
+    .single();
+
+  if (!primaryResult.error) {
+    return primaryResult.data;
+  }
+
+  const missingMeasurementColumn = ['measurement_height', 'measurement_length', 'measurement_depth'].some(
+    (columnName) => isMissingColumnError(primaryResult.error, columnName)
+  );
+
+  if (!missingMeasurementColumn) {
+    console.error('Error creating internal request:', primaryResult.error);
+    const error = new Error('Error al crear la solicitud');
+    error.statusCode = 500;
+    throw error;
+  }
+
+  console.warn(
+    'Columnas de medidas ausentes en internal_requests; reintentando sin measurement_*. Ejecute scripts/internal-requests-measurement-columns.sql'
+  );
+
+  const fallbackRow = buildInternalRequestRow(payload, profileId, {
+    ...options,
+    includeMeasurements: false,
+  });
+
+  const fallbackResult = await supabase
+    .from('internal_requests')
+    .insert([fallbackRow])
+    .select()
+    .single();
+
+  if (fallbackResult.error) {
+    console.error('Error creating internal request (fallback):', fallbackResult.error);
+    const error = new Error('Error al crear la solicitud');
+    error.statusCode = 500;
+    throw error;
+  }
+
+  return fallbackResult.data;
+};
+
 const buildMeasuresHtml = (payload) => {
   const items = [];
   if (payload.measurement_length) items.push(`<li>Longitud: ${payload.measurement_length}m</li>`);
@@ -199,35 +288,7 @@ export const createInternalRequestWithTask = async (rawPayload, options = {}) =>
     throw error;
   }
 
-  const requestData = {
-    title: payload.title,
-    description: payload.description,
-    department: payload.department,
-    site_id: payload.site_id,
-    request_date: payload.request_date,
-    requester_name: payload.requester_name,
-    photo_urls: payload.photo_urls,
-    measurement_length: payload.measurement_length,
-    measurement_height: payload.measurement_height,
-    measurement_depth: payload.measurement_depth,
-    design_urls: payload.design_urls,
-    created_by: profileId,
-    requester_id: options.profileId ?? null,
-    status: 'pending',
-  };
-
-  const { data: insertedRequest, error: requestError } = await supabase
-    .from('internal_requests')
-    .insert([requestData])
-    .select()
-    .single();
-
-  if (requestError) {
-    console.error('Error creating internal request:', requestError);
-    const error = new Error('Error al crear la solicitud');
-    error.statusCode = 500;
-    throw error;
-  }
+  const insertedRequest = await insertInternalRequestRow(payload, profileId, options);
 
   const infrastructureTeam = await fetchInfrastructureTeam();
 

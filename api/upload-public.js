@@ -1,11 +1,5 @@
-import { runMiddleware } from '../server/src/pagos/vercelMulter.js';
-import multer from 'multer';
+import { runMiddleware, publicUploadMiddleware } from '../server/src/pagos/vercelMulter.js';
 import { uploadPublicStorageFile } from '../server/src/services/publicStorageUpload.js';
-
-const publicUploadMiddleware = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 4 * 1024 * 1024 },
-}).single('file');
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
