@@ -63,6 +63,11 @@ const LOGISTIC_PACIFIC_PROVIDERS = [
   { value: 'COPROPIEDAD CENTRO LOGISTICO DEL PACIFICO', label: 'COPROPIEDAD CENTRO LOGISTICO DEL PACIFICO' },
 ];
 
+const MARIELA_SANABRIA_PROVIDER = {
+  value: 'MARIELA SANABRIA',
+  label: 'MARIELA SANABRIA',
+};
+
 const toProviderOptions = (names: string[]) =>
   names.map((name) => ({ value: name, label: name }));
 
@@ -261,7 +266,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'CEDENAR', label: 'CEDENAR (Nariño)' },
       ...LOGISTIC_PACIFIC_PROVIDERS,
       { value: 'Dispac', label: 'Dispac' },
-      { value: 'EDEQ', label: 'EDEQ - Energía del Quindío (Quindío)' }
+      { value: 'EDEQ', label: 'EDEQ - Energía del Quindío (Quindío)' },
+      MARIELA_SANABRIA_PROVIDER,
     ],
     water: [
       { value: 'ASACUHAN', label: 'ASACUHAN (ASOCIACION DE SUSCRIPTORES DEL ACUEDUCTO HONDITA HOJAS ANCHAS)' },
@@ -276,6 +282,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'IBAL', label: 'IBAL (Ibagué)' },
       { value: 'Veolia Aguas de Monteria S.A. E.S.P.', label: 'Veolia Aguas de Monteria S.A. E.S.P.' },
       ...LOGISTIC_PACIFIC_PROVIDERS,
+      MARIELA_SANABRIA_PROVIDER,
     ],
     gas: [
       { value: 'EPM (Empresas Públicas de Medellín)', label: 'EPM (Empresas Públicas de Medellín)' },
