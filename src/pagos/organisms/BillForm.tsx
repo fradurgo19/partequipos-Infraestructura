@@ -341,6 +341,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     rent: RENT_SERVICE_PROVIDERS,
     public_lighting: [
       { value: 'EPM (Empresas Públicas de Medellín)', label: 'EPM (Empresas Públicas de Medellín)' },
+      { value: 'Dispac', label: 'Dispac' },
       { value: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.', label: 'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.' }
     ],
     other: [
