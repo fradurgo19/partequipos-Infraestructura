@@ -18,6 +18,7 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'BOGOTA', address: 'CR 80 NRO.16D-54 El vergel.', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BOGOTA', address: 'CL 6 NRO. 26 -73', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BUCARAMANGA', address: 'KM 7 VIA GIRON NRO. 4-80', businessGroup: 'PARTEQUIPOS S.A.S.' },
+  { city: 'BUCARAMANGA', address: 'KM 7 VIA GIRON NRO. 4-80', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
   { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
   { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'WACONDA S.A.S.' },
