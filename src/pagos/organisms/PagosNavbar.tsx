@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, PlusCircle, LogOut, BarChart3, Users, LayoutDashboard } from 'lucide-react';
+import { FileText, PlusCircle, LogOut, BarChart3, Users, LayoutDashboard, PieChart } from 'lucide-react';
 import { usePagosAuth } from '../context/PagosAuthContext';
 
 export const PagosNavbar: React.FC = () => {
@@ -18,6 +18,7 @@ export const PagosNavbar: React.FC = () => {
   };
 
   const allNavItems = [
+    { path: '/pagos/dashboard', label: 'Dashboard', icon: PieChart, roles: ['area_coordinator'] },
     { path: '/pagos/bills', label: 'Facturas', icon: FileText, roles: ['area_coordinator'] },
     {
       path: '/pagos/new-bill',
@@ -43,7 +44,7 @@ export const PagosNavbar: React.FC = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-6">
-            <Link to="/pagos/bills" className="flex items-center space-x-2">
+            <Link to="/pagos/dashboard" className="flex items-center space-x-2">
               <span className="text-lg font-bold text-white">Pagos · Facturas</span>
             </Link>
             <div className="hidden md:flex space-x-2">

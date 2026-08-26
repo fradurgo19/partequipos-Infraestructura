@@ -12,6 +12,9 @@ const ReportsPage = lazy(() => import('./pages/ReportsPage').then((m) => ({ defa
 const BillsPage = lazy(() => import('./pages/BillsPage').then((m) => ({ default: m.BillsPage })));
 const EditBillPage = lazy(() => import('./pages/EditBillPage').then((m) => ({ default: m.EditBillPage })));
 const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
 
 const Loading = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -22,7 +25,7 @@ const Loading = () => (
 const PagosHomeRedirect = () => {
   const { profile, loading } = usePagosAuth();
   if (loading) return <Loading />;
-  const homePath = profile?.role === 'area_coordinator' ? 'bills' : 'reports';
+  const homePath = profile?.role === 'area_coordinator' ? 'dashboard' : 'reports';
   return <Navigate to={homePath} replace />;
 };
 
@@ -67,6 +70,16 @@ export const PagosApp = () => (
           element={
             <PagosProtectedLayout>
               <EditBillPage />
+            </PagosProtectedLayout>
+          }
+        />
+        <Route
+          path="dashboard"
+          element={
+            <PagosProtectedLayout>
+              <PagosRoleProtectedRoute allowedRoles={['area_coordinator']}>
+                <DashboardPage />
+              </PagosRoleProtectedRoute>
             </PagosProtectedLayout>
           }
         />

@@ -117,6 +117,8 @@ export interface DashboardKPI {
   monthlyChange: number;
   pendingCount: number;
   overdueCount: number;
+  paidTotal: number;
+  paidCount: number;
 }
 
 export interface ChartData {
@@ -129,6 +131,35 @@ export interface ChartData {
     borderWidth?: number;
   }[];
 }
+
+export interface ServiceTypeChartItem {
+  label: string;
+  value: number;
+  consumption: number;
+  unitOfMeasure: string;
+}
+
+export interface LocationChartData {
+  labels: string[];
+  data: number[];
+  counts: number[];
+  unitsSummary: string[];
+}
+
+export interface TrendChartData {
+  periods: string[];
+  labels: string[];
+  data: number[];
+}
+
+export interface DashboardComputedData {
+  kpis: DashboardKPI;
+  trendData: TrendChartData;
+  serviceTypeData: ServiceTypeChartItem[];
+  locationData: LocationChartData;
+}
+
+export type DashboardRangeMode = 'global' | 'month' | 'bimester' | 'quarter' | 'semester';
 
 export interface FilterOptions {
   period?: string;
