@@ -13,14 +13,14 @@ export const useDashboardComparison = (
   selectedPeriods: string[],
   periodBillsCompare: UtilityBill[],
   comparePeriods: string[],
-  allBills: UtilityBill[],
+  baselineBills: UtilityBill[],
   compareActive: boolean
 ) => {
-  const mainData = useDashboardData(periodBills, selectedPeriods, allBills);
+  const mainData = useDashboardData(periodBills, selectedPeriods, baselineBills);
   const compareData = useDashboardData(
     compareActive ? periodBillsCompare : [],
     compareActive ? comparePeriods : [],
-    allBills
+    baselineBills
   );
 
   return useMemo(() => {

@@ -44,11 +44,86 @@ export const periodsFromRangeKeys = (
   map: Record<string, string[]>
 ): string[] => {
   const months = keys.flatMap((key) => map[key] ?? []);
-  return [...new Set(months)].sort().map((month) => `${year}-${month}`);
+  return [...new Set(months)].sort((a, b) => a.localeCompare(b)).map((month) => `${year}-${month}`);
 };
 
 export const sumBillTotal = (bills: UtilityBill[]): number =>
   bills.reduce((sum, bill) => sum + (Number(bill.totalAmount) || 0), 0);
+
+export const normalizeLocation = (location?: string | null): string => location?.trim() || '';
+
+export const billMatchesLocation = (bill: UtilityBill, locationFilter: string): boolean => {
+  if (locationFilter === 'all') return true;
+  return normalizeLocation(bill.location) === locationFilter;
+};
+
+export const billHasServiceType = (
+  bill: UtilityBill,
+  serviceType: ServiceType
+): boolean => {
+  if (bill.consumptions?.some((line) => line.serviceType === serviceType)) {
+    return true;
+  }
+  return bill.serviceType === serviceType;
+};
+
+const sumConsumptionAmounts = (lines: UtilityBill['consumptions']): number =>
+  (lines ?? []).reduce(
+    (sum, line) => sum + (Number(line.totalAmount) || Number(line.value) || 0),
+    0
+  );
+
+/** Reduce la factura al monto/líneas del tipo filtrado (evita inflar KPIs/gráficas). */
+export const projectBillToServiceType = (
+  bill: UtilityBill,
+  serviceType: ServiceType | 'all'
+): UtilityBill => {
+  if (serviceType === 'all') return bill;
+
+  const lines = bill.consumptions?.filter((line) => line.serviceType === serviceType) ?? [];
+  if (lines.length === 0) {
+    return { ...bill, serviceType, consumptions: [] };
+  }
+
+  const totalAmount = sumConsumptionAmounts(lines);
+  const consumption = lines.reduce((sum, line) => sum + (Number(line.consumption) || 0), 0);
+  const unitLine = lines.find((line) => line.unitOfMeasure);
+
+  return {
+    ...bill,
+    serviceType,
+    provider: lines[0]?.provider ?? bill.provider,
+    totalAmount,
+    value: totalAmount,
+    consumption: consumption > 0 ? consumption : null,
+    unitOfMeasure: unitLine?.unitOfMeasure ?? bill.unitOfMeasure,
+    consumptions: lines,
+  };
+};
+
+export interface DashboardBillFilters {
+  periods: string[];
+  locationFilter: string;
+  serviceType: ServiceType | 'all';
+}
+
+/** Filtra por periodo/sede/tipo y proyecta montos al tipo de servicio elegido. */
+export const filterDashboardBills = (
+  bills: UtilityBill[],
+  filters: DashboardBillFilters
+): UtilityBill[] => {
+  const { periods, locationFilter, serviceType } = filters;
+  const periodSet = periods.length > 0 ? new Set(periods) : null;
+
+  return bills
+    .filter((bill) => {
+      if (periodSet && !periodSet.has(bill.period)) return false;
+      if (!billMatchesLocation(bill, locationFilter)) return false;
+      if (serviceType !== 'all' && !billHasServiceType(bill, serviceType)) return false;
+      return true;
+    })
+    .map((bill) => projectBillToServiceType(bill, serviceType));
+};
 
 export const formatPeriodShortLabel = (period: string): string => {
   const [year, month] = period.split('-').map(Number);

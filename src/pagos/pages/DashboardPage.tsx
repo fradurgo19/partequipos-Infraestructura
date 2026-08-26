@@ -7,10 +7,11 @@ import { KPICard } from '../molecules/KPICard';
 import { PeriodSelector } from '../molecules/PeriodSelector';
 import { RangeKeySelector } from '../molecules/RangeKeySelector';
 import { LocationChart, ServiceTypeChart, TrendChart } from '../organisms/DashboardCharts';
-import { DashboardRangeMode, ServiceType, UtilityBill } from '../types';
+import { DashboardRangeMode, ServiceType } from '../types';
 import {
   BIMESTER_MONTHS,
   DASHBOARD_SERVICE_TYPE_ORDER,
+  filterDashboardBills,
   isApprovedOrPaid,
   periodsFromRangeKeys,
   QUARTER_MONTHS,
@@ -33,33 +34,6 @@ const SERVICE_TYPE_FILTER_OPTIONS = [
     label: translateServiceType(type),
   })),
 ];
-
-const filterByPeriodsAndLocation = (
-  bills: UtilityBill[],
-  periods: string[],
-  locationFilter: string
-): UtilityBill[] => {
-  let filtered = bills;
-  if (periods.length > 0) {
-    const periodSet = new Set(periods);
-    filtered = filtered.filter((bill) => periodSet.has(bill.period));
-  }
-  if (locationFilter !== 'all') {
-    filtered = filtered.filter((bill) => bill.location === locationFilter);
-  }
-  return filtered;
-};
-
-const filterByServiceType = (bills: UtilityBill[], serviceType: ServiceType | 'all'): UtilityBill[] => {
-  if (serviceType === 'all') return bills;
-
-  return bills.filter((bill) => {
-    if (bill.consumptions?.some((line) => line.serviceType === serviceType)) {
-      return true;
-    }
-    return bill.serviceType === serviceType;
-  });
-};
 
 const getTotalTitle = (selectedPeriods: string[]): string =>
   selectedPeriods.length === 1 ? 'Total Mensual' : 'Total Periodos';
@@ -105,15 +79,38 @@ export const DashboardPage: React.FC = () => {
     setSelectedPeriods(periods);
   };
 
-  const periodBills = useMemo(() => {
-    const byPeriodLocation = filterByPeriodsAndLocation(allBills, selectedPeriods, locationFilter);
-    return filterByServiceType(byPeriodLocation, serviceTypeFilter);
-  }, [allBills, selectedPeriods, locationFilter, serviceTypeFilter]);
+  const scopeFilters = useMemo(
+    () => ({
+      periods: [] as string[],
+      locationFilter,
+      serviceType: serviceTypeFilter,
+    }),
+    [locationFilter, serviceTypeFilter]
+  );
+
+  /** Misma sede/tipo, todos los periodos → base del % de variación. */
+  const baselineBills = useMemo(
+    () => filterDashboardBills(allBills, scopeFilters),
+    [allBills, scopeFilters]
+  );
+
+  const periodBills = useMemo(
+    () =>
+      filterDashboardBills(allBills, {
+        periods: selectedPeriods,
+        locationFilter,
+        serviceType: serviceTypeFilter,
+      }),
+    [allBills, selectedPeriods, locationFilter, serviceTypeFilter]
+  );
 
   const periodBillsCompare = useMemo(() => {
     if (!compareActive || comparePeriods.length === 0) return [];
-    const byPeriodLocation = filterByPeriodsAndLocation(allBills, comparePeriods, locationFilter);
-    return filterByServiceType(byPeriodLocation, serviceTypeFilter);
+    return filterDashboardBills(allBills, {
+      periods: comparePeriods,
+      locationFilter,
+      serviceType: serviceTypeFilter,
+    });
   }, [allBills, compareActive, comparePeriods, locationFilter, serviceTypeFilter]);
 
   const { mainData, compareData, compareTrendData, locationCompareDataAligned } = useDashboardComparison(
@@ -121,7 +118,7 @@ export const DashboardPage: React.FC = () => {
     selectedPeriods,
     periodBillsCompare,
     comparePeriods,
-    allBills,
+    baselineBills,
     compareActive
   );
 
@@ -246,8 +243,9 @@ export const DashboardPage: React.FC = () => {
 
         {rangeMode === 'global' && (
           <p className="text-sm text-gray-600">
-            Vista global: se incluyen todas las facturas autorizadas
-            {locationFilter !== 'all' ? ' de la sede seleccionada' : ''}.
+            Vista global: KPIs y gráficas usan todas las facturas autorizadas
+            {locationFilter !== 'all' ? ' de la sede seleccionada' : ''}
+            {serviceTypeFilter !== 'all' ? ` · ${translateServiceType(serviceTypeFilter)}` : ''}.
           </p>
         )}
 

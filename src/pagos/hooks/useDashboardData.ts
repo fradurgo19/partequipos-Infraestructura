@@ -138,17 +138,21 @@ const buildLocationData = (bills: UtilityBill[]): LocationChartData => {
   };
 };
 
+/**
+ * @param bills Facturas del filtro activo (periodo + sede + tipo) → KPIs y charts tipo/sede + tendencia
+ * @param baselineBills Universo para % vs mes anterior (misma sede/tipo, todos los periodos)
+ */
 export const useDashboardData = (
   bills: UtilityBill[],
   selectedPeriods: string[],
-  allBills: UtilityBill[]
+  baselineBills: UtilityBill[]
 ): DashboardComputedData =>
   useMemo(
     () => ({
-      kpis: buildKpis(bills, selectedPeriods, allBills),
-      trendData: buildTrendData(allBills),
+      kpis: buildKpis(bills, selectedPeriods, baselineBills),
+      trendData: buildTrendData(bills),
       serviceTypeData: buildServiceTypeData(bills),
       locationData: buildLocationData(bills),
     }),
-    [bills, selectedPeriods, allBills]
+    [bills, selectedPeriods, baselineBills]
   );
