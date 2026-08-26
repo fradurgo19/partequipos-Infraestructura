@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from 'react';
+import { FilterX } from 'lucide-react';
+import { Button } from '../../atoms/Button';
 import { Select } from '../../atoms/Select';
 import { useBills } from '../hooks/useBills';
 import { useDashboardComparison } from '../hooks/useDashboardComparison';
@@ -38,9 +40,36 @@ const SERVICE_TYPE_FILTER_OPTIONS = [
 const getTotalTitle = (selectedPeriods: string[]): string =>
   selectedPeriods.length === 1 ? 'Total Mensual' : 'Total Periodos';
 
+const hasActiveDashboardFilters = ({
+  rangeMode,
+  selectedPeriods,
+  selectedRangeKeys,
+  locationFilter,
+  serviceTypeFilter,
+  compareActive,
+  comparePeriods,
+}: {
+  rangeMode: DashboardRangeMode;
+  selectedPeriods: string[];
+  selectedRangeKeys: string[];
+  locationFilter: string;
+  serviceTypeFilter: ServiceType | 'all';
+  compareActive: boolean;
+  comparePeriods: string[];
+}): boolean => {
+  if (rangeMode !== 'global') return true;
+  if (selectedPeriods.length > 0) return true;
+  if (selectedRangeKeys.length > 0) return true;
+  if (locationFilter !== 'all') return true;
+  if (serviceTypeFilter !== 'all') return true;
+  if (compareActive) return true;
+  return comparePeriods.length > 0;
+};
+
 export const DashboardPage: React.FC = () => {
   const { bills: allBills, loading, error } = useBills({});
-  const { availablePeriods, availableLocations, availableYears } = useDashboardFilterOptions(allBills);
+  const { availablePeriods, availableLocations, availableYears } =
+    useDashboardFilterOptions(allBills);
 
   const [rangeMode, setRangeMode] = useState<DashboardRangeMode>('global');
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
@@ -79,6 +108,27 @@ export const DashboardPage: React.FC = () => {
     setSelectedPeriods(periods);
   };
 
+  const handleClearFilters = () => {
+    setRangeMode('global');
+    setSelectedPeriods([]);
+    setSelectedRangeKeys([]);
+    setYearForRanges(availableYears[0] ?? new Date().getFullYear());
+    setLocationFilter('all');
+    setServiceTypeFilter('all');
+    setCompareActive(false);
+    setComparePeriods([]);
+  };
+
+  const filtersActive = hasActiveDashboardFilters({
+    rangeMode,
+    selectedPeriods,
+    selectedRangeKeys,
+    locationFilter,
+    serviceTypeFilter,
+    compareActive,
+    comparePeriods,
+  });
+
   const scopeFilters = useMemo(
     () => ({
       periods: [] as string[],
@@ -113,14 +163,15 @@ export const DashboardPage: React.FC = () => {
     });
   }, [allBills, compareActive, comparePeriods, locationFilter, serviceTypeFilter]);
 
-  const { mainData, compareData, compareTrendData, locationCompareDataAligned } = useDashboardComparison(
-    periodBills,
-    selectedPeriods,
-    periodBillsCompare,
-    comparePeriods,
-    baselineBills,
-    compareActive
-  );
+  const { mainData, compareData, compareTrendData, locationCompareDataAligned } =
+    useDashboardComparison(
+      periodBills,
+      selectedPeriods,
+      periodBillsCompare,
+      comparePeriods,
+      baselineBills,
+      compareActive
+    );
 
   const approvedCount = periodBills.filter((bill) => isApprovedOrPaid(bill.status)).length;
   const compareApprovedCount = compareData
@@ -153,6 +204,22 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-sm font-semibold text-[#50504f]">Filtros</h2>
+          {filtersActive && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleClearFilters}
+              className="flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
+            >
+              <FilterX className="w-4 h-4" aria-hidden />
+              <span>Borrar filtros</span>
+            </Button>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <Select
             label="Vista temporal"
