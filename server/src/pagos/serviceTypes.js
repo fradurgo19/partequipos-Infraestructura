@@ -11,6 +11,7 @@ export const PAGOS_SERVICE_TYPES = [
   'public_lighting',
   'security',
   'administration',
+  'property_tax',
   'rent',
   'other',
 ];

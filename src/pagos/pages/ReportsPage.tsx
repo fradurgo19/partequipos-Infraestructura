@@ -151,6 +151,7 @@ export const ReportsPage: React.FC = () => {
       public_lighting: 'Alumbrado Público',
       security: 'Seguridad',
       administration: 'Administración',
+      property_tax: 'Impuesto Predial',
       rent: 'Arrendamiento',
       other: 'Otro'
     };

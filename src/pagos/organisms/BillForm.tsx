@@ -101,6 +101,15 @@ const RENT_SERVICE_PROVIDERS = toProviderOptions([
   ...LOGISTIC_PACIFIC_PROVIDERS.map((provider) => provider.value),
 ]);
 
+const ADMINISTRATION_SERVICE_PROVIDERS = toProviderOptions([
+  'CONDOMINIO GRATIA BARRANQUILLA',
+  'CONJUNTO RESIDENCIAL CANTO LUNA',
+  'CONJUNTO RESIDENCIAL LA RIVIERA - P. H.',
+  'EDIFICIO FENIX',
+  'EDIFICIO PUNTA MADERO - PROPIEDAD HORIZONTAL',
+  'ENTRELAGOS CONDOMINIO CAMPESTRE',
+]);
+
 const BillFormField: React.FC<{ fieldKey: string; children: React.ReactNode }> = ({
   fieldKey,
   children,
@@ -188,6 +197,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     { value: 'public_lighting', label: 'Alumbrado Público' },
     { value: 'security', label: 'Seguridad' },
     { value: 'administration', label: 'Administración' },
+    { value: 'property_tax', label: 'Impuesto Predial' },
     { value: 'rent', label: 'Arrendamiento' },
     { value: 'other', label: 'Otro' }
   ];
@@ -342,9 +352,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       { value: 'Air-e S.A.S. (SS PCOS Barranquilla)', label: 'Air-e S.A.S. (SS PCOS Barranquilla)' }
     ],
     security: SECURITY_SERVICE_PROVIDERS,
-    administration: [
-      { value: 'Administración', label: 'Administración' }
-    ],
+    administration: ADMINISTRATION_SERVICE_PROVIDERS,
+    property_tax: ADMINISTRATION_SERVICE_PROVIDERS,
     rent: RENT_SERVICE_PROVIDERS,
     public_lighting: [
       { value: 'EPM (Empresas Públicas de Medellín)', label: 'EPM (Empresas Públicas de Medellín)' },

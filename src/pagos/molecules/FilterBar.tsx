@@ -44,6 +44,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     { value: 'public_lighting', label: 'Alumbrado Público' },
     { value: 'security', label: 'Seguridad' },
     { value: 'administration', label: 'Administración' },
+    { value: 'property_tax', label: 'Impuesto Predial' },
     { value: 'rent', label: 'Arrendamiento' },
     { value: 'other', label: 'Otro' },
   ];

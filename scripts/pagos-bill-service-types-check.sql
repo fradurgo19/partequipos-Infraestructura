@@ -1,5 +1,5 @@
 -- Actualiza restricciones CHECK de service_type en utility_bills y bill_consumptions.
--- Incluye tipos usados en el formulario: public_lighting, security, administration, rent, etc.
+-- Incluye tipos del formulario: public_lighting, security, administration, property_tax, rent, etc.
 -- Ejecutar en Supabase SQL Editor.
 
 ALTER TABLE bill_consumptions DROP CONSTRAINT IF EXISTS bill_consumptions_service_type_check;
@@ -18,6 +18,7 @@ ALTER TABLE bill_consumptions
     'public_lighting',
     'security',
     'administration',
+    'property_tax',
     'rent',
     'other'
   ));
@@ -38,12 +39,13 @@ ALTER TABLE utility_bills
     'public_lighting',
     'security',
     'administration',
+    'property_tax',
     'rent',
     'other'
   ));
 
 COMMENT ON COLUMN bill_consumptions.service_type IS
-  'Tipo de servicio del consumo (electricity, water, public_lighting, security, rent, other, etc.)';
+  'Tipo de servicio del consumo (electricity, water, public_lighting, security, administration, property_tax, rent, other, etc.)';
 
 COMMENT ON COLUMN utility_bills.service_type IS
-  'Tipo de servicio principal de la factura (electricity, water, public_lighting, security, rent, other, etc.)';
+  'Tipo de servicio principal de la factura (electricity, water, public_lighting, security, administration, property_tax, rent, other, etc.)';

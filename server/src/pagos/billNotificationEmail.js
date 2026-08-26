@@ -54,6 +54,7 @@ const SERVICE_TYPE_LABELS = {
   public_lighting: 'Alumbrado Público',
   security: 'Seguridad',
   administration: 'Administración',
+  property_tax: 'Impuesto Predial',
   rent: 'Arrendamiento',
   other: 'Otro',
 };

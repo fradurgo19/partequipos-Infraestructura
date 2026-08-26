@@ -12,6 +12,7 @@ export const DASHBOARD_SERVICE_TYPE_ORDER: ServiceType[] = [
   'public_lighting',
   'security',
   'administration',
+  'property_tax',
   'rent',
   'other',
 ];
