@@ -156,6 +156,7 @@ export const LocationChart: React.FC<LocationChartProps> = ({ locationData, comp
               dataKey="label"
               width={yAxisWidth}
               interval={0}
+              reversed
               tick={LocationAxisTick}
             />
             <Tooltip

@@ -129,10 +129,6 @@ export interface Notification {
 export interface DashboardKPI {
   monthlyTotal: number;
   monthlyChange: number;
-  pendingCount: number;
-  overdueCount: number;
-  paidTotal: number;
-  paidCount: number;
 }
 
 export interface ChartData {

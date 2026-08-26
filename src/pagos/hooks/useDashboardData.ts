@@ -7,7 +7,7 @@ import {
   TrendChartData,
   UtilityBill,
 } from '../types';
-import { getPreviousPeriod, isOverdue, translateServiceType } from '../utils/formatters';
+import { getPreviousPeriod, translateServiceType } from '../utils/formatters';
 import {
   DASHBOARD_SERVICE_TYPE_ORDER,
   formatPeriodShortLabel,
@@ -17,22 +17,11 @@ import {
 
 const buildKpis = (bills: UtilityBill[], selectedPeriods: string[], allBills: UtilityBill[]): DashboardKPI => {
   const monthlyTotal = sumBillTotal(bills);
-  const pendingCount = bills.filter((bill) => bill.status === 'pending').length;
-  const overdueCount = bills.filter(
-    (bill) => bill.status === 'pending' && isOverdue(bill.dueDate)
-  ).length;
-  const paidBills = bills.filter((bill) => bill.status === 'paid');
-  const paidTotal = sumBillTotal(paidBills);
-  const paidCount = paidBills.length;
 
   if (selectedPeriods.length === 0) {
     return {
       monthlyTotal,
       monthlyChange: 0,
-      pendingCount,
-      overdueCount,
-      paidTotal,
-      paidCount,
     };
   }
 
@@ -45,10 +34,6 @@ const buildKpis = (bills: UtilityBill[], selectedPeriods: string[], allBills: Ut
   return {
     monthlyTotal,
     monthlyChange,
-    pendingCount,
-    overdueCount,
-    paidTotal,
-    paidCount,
   };
 };
 
@@ -129,7 +114,13 @@ const buildLocationData = (bills: UtilityBill[]): LocationChartData => {
     byLocation.set(key, current);
   });
 
-  const labels = [...byLocation.keys()].sort((a, b) => a.localeCompare(b, 'es'));
+  const labels = [...byLocation.entries()]
+    .sort(([, left], [, right]) => {
+      const totalDiff = right.total - left.total;
+      if (totalDiff !== 0) return totalDiff;
+      return left.localeCompare(right, 'es');
+    })
+    .map(([label]) => label);
   return {
     labels,
     data: labels.map((label) => byLocation.get(label)?.total ?? 0),

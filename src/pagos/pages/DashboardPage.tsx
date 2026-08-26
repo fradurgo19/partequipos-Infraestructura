@@ -326,7 +326,7 @@ export const DashboardPage: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <KPICard
           title={getTotalTitle(selectedPeriods)}
           value={formatCurrency(mainData.kpis.monthlyTotal)}
@@ -334,30 +334,6 @@ export const DashboardPage: React.FC = () => {
           compareValue={
             compareData ? formatCurrency(compareData.kpis.monthlyTotal) : null
           }
-        />
-        <KPICard
-          title="Valor pagado"
-          value={formatCurrency(mainData.kpis.paidTotal)}
-          compareValue={compareData ? formatCurrency(compareData.kpis.paidTotal) : null}
-          accentClassName="bg-blue-600"
-        />
-        <KPICard
-          title="Facturas pagadas"
-          value={mainData.kpis.paidCount}
-          compareValue={compareData ? compareData.kpis.paidCount : null}
-          accentClassName="bg-blue-500"
-        />
-        <KPICard
-          title="Facturas pendientes"
-          value={mainData.kpis.pendingCount}
-          compareValue={compareData ? compareData.kpis.pendingCount : null}
-          accentClassName="bg-amber-500"
-        />
-        <KPICard
-          title="Facturas vencidas"
-          value={mainData.kpis.overdueCount}
-          compareValue={compareData ? compareData.kpis.overdueCount : null}
-          accentClassName="bg-red-600"
         />
         <KPICard
           title="Facturas aprobadas"
