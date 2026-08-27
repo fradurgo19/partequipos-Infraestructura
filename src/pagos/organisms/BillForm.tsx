@@ -97,6 +97,8 @@ const RENT_SERVICE_PROVIDERS = toProviderOptions([
   'WACONDA SAS',
   'ARAUJO Y SEGOVIA DE CORDOBA SA',
   'MARIELA SANABRIA ALDANA',
+  'CELPA ZONA FRANCA',
+  'CARLOS A SANCHEZ Y CIA CASYCO SAS',
   'Arrendador',
   ...LOGISTIC_PACIFIC_PROVIDERS.map((provider) => provider.value),
 ]);
