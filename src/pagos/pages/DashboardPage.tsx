@@ -163,7 +163,7 @@ export const DashboardPage: React.FC = () => {
     });
   }, [allBills, compareActive, comparePeriods, locationFilter, serviceTypeFilter]);
 
-  const { mainData, compareData, compareTrendData, locationCompareDataAligned } =
+  const { mainData, compareData, compareTrendData, locationCompareDataAligned, locationCompareCountsAligned } =
     useDashboardComparison(
       periodBills,
       selectedPeriods,
@@ -351,6 +351,7 @@ export const DashboardPage: React.FC = () => {
       <LocationChart
         locationData={mainData.locationData}
         compareData={locationCompareDataAligned}
+        compareCounts={locationCompareCountsAligned}
       />
     </div>
   );
