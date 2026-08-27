@@ -203,7 +203,7 @@ export const DashboardPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
+      <div className="sticky top-16 z-40 bg-white rounded-xl border border-gray-200 shadow-md p-5 space-y-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-semibold text-[#50504f]">Filtros</h2>
           {filtersActive && (
