@@ -30,7 +30,6 @@ export const useDashboardComparison = (
         compareData: null as DashboardComputedData | null,
         compareTrendData: null as number[] | null,
         locationCompareDataAligned: null as number[] | null,
-        locationCompareCountsAligned: null as number[] | null,
       };
     }
 
@@ -46,11 +45,6 @@ export const useDashboardComparison = (
         mainData.locationData.labels,
         compareData.locationData.labels,
         compareData.locationData.data
-      ),
-      locationCompareCountsAligned: alignSeries(
-        mainData.locationData.labels,
-        compareData.locationData.labels,
-        compareData.locationData.counts
       ),
     };
   }, [mainData, compareData, compareActive]);
