@@ -35,6 +35,8 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'BOGOTA', address: 'CL 23 NRO.72-91 APT 701 LA RIVIERA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'CARTAGENA', address: 'CRA18 Nro. 24 45 apto 703 ED PUNTA MADERO', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BARRANQUILLA', address: 'CRA 51 NRO.96A-79 ED FENIX', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'BARRANQUILLA', address: 'CONDOMINIO GRATIA', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'VILLAVICENCIO', address: 'Lote en Villavicencio', businessGroup: 'WACONDA S.A.S.' },
 ];
 
 /** Ciudades adicionales disponibles en el formulario aunque no tengan sedes registradas aún. */
