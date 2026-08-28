@@ -105,19 +105,58 @@ export interface DashboardBillFilters {
   periods: string[];
   locationFilter: string;
   serviceType: ServiceType | 'all';
+  startDate?: string;
+  endDate?: string;
 }
 
-/** Filtra por periodo/sede/tipo y proyecta montos al tipo de servicio elegido. */
+const billPeriodMonth = (period: string): Date | null => {
+  const [year, month] = period.split('-').map(Number);
+  if (!year || !month) return null;
+  return new Date(year, month - 1, 1);
+};
+
+const toMonthStart = (dateValue: string): Date | null => {
+  const normalized = dateValue.includes('T') ? dateValue : `${dateValue}T00:00:00`;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+};
+
+export const billMatchesDateRange = (
+  period: string,
+  startDate?: string,
+  endDate?: string
+): boolean => {
+  if (!startDate && !endDate) return true;
+
+  const billMonth = billPeriodMonth(period);
+  if (!billMonth) return false;
+
+  if (startDate) {
+    const startMonth = toMonthStart(startDate);
+    if (startMonth && billMonth < startMonth) return false;
+  }
+
+  if (endDate) {
+    const endMonth = toMonthStart(endDate);
+    if (endMonth && billMonth > endMonth) return false;
+  }
+
+  return true;
+};
+
+/** Filtra por periodo/sede/tipo/rango de fechas y proyecta montos al tipo de servicio elegido. */
 export const filterDashboardBills = (
   bills: UtilityBill[],
   filters: DashboardBillFilters
 ): UtilityBill[] => {
-  const { periods, locationFilter, serviceType } = filters;
+  const { periods, locationFilter, serviceType, startDate, endDate } = filters;
   const periodSet = periods.length > 0 ? new Set(periods) : null;
 
   return bills
     .filter((bill) => {
       if (periodSet && !periodSet.has(bill.period)) return false;
+      if (!billMatchesDateRange(bill.period, startDate, endDate)) return false;
       if (!billMatchesLocation(bill, locationFilter)) return false;
       if (serviceType !== 'all' && !billHasServiceType(bill, serviceType)) return false;
       return true;

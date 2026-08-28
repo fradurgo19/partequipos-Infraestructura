@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FilterX } from 'lucide-react';
 import { Button } from '../../atoms/Button';
+import { Input } from '../../atoms/Input';
 import { Select } from '../../atoms/Select';
 import { useBills } from '../hooks/useBills';
 import { useDashboardComparison } from '../hooks/useDashboardComparison';
@@ -46,6 +47,8 @@ const hasActiveDashboardFilters = ({
   selectedRangeKeys,
   locationFilter,
   serviceTypeFilter,
+  startDate,
+  endDate,
   compareActive,
   comparePeriods,
 }: {
@@ -54,6 +57,8 @@ const hasActiveDashboardFilters = ({
   selectedRangeKeys: string[];
   locationFilter: string;
   serviceTypeFilter: ServiceType | 'all';
+  startDate: string;
+  endDate: string;
   compareActive: boolean;
   comparePeriods: string[];
 }): boolean => {
@@ -62,6 +67,8 @@ const hasActiveDashboardFilters = ({
   if (selectedRangeKeys.length > 0) return true;
   if (locationFilter !== 'all') return true;
   if (serviceTypeFilter !== 'all') return true;
+  if (startDate) return true;
+  if (endDate) return true;
   if (compareActive) return true;
   return comparePeriods.length > 0;
 };
@@ -79,6 +86,8 @@ export const DashboardPage: React.FC = () => {
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceType | 'all'>('all');
   const [compareActive, setCompareActive] = useState(false);
   const [comparePeriods, setComparePeriods] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const activeYear = availableYears.includes(yearForRanges) ? yearForRanges : availableYears[0];
 
@@ -117,6 +126,8 @@ export const DashboardPage: React.FC = () => {
     setServiceTypeFilter('all');
     setCompareActive(false);
     setComparePeriods([]);
+    setStartDate('');
+    setEndDate('');
   };
 
   const filtersActive = hasActiveDashboardFilters({
@@ -125,17 +136,28 @@ export const DashboardPage: React.FC = () => {
     selectedRangeKeys,
     locationFilter,
     serviceTypeFilter,
+    startDate,
+    endDate,
     compareActive,
     comparePeriods,
   });
+
+  const dateRangeFilters = useMemo(
+    () => ({
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    }),
+    [startDate, endDate]
+  );
 
   const scopeFilters = useMemo(
     () => ({
       periods: [] as string[],
       locationFilter,
       serviceType: serviceTypeFilter,
+      ...dateRangeFilters,
     }),
-    [locationFilter, serviceTypeFilter]
+    [locationFilter, serviceTypeFilter, dateRangeFilters]
   );
 
   /** Misma sede/tipo, todos los periodos → base del % de variación. */
@@ -150,8 +172,9 @@ export const DashboardPage: React.FC = () => {
         periods: selectedPeriods,
         locationFilter,
         serviceType: serviceTypeFilter,
+        ...dateRangeFilters,
       }),
-    [allBills, selectedPeriods, locationFilter, serviceTypeFilter]
+    [allBills, selectedPeriods, locationFilter, serviceTypeFilter, dateRangeFilters]
   );
 
   const periodBillsCompare = useMemo(() => {
@@ -160,8 +183,9 @@ export const DashboardPage: React.FC = () => {
       periods: comparePeriods,
       locationFilter,
       serviceType: serviceTypeFilter,
+      ...dateRangeFilters,
     });
-  }, [allBills, compareActive, comparePeriods, locationFilter, serviceTypeFilter]);
+  }, [allBills, compareActive, comparePeriods, locationFilter, serviceTypeFilter, dateRangeFilters]);
 
   const { mainData, compareData, compareTrendData, locationCompareDataAligned } =
     useDashboardComparison(
@@ -220,12 +244,28 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
           <Select
             label="Vista temporal"
             value={rangeMode}
             options={RANGE_MODE_OPTIONS}
             onChange={(e) => handleRangeModeChange(e.target.value as DashboardRangeMode)}
+          />
+          <Input
+            label="Fecha inicio"
+            type="date"
+            value={startDate}
+            max={endDate || undefined}
+            onChange={(e) => setStartDate(e.target.value)}
+            fullWidth
+          />
+          <Input
+            label="Fecha fin"
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(e) => setEndDate(e.target.value)}
+            fullWidth
           />
           <Select
             label="Tipo de servicio"
@@ -312,7 +352,11 @@ export const DashboardPage: React.FC = () => {
           <p className="text-sm text-gray-600">
             Vista global: KPIs y gráficas usan todas las facturas autorizadas
             {locationFilter !== 'all' ? ' de la sede seleccionada' : ''}
-            {serviceTypeFilter !== 'all' ? ` · ${translateServiceType(serviceTypeFilter)}` : ''}.
+            {serviceTypeFilter !== 'all' ? ` · ${translateServiceType(serviceTypeFilter)}` : ''}
+            {startDate || endDate
+              ? ` · periodo factura ${startDate || '…'} a ${endDate || '…'}`
+              : ''}
+            .
           </p>
         )}
 
