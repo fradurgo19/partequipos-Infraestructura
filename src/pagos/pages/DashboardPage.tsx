@@ -227,51 +227,50 @@ export const DashboardPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="sticky top-16 z-40 bg-white rounded-xl border border-gray-200 shadow-md p-5 space-y-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-sm font-semibold text-[#50504f]">Filtros</h2>
+      <div className="sticky top-16 z-40 bg-white rounded-lg border border-gray-200 shadow-sm px-3 py-2.5 sm:px-4 sm:py-3 space-y-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 justify-between">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-[#50504f]">
+              Filtros
+            </h2>
+            <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={compareActive}
+                onChange={(e) => setCompareActive(e.target.checked)}
+                className="rounded border-gray-300 text-[#cf1b22] focus:ring-[#cf1b22] h-3.5 w-3.5"
+              />
+              <span>Comparativo</span>
+            </label>
+          </div>
           {filtersActive && (
             <Button
               type="button"
               variant="secondary"
               size="sm"
               onClick={handleClearFilters}
-              className="flex items-center justify-center gap-2 shrink-0 self-start sm:self-auto"
+              className="flex items-center gap-1.5 shrink-0 h-7 px-2 text-xs"
             >
-              <FilterX className="w-4 h-4" aria-hidden />
-              <span>Borrar filtros</span>
+              <FilterX className="w-3.5 h-3.5" aria-hidden />
+              <span>Borrar</span>
             </Button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2 [&_label]:text-xs [&_label]:mb-0.5">
           <Select
             label="Vista temporal"
             value={rangeMode}
             options={RANGE_MODE_OPTIONS}
             onChange={(e) => handleRangeModeChange(e.target.value as DashboardRangeMode)}
-          />
-          <Input
-            label="Fecha inicio"
-            type="date"
-            value={startDate}
-            max={endDate || undefined}
-            onChange={(e) => setStartDate(e.target.value)}
-            fullWidth
-          />
-          <Input
-            label="Fecha fin"
-            type="date"
-            value={endDate}
-            min={startDate || undefined}
-            onChange={(e) => setEndDate(e.target.value)}
-            fullWidth
+            className="py-1.5 text-sm min-h-0"
           />
           <Select
             label="Tipo de servicio"
             value={serviceTypeFilter}
             options={SERVICE_TYPE_FILTER_OPTIONS}
             onChange={(e) => setServiceTypeFilter(e.target.value as ServiceType | 'all')}
+            className="py-1.5 text-sm min-h-0"
           />
           <Select
             label="Sede / ubicación"
@@ -281,92 +280,94 @@ export const DashboardPage: React.FC = () => {
               ...availableLocations.map((location) => ({ value: location, label: location })),
             ]}
             onChange={(e) => setLocationFilter(e.target.value)}
+            className="py-1.5 text-sm min-h-0"
           />
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 text-sm text-gray-700 pb-2">
-              <input
-                type="checkbox"
-                checked={compareActive}
-                onChange={(e) => setCompareActive(e.target.checked)}
-                className="rounded border-gray-300 text-[#cf1b22] focus:ring-[#cf1b22]"
-              />
-              <span>Activar comparativo</span>
-            </label>
+          <div className="col-span-2 lg:col-span-1 xl:col-span-2 grid grid-cols-2 gap-2">
+            <Input
+              label="Fecha inicio"
+              type="date"
+              value={startDate}
+              max={endDate || undefined}
+              onChange={(e) => setStartDate(e.target.value)}
+              fullWidth
+              className="py-1.5 text-sm min-h-0"
+            />
+            <Input
+              label="Fecha fin"
+              type="date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => setEndDate(e.target.value)}
+              fullWidth
+              className="py-1.5 text-sm min-h-0"
+            />
           </div>
         </div>
 
-        {rangeMode === 'month' && (
-          <PeriodSelector
-            availablePeriods={availablePeriods}
-            selectedPeriods={selectedPeriods}
-            onChange={handleMonthPeriodsChange}
-          />
-        )}
+        {(rangeMode !== 'global' || compareActive) && (
+          <div className="border-t border-gray-100 pt-2 space-y-2">
+            {rangeMode === 'month' && (
+              <PeriodSelector
+                availablePeriods={availablePeriods}
+                selectedPeriods={selectedPeriods}
+                onChange={handleMonthPeriodsChange}
+              />
+            )}
 
-        {rangeMode === 'bimester' && (
-          <RangeKeySelector
-            title="Bimestres"
-            keys={Object.keys(BIMESTER_MONTHS)}
-            selectedKeys={selectedRangeKeys}
-            onChange={(keys) => applyRangeKeys(keys, 'bimester', activeYear)}
-            year={activeYear}
-            availableYears={availableYears}
-            onYearChange={(year) => {
-              setYearForRanges(year);
-              applyRangeKeys(selectedRangeKeys, 'bimester', year);
-            }}
-          />
-        )}
+            {rangeMode === 'bimester' && (
+              <RangeKeySelector
+                title="Bimestres"
+                keys={Object.keys(BIMESTER_MONTHS)}
+                selectedKeys={selectedRangeKeys}
+                onChange={(keys) => applyRangeKeys(keys, 'bimester', activeYear)}
+                year={activeYear}
+                availableYears={availableYears}
+                onYearChange={(year) => {
+                  setYearForRanges(year);
+                  applyRangeKeys(selectedRangeKeys, 'bimester', year);
+                }}
+              />
+            )}
 
-        {rangeMode === 'quarter' && (
-          <RangeKeySelector
-            title="Trimestres"
-            keys={Object.keys(QUARTER_MONTHS)}
-            selectedKeys={selectedRangeKeys}
-            onChange={(keys) => applyRangeKeys(keys, 'quarter', activeYear)}
-            year={activeYear}
-            availableYears={availableYears}
-            onYearChange={(year) => {
-              setYearForRanges(year);
-              applyRangeKeys(selectedRangeKeys, 'quarter', year);
-            }}
-          />
-        )}
+            {rangeMode === 'quarter' && (
+              <RangeKeySelector
+                title="Trimestres"
+                keys={Object.keys(QUARTER_MONTHS)}
+                selectedKeys={selectedRangeKeys}
+                onChange={(keys) => applyRangeKeys(keys, 'quarter', activeYear)}
+                year={activeYear}
+                availableYears={availableYears}
+                onYearChange={(year) => {
+                  setYearForRanges(year);
+                  applyRangeKeys(selectedRangeKeys, 'quarter', year);
+                }}
+              />
+            )}
 
-        {rangeMode === 'semester' && (
-          <RangeKeySelector
-            title="Semestres"
-            keys={Object.keys(SEMESTER_MONTHS)}
-            selectedKeys={selectedRangeKeys}
-            onChange={(keys) => applyRangeKeys(keys, 'semester', activeYear)}
-            year={activeYear}
-            availableYears={availableYears}
-            onYearChange={(year) => {
-              setYearForRanges(year);
-              applyRangeKeys(selectedRangeKeys, 'semester', year);
-            }}
-          />
-        )}
+            {rangeMode === 'semester' && (
+              <RangeKeySelector
+                title="Semestres"
+                keys={Object.keys(SEMESTER_MONTHS)}
+                selectedKeys={selectedRangeKeys}
+                onChange={(keys) => applyRangeKeys(keys, 'semester', activeYear)}
+                year={activeYear}
+                availableYears={availableYears}
+                onYearChange={(year) => {
+                  setYearForRanges(year);
+                  applyRangeKeys(selectedRangeKeys, 'semester', year);
+                }}
+              />
+            )}
 
-        {rangeMode === 'global' && (
-          <p className="text-sm text-gray-600">
-            Vista global: KPIs y gráficas usan todas las facturas autorizadas
-            {locationFilter !== 'all' ? ' de la sede seleccionada' : ''}
-            {serviceTypeFilter !== 'all' ? ` · ${translateServiceType(serviceTypeFilter)}` : ''}
-            {startDate || endDate
-              ? ` · periodo factura ${startDate || '…'} a ${endDate || '…'}`
-              : ''}
-            .
-          </p>
-        )}
-
-        {compareActive && (
-          <PeriodSelector
-            availablePeriods={availablePeriods}
-            selectedPeriods={comparePeriods}
-            onChange={setComparePeriods}
-            label="Periodos comparativos"
-          />
+            {compareActive && (
+              <PeriodSelector
+                availablePeriods={availablePeriods}
+                selectedPeriods={comparePeriods}
+                onChange={setComparePeriods}
+                label="Periodos comparativos"
+              />
+            )}
+          </div>
         )}
       </div>
 

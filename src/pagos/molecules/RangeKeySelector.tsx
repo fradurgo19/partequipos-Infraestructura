@@ -28,13 +28,13 @@ export const RangeKeySelector: React.FC<RangeKeySelectorProps> = ({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-[#50504f]">{title}</p>
+        <p className="text-xs font-medium text-[#50504f]">{title}</p>
         <select
           value={year}
           onChange={(e) => onYearChange(Number(e.target.value))}
-          className="text-sm border border-gray-300 rounded-lg px-2 py-1"
+          className="text-xs border border-gray-300 rounded-md px-1.5 py-0.5"
           aria-label="Año del rango"
         >
           {availableYears.map((item) => (
@@ -44,7 +44,7 @@ export const RangeKeySelector: React.FC<RangeKeySelectorProps> = ({
           ))}
         </select>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {keys.map((key) => {
           const active = selectedKeys.includes(key);
           return (
@@ -52,7 +52,8 @@ export const RangeKeySelector: React.FC<RangeKeySelectorProps> = ({
               key={key}
               type="button"
               onClick={() => toggleKey(key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+              aria-pressed={active}
+              className={`px-2 py-0.5 rounded-md text-xs font-medium border transition-colors ${
                 active
                   ? 'bg-[#cf1b22] text-white border-[#cf1b22]'
                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
