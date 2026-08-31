@@ -1,6 +1,7 @@
 -- Actualiza restricciones CHECK de service_type en utility_bills y bill_consumptions.
 -- Incluye tipos del formulario: public_lighting, security, administration, property_tax, rent, etc.
--- Ejecutar en Supabase SQL Editor.
+-- REQUERIDO en producción: sin este script, Impuesto Predial (property_tax) falla con 23514.
+-- Ejecutar en Supabase → SQL Editor → Run.
 
 ALTER TABLE bill_consumptions DROP CONSTRAINT IF EXISTS bill_consumptions_service_type_check;
 
@@ -49,3 +50,9 @@ COMMENT ON COLUMN bill_consumptions.service_type IS
 
 COMMENT ON COLUMN utility_bills.service_type IS
   'Tipo de servicio principal de la factura (electricity, water, public_lighting, security, administration, property_tax, rent, other, etc.)';
+
+-- Verificación opcional: debe listar property_tax en la definición del CHECK.
+-- SELECT conname, pg_get_constraintdef(oid)
+-- FROM pg_constraint
+-- WHERE conrelid = 'utility_bills'::regclass
+--   AND conname = 'utility_bills_service_type_check';

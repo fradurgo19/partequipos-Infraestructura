@@ -7,6 +7,7 @@ import { buildConsumptionPayload } from '../consumptionPayload.js';
 import { assertBillNotDuplicate } from '../duplicateBill.js';
 import {
   assertValidConsumptionServiceTypes,
+  assertValidPagosBillServiceType,
   toConsumptionDbError,
 } from '../validateConsumptions.js';
 
@@ -43,6 +44,10 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
       consumptions: incomingConsumptions,
       excludeBillId: billId,
     });
+  }
+
+  if (normalizedUpdates.serviceType !== undefined) {
+    assertValidPagosBillServiceType(normalizedUpdates.serviceType);
   }
 
   const shouldResolveSite =
@@ -96,7 +101,12 @@ export const updatePagosBill = async (pagosUser, billId, updates) => {
 
   const { data: updatedRow, error: updateError } = await updateQuery.select().single();
 
-  if (updateError || !updatedRow) {
+  if (updateError) {
+    console.error('Error al actualizar factura en utility_bills:', updateError);
+    throw toConsumptionDbError(updateError, 'Error al actualizar factura');
+  }
+
+  if (!updatedRow) {
     const notFound = new Error('Factura no encontrada');
     notFound.statusCode = 404;
     throw notFound;

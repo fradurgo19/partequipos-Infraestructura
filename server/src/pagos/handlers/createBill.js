@@ -8,6 +8,7 @@ import { buildConsumptionPayload } from '../consumptionPayload.js';
 import { assertBillNotDuplicate, isDuplicateBillDbError } from '../duplicateBill.js';
 import {
   assertValidConsumptionServiceTypes,
+  assertValidPagosBillServiceType,
   toConsumptionDbError,
 } from '../validateConsumptions.js';
 
@@ -22,6 +23,7 @@ export const createPagosBill = async (pagosUser, bill) => {
   assertValidConsumptionServiceTypes(consumptions);
 
   const normalized = normalizeBillBody(bill, consumptions);
+  assertValidPagosBillServiceType(normalized.serviceType);
 
   await assertBillNotDuplicate({
     invoiceNumber: normalized.invoiceNumber,
@@ -77,9 +79,7 @@ export const createPagosBill = async (pagosUser, bill) => {
       dupError.statusCode = 409;
       throw dupError;
     }
-    const dbError = new Error('Error al crear factura');
-    dbError.statusCode = 500;
-    throw dbError;
+    throw toConsumptionDbError(error, 'Error al crear factura');
   }
 
   const consumptionsPayload = consumptions.map((c) => buildConsumptionPayload(createdBill.id, c));
