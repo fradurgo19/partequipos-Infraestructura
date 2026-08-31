@@ -5,6 +5,31 @@ export interface BillLocationEntry {
   businessGroup: string;
 }
 
+/** Grupos empresariales disponibles en el formulario de facturas (independiente de la ciudad). */
+export const STANDARD_BILL_BUSINESS_GROUPS = [
+  'MAQUITECNO SAS',
+  'PARTEQUIPOS MAQUINARIA S.A.S.',
+  'PARTEQUIPOS S.A.S.',
+  'WACONDA S.A.S.',
+] as const;
+
+/**
+ * Ciudades adicionales: todos los grupos empresariales y dirección "Lote"
+ * para cualquier grupo seleccionado.
+ */
+export const ADDITIONAL_BILL_CITIES = ['SIBERIA', 'CISNEROS', 'URRAO'] as const;
+
+const buildLoteEntriesForCities = (cities: readonly string[]): BillLocationEntry[] =>
+  cities.flatMap((city) =>
+    STANDARD_BILL_BUSINESS_GROUPS.map((businessGroup) => ({
+      city,
+      businessGroup,
+      address: 'Lote',
+    }))
+  );
+
+const ADDITIONAL_CITY_LOTE_CATALOG = buildLoteEntriesForCities(ADDITIONAL_BILL_CITIES);
+
 /** Catálogo legacy para facturas migradas con grupos empresariales históricos. */
 export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'ITAGUI', address: 'CL 30 NRO. 41-30', businessGroup: 'PARTEQUIPOS S.A.S.' },
@@ -37,18 +62,8 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'BARRANQUILLA', address: 'CRA 51 NRO.96A-79 ED FENIX', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BARRANQUILLA', address: 'CONDOMINIO GRATIA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'VILLAVICENCIO', address: 'Lote en Villavicencio', businessGroup: 'WACONDA S.A.S.' },
+  ...ADDITIONAL_CITY_LOTE_CATALOG,
 ];
-
-/** Ciudades adicionales disponibles en el formulario aunque no tengan sedes registradas aún. */
-export const ADDITIONAL_BILL_CITIES = [] as const;
-
-/** Grupos empresariales disponibles en el formulario de facturas (independiente de la ciudad). */
-export const STANDARD_BILL_BUSINESS_GROUPS = [
-  'MAQUITECNO SAS',
-  'PARTEQUIPOS MAQUINARIA S.A.S.',
-  'PARTEQUIPOS S.A.S.',
-  'WACONDA S.A.S.',
-] as const;
 
 const sortLabels = (items: string[]) =>
   [...new Set(items)].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));

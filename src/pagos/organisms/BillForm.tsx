@@ -112,6 +112,24 @@ const ADMINISTRATION_SERVICE_PROVIDERS = toProviderOptions([
   'ENTRELAGOS CONDOMINIO CAMPESTRE',
 ]);
 
+const PROPERTY_TAX_SERVICE_PROVIDERS = [
+  ...ADMINISTRATION_SERVICE_PROVIDERS,
+  ...toProviderOptions([
+    'LOTE GUARNE CEDI',
+    'LOTE SIBERIA',
+    'LOTE 38 CELPA',
+    'LOTE 37 CELPA',
+    'APTO GUARNE MIRADOR 360 N°407',
+    'APTO GUARNE MIRADOR 360 N°603',
+    'LOTE BARRANQUILLA LOGIK 40',
+    'FINCA EL ZARZAL',
+    'CASA EL PORTAL 1',
+    'CASA EL PORTAL 2',
+    'FINCA URRAO',
+    'LOTE CARTAGENA',
+  ]),
+];
+
 const BillFormField: React.FC<{ fieldKey: string; children: React.ReactNode }> = ({
   fieldKey,
   children,
@@ -355,7 +373,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     ],
     security: SECURITY_SERVICE_PROVIDERS,
     administration: ADMINISTRATION_SERVICE_PROVIDERS,
-    property_tax: ADMINISTRATION_SERVICE_PROVIDERS,
+    property_tax: PROPERTY_TAX_SERVICE_PROVIDERS,
     rent: RENT_SERVICE_PROVIDERS,
     public_lighting: [
       { value: 'EPM (Empresas Públicas de Medellín)', label: 'EPM (Empresas Públicas de Medellín)' },
