@@ -56,12 +56,16 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'MONTERIA', address: 'CRA 17 NRO. 76-94 BOSQUES DE SEVILLA', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
   { city: 'ENVIGADO', address: 'CALLE 35ASUR NRO. 45B -66 ELPORTAL 1', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
   { city: 'ENVIGADO', address: 'CALLE 35ASUR NRO. 45B -52 EL PORTAL 2', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
+  { city: 'ENVIGADO', address: 'PORTAL 1', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'ENVIGADO', address: 'PORTAL 2', businessGroup: 'WACONDA S.A.S.' },
   { city: 'SABANETA', address: 'CL 70 SUR NRO. 43A - 15 INT 2404 CANTO LUNA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BOGOTA', address: 'CL 23 NRO.72-91 APT 701 LA RIVIERA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'CARTAGENA', address: 'CRA18 Nro. 24 45 apto 703 ED PUNTA MADERO', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BARRANQUILLA', address: 'CRA 51 NRO.96A-79 ED FENIX', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BARRANQUILLA', address: 'CONDOMINIO GRATIA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'VILLAVICENCIO', address: 'Lote en Villavicencio', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'LOTE 37', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'LOTE 38', businessGroup: 'WACONDA S.A.S.' },
   ...ADDITIONAL_CITY_LOTE_CATALOG,
 ];
 
