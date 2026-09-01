@@ -14,6 +14,11 @@ ADD COLUMN IF NOT EXISTS deliverables jsonb, -- Entregables del contrato
 ADD COLUMN IF NOT EXISTS warranty_period integer, -- Período de garantía en días
 ADD COLUMN IF NOT EXISTS warranty_terms text, -- Términos de garantía
 ADD COLUMN IF NOT EXISTS attachment_urls text[] DEFAULT '{}'; -- Documentos e imágenes adjuntos del contrato
+ADD COLUMN IF NOT EXISTS has_policy boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS policy_type text,
+ADD COLUMN IF NOT EXISTS policy_start_date date,
+ADD COLUMN IF NOT EXISTS policy_end_date date,
+ADD COLUMN IF NOT EXISTS insured_amount decimal(12,2);
 
 -- Tabla para "Otro sí" (actividades adicionales)
 CREATE TABLE IF NOT EXISTS contract_addendums (

@@ -353,6 +353,11 @@ export interface Contract {
   deliverables?: any;
   warranty_period?: number;
   warranty_terms?: string;
+  has_policy?: boolean;
+  policy_type?: string;
+  policy_start_date?: string;
+  policy_end_date?: string;
+  insured_amount?: number;
   created_by: string;
   created_at: string;
   updated_at: string;

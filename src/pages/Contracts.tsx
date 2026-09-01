@@ -38,6 +38,78 @@ const ACTIVITY_TYPES = [
   'Otro',
 ];
 
+const HAS_POLICY_OPTIONS = [
+  { value: 'no', label: 'No' },
+  { value: 'yes', label: 'Sí' },
+];
+
+/** Tipos de póliza de seguro usados en contratación en Colombia. */
+const POLICY_TYPES = [
+  { value: 'cumplimiento', label: 'Cumplimiento' },
+  { value: 'calidad', label: 'Calidad del bien o servicio' },
+  { value: 'rc_extracontractual', label: 'Responsabilidad civil extracontractual' },
+  { value: 'rc_profesional', label: 'Responsabilidad civil profesional' },
+  { value: 'salarios_prestaciones', label: 'Salarios y prestaciones sociales' },
+  { value: 'anticipo', label: 'Buen manejo y correcta inversión del anticipo' },
+  { value: 'seriedad_oferta', label: 'Seriedad de la oferta' },
+  { value: 'subsidios', label: 'Manejo responsable de subsidios y recursos públicos' },
+  { value: 'todo_riesgo_construccion', label: 'Todo riesgo construcción' },
+  { value: 'estabilidad_obra', label: 'Estabilidad de obra' },
+  { value: 'vida_deudor', label: 'Vida deudor' },
+  { value: 'otra', label: 'Otra' },
+];
+
+const getPolicyTypeLabel = (value?: string): string =>
+  POLICY_TYPES.find((type) => type.value === value)?.label ?? value ?? '';
+
+const createInitialContractFormData = () => ({
+  contractor_id: '',
+  contract_type: 'labor' as ContractType,
+  description: '',
+  total_amount: '',
+  start_date: new Date().toISOString().split('T')[0],
+  end_date: '',
+  activity_type: '',
+  cost_center: '',
+  internal_client_type: '',
+  project_name: '',
+  payment_terms: '',
+  warranty_period: '',
+  warranty_terms: '',
+  site_id: '',
+  has_policy: 'no',
+  policy_type: '',
+  policy_start_date: '',
+  policy_end_date: '',
+  insured_amount: '',
+  activities: [] as Array<{ id: string; description: string; amount: string }>,
+  deliverables: [] as string[],
+  payment_schedule: [] as Array<{ date: string; amount: string; description: string }>,
+  attachment_urls: [] as string[],
+});
+
+const buildPolicyFields = (formData: ReturnType<typeof createInitialContractFormData>) => {
+  if (formData.has_policy !== 'yes') {
+    return {
+      has_policy: false,
+      policy_type: null,
+      policy_start_date: null,
+      policy_end_date: null,
+      insured_amount: null,
+    };
+  }
+
+  return {
+    has_policy: true,
+    policy_type: formData.policy_type || null,
+    policy_start_date: formData.policy_start_date || null,
+    policy_end_date: formData.policy_end_date || null,
+    insured_amount: formData.insured_amount
+      ? Number.parseFloat(formData.insured_amount) || 0
+      : null,
+  };
+};
+
 const isImageAttachment = (url: string): boolean =>
   /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
 
@@ -118,26 +190,7 @@ export const Contracts = () => {
   const [showAddendumModal, setShowAddendumModal] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
-  const [formData, setFormData] = useState({
-    contractor_id: '',
-    contract_type: 'labor' as ContractType,
-    description: '',
-    total_amount: '',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: '',
-    activity_type: '',
-    cost_center: '',
-    internal_client_type: '',
-    project_name: '',
-    payment_terms: '',
-    warranty_period: '',
-    warranty_terms: '',
-    site_id: '',
-    activities: [] as Array<{ id: string; description: string; amount: string }>,
-    deliverables: [] as string[],
-    payment_schedule: [] as Array<{ date: string; amount: string; description: string }>,
-    attachment_urls: [] as string[],
-  });
+  const [formData, setFormData] = useState(createInitialContractFormData);
 
   const [addendumData, setAddendumData] = useState({
     description: '',
@@ -259,6 +312,7 @@ export const Contracts = () => {
       })) : null,
       attachment_urls: formData.attachment_urls.length > 0 ? formData.attachment_urls : null,
       budget_control: null,
+      ...buildPolicyFields(formData),
       status: 'draft',
       legal_review_status: 'pending',
       created_by: profile.id,
@@ -338,6 +392,11 @@ export const Contracts = () => {
       warranty_period: contract.warranty_period?.toString() || '',
       warranty_terms: contract.warranty_terms || '',
       site_id: contract.site_id || '',
+      has_policy: contract.has_policy ? 'yes' : 'no',
+      policy_type: contract.policy_type || '',
+      policy_start_date: contract.policy_start_date || '',
+      policy_end_date: contract.policy_end_date || '',
+      insured_amount: contract.insured_amount?.toString() || '',
       activities: (contract.budget_control?.items ?? []).map((item, i) => ({
         id: `act-edit-${contract.id}-${i}`,
         description: item.description,
@@ -351,26 +410,7 @@ export const Contracts = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      contractor_id: '',
-      contract_type: 'labor',
-      description: '',
-      total_amount: '',
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: '',
-      activity_type: '',
-      cost_center: '',
-      internal_client_type: '',
-      project_name: '',
-      payment_terms: '',
-      warranty_period: '',
-      warranty_terms: '',
-      site_id: '',
-      activities: [],
-      deliverables: [],
-      payment_schedule: [],
-      attachment_urls: [],
-    });
+    setFormData(createInitialContractFormData());
     setEditingContract(null);
   };
 
@@ -519,6 +559,42 @@ export const Contracts = () => {
                             Otro Sí #{addendum.addendum_number}: ${(addendum.additional_amount || 0).toLocaleString('es-CO')}
                           </Badge>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {contract.has_policy && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                      <p className="text-xs text-blue-700 font-medium mb-2">Póliza de seguro</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                        <div>
+                          <p className="text-gray-500 text-xs">Tipo</p>
+                          <p className="font-medium text-[#50504f]">
+                            {getPolicyTypeLabel(contract.policy_type)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Monto asegurado</p>
+                          <p className="font-medium text-[#50504f]">
+                            ${(contract.insured_amount || 0).toLocaleString('es-CO')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Inicio</p>
+                          <p className="font-medium text-[#50504f]">
+                            {contract.policy_start_date
+                              ? new Date(contract.policy_start_date).toLocaleDateString('es-CO')
+                              : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Vencimiento</p>
+                          <p className="font-medium text-[#50504f]">
+                            {contract.policy_end_date
+                              ? new Date(contract.policy_end_date).toLocaleDateString('es-CO')
+                              : 'N/A'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -712,7 +788,75 @@ export const Contracts = () => {
               onChange={(e) => setFormData({ ...formData, warranty_period: e.target.value })}
               fullWidth
             />
+            <Select
+              label="¿Tiene póliza?"
+              value={formData.has_policy}
+              onChange={(e) => {
+                const hasPolicy = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  has_policy: hasPolicy,
+                  ...(hasPolicy === 'no'
+                    ? {
+                        policy_type: '',
+                        policy_start_date: '',
+                        policy_end_date: '',
+                        insured_amount: '',
+                      }
+                    : {}),
+                }));
+              }}
+              options={HAS_POLICY_OPTIONS}
+              fullWidth
+            />
           </div>
+
+          {formData.has_policy === 'yes' && (
+            <fieldset className="border border-gray-200 rounded-lg p-4 space-y-4">
+              <legend className="px-2 text-sm font-semibold text-[#50504f]">Datos de la póliza</legend>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Select
+                  label="Tipo de póliza"
+                  value={formData.policy_type}
+                  onChange={(e) => setFormData({ ...formData, policy_type: e.target.value })}
+                  options={[
+                    { value: '', label: 'Seleccione el tipo de póliza' },
+                    ...POLICY_TYPES,
+                  ]}
+                  required
+                  fullWidth
+                />
+                <Input
+                  label="Monto asegurado"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.insured_amount}
+                  onChange={(e) => setFormData({ ...formData, insured_amount: e.target.value })}
+                  required
+                  fullWidth
+                />
+                <Input
+                  label="Fecha de inicio de la póliza"
+                  type="date"
+                  value={formData.policy_start_date}
+                  onChange={(e) => setFormData({ ...formData, policy_start_date: e.target.value })}
+                  max={formData.policy_end_date || undefined}
+                  required
+                  fullWidth
+                />
+                <Input
+                  label="Fecha de vencimiento de la póliza"
+                  type="date"
+                  value={formData.policy_end_date}
+                  onChange={(e) => setFormData({ ...formData, policy_end_date: e.target.value })}
+                  min={formData.policy_start_date || undefined}
+                  required
+                  fullWidth
+                />
+              </div>
+            </fieldset>
+          )}
 
           <Textarea
             label="Descripción"
