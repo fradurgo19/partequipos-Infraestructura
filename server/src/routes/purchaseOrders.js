@@ -12,7 +12,6 @@ router.get('/', authenticateToken, async (req, res) => {
       .select(`
         *,
         site:sites(id, name, location),
-        service_order:service_orders!purchase_orders_service_order_id_fkey(id, order_number),
         created_by_user:profiles!purchase_orders_created_by_fkey(id, full_name),
         prepared_by_user:profiles!purchase_orders_prepared_by_fkey(id, full_name),
         authorized_by_user:profiles!purchase_orders_authorized_by_fkey(id, full_name)
@@ -34,8 +33,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       .from('purchase_orders')
       .select(`
         *,
-        site:sites(id, name, location),
-        service_order:service_orders!purchase_orders_service_order_id_fkey(id, order_number)
+        site:sites(id, name, location)
       `)
       .eq('id', req.params.id)
       .single();

@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   MapPin,
   ClipboardList,
-  FileText,
   Ruler,
   Send,
   FileSpreadsheet,
@@ -36,7 +35,6 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
       { id: 'dashboard', label: 'Panel', icon: LayoutDashboard, path: '/dashboard' },
       { id: 'sites', label: 'Sedes y Proyectos', icon: MapPin, path: '/sites' },
       { id: 'tasks', label: 'Tareas', icon: ClipboardList, path: '/tasks' },
-      { id: 'service-orders', label: 'Órdenes de Servicio', icon: FileText, path: '/service-orders' },
       { id: 'purchase-orders', label: 'Órdenes de Compra', icon: ShoppingCart, path: '/purchase-orders' },
       { id: 'contractors', label: 'Contratistas', icon: Building2, path: '/contractors' },
       { id: 'contracts', label: 'Contratos', icon: FileCheck, path: '/contracts' },
@@ -56,7 +54,7 @@ export const Sidebar = ({ isOpen, onClose, isCollapsed = false, onToggleCollapse
     }
 
     if (profile?.role === 'contractor') {
-      return allModules.filter((m) => ['dashboard', 'tasks', 'service-orders'].includes(m.id));
+      return allModules.filter((m) => ['dashboard', 'tasks'].includes(m.id));
     }
 
     if (profile?.role === 'admin' || profile?.role === 'infrastructure') {

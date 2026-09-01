@@ -6,7 +6,6 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Sites } from './pages/Sites';
 import { Tasks } from './pages/Tasks';
-import { ServiceOrders } from './pages/ServiceOrders';
 import { PurchaseOrders } from './pages/PurchaseOrders';
 import { Contractors } from './pages/Contractors';
 import { Contracts } from './pages/Contracts';
@@ -32,7 +31,6 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/sites" element={<Sites />} />
             <Route path="/tasks" element={<Tasks />} />
-            <Route path="/service-orders" element={<ServiceOrders />} />
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/contractors" element={<Contractors />} />
             <Route path="/contracts" element={<Contracts />} />

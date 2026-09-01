@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   MapPin,
   ClipboardList,
-  FileText,
   Send,
   FileSpreadsheet,
   TrendingUp,
@@ -22,7 +21,6 @@ import { supabase } from '../lib/supabase';
 interface DashboardStats {
   totalTasks: number;
   pendingTasks: number;
-  totalServiceOrders: number;
   totalSites: number;
   pendingMeasurements: number;
   pendingRequests: number;
@@ -39,7 +37,6 @@ export const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalTasks: 0,
     pendingTasks: 0,
-    totalServiceOrders: 0,
     totalSites: 0,
     pendingMeasurements: 0,
     pendingRequests: 0,
@@ -53,10 +50,9 @@ export const Dashboard = () => {
   const loadStats = useCallback(async () => {
     if (!profile) return;
 
-    const [tasksResult, serviceOrdersResult, sitesResult, measurementsResult, requestsResult, usersResult, maintenancesResult] =
+    const [tasksResult, sitesResult, measurementsResult, requestsResult, usersResult, maintenancesResult] =
       await Promise.all([
         supabase.from('tasks').select('*', { count: 'exact', head: false }),
-        supabase.from('service_orders').select('*', { count: 'exact', head: false }),
         supabase.from('sites').select('*', { count: 'exact', head: false }),
         supabase.from('measurements').select('*', { count: 'exact', head: false }),
         supabase.from('internal_requests').select('*', { count: 'exact', head: false }),
@@ -107,7 +103,6 @@ export const Dashboard = () => {
       totalTasks: tasksResult.data?.length || 0,
       pendingTasks:
         tasksResult.data?.filter((t) => t.status === 'pending').length || 0,
-      totalServiceOrders: serviceOrdersResult.data?.length || 0,
       totalSites: sitesResult.data?.length || 0,
       pendingMeasurements:
         measurementsResult.data?.filter((m) => m.status === 'pending').length || 0,
@@ -153,19 +148,6 @@ export const Dashboard = () => {
         iconColor: 'text-[#cf1b22]',
         animation: 'float-card-reverse',
         path: '/tasks',
-      },
-      {
-        id: 'service-orders',
-        title: 'Órdenes de Servicio',
-        icon: FileText,
-        description: 'Gestionar órdenes de servicio y contratistas',
-        stat: stats.totalServiceOrders,
-        statLabel: 'Total Órdenes',
-        gradient: 'from-green-500 to-green-600',
-        iconBg: 'bg-green-100',
-        iconColor: 'text-green-600',
-        animation: 'float-card-slow',
-        path: '/service-orders',
       },
       {
         id: 'purchase-orders',
@@ -278,7 +260,7 @@ export const Dashboard = () => {
     }
 
     if (profile?.role === 'contractor') {
-      return allCards.filter((c) => ['tasks', 'service-orders'].includes(c.id));
+      return allCards.filter((c) => ['tasks'].includes(c.id));
     }
 
     if (profile?.role === 'supervision') {

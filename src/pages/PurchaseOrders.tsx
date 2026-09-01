@@ -10,7 +10,7 @@ import { Badge } from '../atoms/Badge';
 import { FileUpload } from '../molecules/FileUpload';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { PurchaseOrder, Site, ServiceOrder } from '../types';
+import { PurchaseOrder, Site } from '../types';
 import { generatePurchaseOrderPDF } from '../services/pdfGenerator';
 
 const AREA_CODES = [
@@ -25,7 +25,6 @@ export const PurchaseOrders = () => {
   const { profile } = useAuth();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
-  const [serviceOrders, setServiceOrders] = useState<Array<Pick<ServiceOrder, 'id' | 'order_number' | 'site_id'>>>([]);
   const [users, setUsers] = useState<Array<{ id: string; full_name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -52,7 +51,6 @@ export const PurchaseOrders = () => {
     prepared_date: new Date().toISOString().split('T')[0],
     employee_signature_date: '',
     site_id: '',
-    service_order_id: '',
     quotation_attachment_url: '',
     invoice_attachment_url: '',
     erpg_number: '542',
@@ -64,17 +62,15 @@ export const PurchaseOrders = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const [ordersResult, sitesResult, serviceOrdersResult, usersResult] = await Promise.all([
+    const [ordersResult, sitesResult, usersResult] = await Promise.all([
       supabase
         .from('purchase_orders')
         .select(`
           *,
-          site:sites(id, name, location),
-          service_order:service_orders(id, order_number)
+          site:sites(id, name, location)
         `)
         .order('created_at', { ascending: false }),
       supabase.from('sites').select('*').order('name'),
-      supabase.from('service_orders').select('id, order_number, site_id').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, full_name').order('full_name'),
     ]);
 
@@ -83,9 +79,6 @@ export const PurchaseOrders = () => {
     }
     if (!sitesResult.error && sitesResult.data) {
       setSites(sitesResult.data);
-    }
-    if (!serviceOrdersResult.error && serviceOrdersResult.data) {
-      setServiceOrders(serviceOrdersResult.data as Array<Pick<ServiceOrder, 'id' | 'order_number' | 'site_id'>>);
     }
     if (!usersResult.error && usersResult.data) {
       setUsers(usersResult.data);
@@ -177,7 +170,6 @@ export const PurchaseOrders = () => {
       prepared_date: formData.prepared_date,
       employee_signature_date: formData.employee_signature_date || null,
       site_id: formData.site_id || null,
-      service_order_id: formData.service_order_id || null,
       quotation_attachment_url: formData.quotation_attachment_url || null,
       invoice_attachment_url: formData.invoice_attachment_url || null,
       erpg_number: formData.erpg_number,
@@ -253,7 +245,6 @@ export const PurchaseOrders = () => {
       prepared_date: new Date().toISOString().split('T')[0],
       employee_signature_date: '',
       site_id: '',
-      service_order_id: '',
       quotation_attachment_url: '',
       invoice_attachment_url: '',
       erpg_number: '542',
@@ -473,16 +464,6 @@ export const PurchaseOrders = () => {
               options={[
                 { value: '', label: 'Seleccione una sede' },
                 ...sites.map(site => ({ value: site.id, label: site.name })),
-              ]}
-              fullWidth
-            />
-            <Select
-              label="Orden de Servicio (Opcional)"
-              value={formData.service_order_id}
-              onChange={(e) => setFormData({ ...formData, service_order_id: e.target.value })}
-              options={[
-                { value: '', label: 'Ninguna' },
-                ...serviceOrders.map(so => ({ value: so.id, label: `OS #${so.order_number}` })),
               ]}
               fullWidth
             />
