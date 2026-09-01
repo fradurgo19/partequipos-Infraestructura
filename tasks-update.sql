@@ -23,7 +23,8 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assigned_to text;
 ALTER TABLE task_timeline ADD COLUMN IF NOT EXISTS photo_url text;
 
 -- Actualizar enum de task_type si es necesario (ya existe en el schema inicial)
--- Los tipos de área solicitante: Maquinaria, Repuestos, Bienes inmuebles
+-- Los tipos de área solicitante incluyen Maquinaria, Repuestos, Bienes inmuebles,
+-- Comercio Exterior, Transporte, Servicio, Comercial Repuesto y Comercial Maquinaria.
 
 -- Índices adicionales
 CREATE INDEX IF NOT EXISTS idx_tasks_request_date ON tasks(request_date);

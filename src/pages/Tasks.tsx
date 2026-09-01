@@ -36,7 +36,12 @@ const TASK_TYPES = [
 const REQUESTING_AREAS = [
   'Maquinaria',
   'Repuestos',
-  'Bienes inmuebles'
+  'Bienes inmuebles',
+  'Comercio Exterior',
+  'Transporte',
+  'Servicio',
+  'Comercial Repuesto',
+  'Comercial Maquinaria',
 ];
 
 const ASSIGNED_TO_OPTIONS = [
