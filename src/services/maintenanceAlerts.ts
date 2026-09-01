@@ -16,7 +16,7 @@ const shouldAlert = (daysUntil: number): boolean =>
 interface MaintenanceRow {
   id: string;
   component_type: string;
-  component_id: string;
+  component_id?: string | null;
   component_name?: string | null;
   next_maintenance_date: string;
   site?: { name?: string } | null;
@@ -41,12 +41,15 @@ const createAlertIfMissing = async (
   const componentLabel = getMaintenanceComponentLabel(maintenance);
   const siteName = maintenance.site?.name ?? 'Sede';
   const dayLabel = daysUntil === 0 ? 'hoy' : `en ${daysUntil} día(s)`;
+  const idSuffix = maintenance.component_id?.trim()
+    ? ` (ID: ${maintenance.component_id.trim()})`
+    : '';
 
   await supabase.from('notifications').insert([
     {
       user_id: adminId,
       title: 'Mantenimiento próximo',
-      message: `${componentLabel} (ID: ${maintenance.component_id}) en ${siteName} vence ${dayLabel}. Fecha: ${maintenance.next_maintenance_date}`,
+      message: `${componentLabel}${idSuffix} en ${siteName} vence ${dayLabel}. Fecha: ${maintenance.next_maintenance_date}`,
       type: 'maintenance',
       reference_id: maintenance.id,
       read: false,
@@ -70,10 +73,19 @@ export const syncMaintenanceAlerts = async (): Promise<void> => {
 
   if (error || !maintenances?.length) return;
 
-  for (const maintenance of maintenances) {
-    if (!maintenance.next_maintenance_date) continue;
-    const days = daysUntilDate(maintenance.next_maintenance_date);
+  for (const row of maintenances) {
+    if (!row.next_maintenance_date) continue;
+    const days = daysUntilDate(row.next_maintenance_date);
     if (!shouldAlert(days)) continue;
+
+    const maintenance: MaintenanceRow = {
+      id: row.id,
+      component_type: row.component_type,
+      component_id: row.component_id,
+      component_name: row.component_name,
+      next_maintenance_date: row.next_maintenance_date,
+      site: Array.isArray(row.site) ? row.site[0] : row.site,
+    };
 
     for (const admin of admins) {
       await createAlertIfMissing(admin.id, maintenance, days);

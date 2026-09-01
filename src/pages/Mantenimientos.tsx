@@ -9,7 +9,7 @@ import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Maintenance, Site, Contractor } from '../types';
+import { Maintenance, Site, Contractor, MaintenanceKind, ComponentStatus } from '../types';
 import { getMaintenanceComponentLabel } from '../constants/siteComponents';
 import { syncMaintenanceAlerts } from '../services/maintenanceAlerts';
 
@@ -28,12 +28,47 @@ const emptyForm = {
   component_name: '',
   component_id: '',
   contractor_id: '',
-  maintenance_kind: 'preventive' as const,
+  maintenance_kind: 'preventive' as MaintenanceKind,
   last_maintenance_date: '',
   next_maintenance_date: '',
   last_maintenance_cost: '',
-  component_status: 'active' as const,
+  component_status: 'active' as ComponentStatus,
   notes: '',
+};
+
+interface ComponentEntry {
+  entryId: string;
+  component_name: string;
+  component_id: string;
+  last_maintenance_cost: string;
+  notes: string;
+}
+
+let componentEntryCounter = 0;
+
+const createComponentEntry = (): ComponentEntry => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return {
+      entryId: crypto.randomUUID(),
+      component_name: '',
+      component_id: '',
+      last_maintenance_cost: '',
+      notes: '',
+    };
+  }
+  componentEntryCounter += 1;
+  return {
+    entryId: `component-entry-${componentEntryCounter}`,
+    component_name: '',
+    component_id: '',
+    last_maintenance_cost: '',
+    notes: '',
+  };
+};
+
+const formatComponentId = (value?: string | null): string | null => {
+  const trimmed = value?.trim();
+  return trimmed || null;
 };
 
 const formatCurrency = (value?: number | null): string =>
@@ -76,6 +111,7 @@ export const Mantenimientos = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Maintenance | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [componentEntries, setComponentEntries] = useState<ComponentEntry[]>([createComponentEntry()]);
   const [filterSite, setFilterSite] = useState('');
   const [filterKind, setFilterKind] = useState('');
 
@@ -120,34 +156,55 @@ export const Mantenimientos = () => {
     e.preventDefault();
     if (!profile) return;
 
-    const payload = {
-      site_id: formData.site_id,
-      component_type: 'manual',
-      component_name: formData.component_name.trim(),
-      component_id: formData.component_id.trim(),
-      contractor_id: formData.contractor_id || null,
-      maintenance_kind: formData.maintenance_kind,
-      last_maintenance_date: formData.last_maintenance_date,
-      next_maintenance_date: formData.next_maintenance_date,
-      last_maintenance_cost: parseOptionalCost(formData.last_maintenance_cost),
-      component_status: formData.component_status,
-      notes: formData.notes.trim() || null,
-    };
-
     if (editingItem) {
+      const payload = {
+        site_id: formData.site_id,
+        component_type: 'manual',
+        component_name: formData.component_name.trim(),
+        component_id: formatComponentId(formData.component_id),
+        contractor_id: formData.contractor_id || null,
+        maintenance_kind: formData.maintenance_kind,
+        last_maintenance_date: formData.last_maintenance_date,
+        next_maintenance_date: formData.next_maintenance_date,
+        last_maintenance_cost: parseOptionalCost(formData.last_maintenance_cost),
+        component_status: formData.component_status,
+        notes: formData.notes.trim() || null,
+      };
+
       const { error } = await supabase.from('maintenances').update(payload).eq('id', editingItem.id);
       if (!error) {
         setShowModal(false);
         resetForm();
         loadData();
       }
-    } else {
-      const { error } = await supabase.from('maintenances').insert([{ ...payload, created_by: profile.id }]);
-      if (!error) {
-        setShowModal(false);
-        resetForm();
-        loadData();
-      }
+      return;
+    }
+
+    const validEntries = componentEntries.filter((entry) => entry.component_name.trim());
+    if (validEntries.length === 0) {
+      return;
+    }
+
+    const payloads = validEntries.map((entry) => ({
+      site_id: formData.site_id,
+      component_type: 'manual',
+      component_name: entry.component_name.trim(),
+      component_id: formatComponentId(entry.component_id),
+      contractor_id: formData.contractor_id || null,
+      maintenance_kind: formData.maintenance_kind,
+      last_maintenance_date: formData.last_maintenance_date,
+      next_maintenance_date: formData.next_maintenance_date,
+      last_maintenance_cost: parseOptionalCost(entry.last_maintenance_cost),
+      component_status: formData.component_status,
+      notes: entry.notes.trim() || null,
+      created_by: profile.id,
+    }));
+
+    const { error } = await supabase.from('maintenances').insert(payloads);
+    if (!error) {
+      setShowModal(false);
+      resetForm();
+      loadData();
     }
   };
 
@@ -156,7 +213,7 @@ export const Mantenimientos = () => {
     setFormData({
       site_id: item.site_id,
       component_name: item.component_name ?? getMaintenanceComponentLabel(item),
-      component_id: item.component_id,
+      component_id: item.component_id ?? '',
       contractor_id: item.contractor_id ?? '',
       maintenance_kind: item.maintenance_kind,
       last_maintenance_date: item.last_maintenance_date,
@@ -176,7 +233,28 @@ export const Mantenimientos = () => {
 
   const resetForm = () => {
     setFormData(emptyForm);
+    setComponentEntries([createComponentEntry()]);
     setEditingItem(null);
+  };
+
+  const handleAddComponentEntry = () => {
+    setComponentEntries((current) => [...current, createComponentEntry()]);
+  };
+
+  const handleRemoveComponentEntry = (entryId: string) => {
+    setComponentEntries((current) =>
+      current.length <= 1 ? current : current.filter((entry) => entry.entryId !== entryId)
+    );
+  };
+
+  const updateComponentEntry = (
+    entryId: string,
+    field: keyof Omit<ComponentEntry, 'entryId'>,
+    value: string
+  ) => {
+    setComponentEntries((current) =>
+      current.map((entry) => (entry.entryId === entryId ? { ...entry, [field]: value } : entry))
+    );
   };
 
   const handleSiteChange = (siteId: string) => {
@@ -304,7 +382,8 @@ export const Mantenimientos = () => {
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-700 font-medium">
-                      {getMaintenanceComponentLabel(item)} · ID: {item.component_id}
+                      {getMaintenanceComponentLabel(item)}
+                      {item.component_id?.trim() ? ` · ID: ${item.component_id.trim()}` : ''}
                     </p>
                     {item.contractor && (
                       <p className="text-sm text-gray-600 mt-1">
@@ -364,23 +443,117 @@ export const Mantenimientos = () => {
             fullWidth
           />
 
-          <Input
-            label="Componente *"
-            value={formData.component_name}
-            onChange={(e) => setFormData({ ...formData, component_name: e.target.value })}
-            placeholder="Ej: Aire acondicionado split, Bomba hidráulica"
-            required
-            fullWidth
-          />
+          {editingItem ? (
+            <>
+              <Input
+                label="Componente *"
+                value={formData.component_name}
+                onChange={(e) => setFormData({ ...formData, component_name: e.target.value })}
+                placeholder="Ej: Aire acondicionado split, Bomba hidráulica"
+                required
+                fullWidth
+              />
 
-          <Input
-            label="Número ID del componente *"
-            value={formData.component_id}
-            onChange={(e) => setFormData({ ...formData, component_id: e.target.value })}
-            placeholder="Ej: AC-001, BOMBA-12"
-            required
-            fullWidth
-          />
+              <Input
+                label="Número ID del componente"
+                value={formData.component_id}
+                onChange={(e) => setFormData({ ...formData, component_id: e.target.value })}
+                placeholder="Opcional. Ej: AC-001, BOMBA-12"
+                fullWidth
+              />
+
+              <Input
+                label="Valor último mantenimiento (COP)"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.last_maintenance_cost}
+                onChange={(e) => setFormData({ ...formData, last_maintenance_cost: e.target.value })}
+                placeholder="0.00"
+                fullWidth
+              />
+
+              <Textarea
+                label="Notas"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={3}
+                fullWidth
+              />
+            </>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-[#50504f]">Componentes</h3>
+                <Button type="button" size="sm" variant="secondary" onClick={handleAddComponentEntry}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Agregar componente
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Puede registrar varios componentes en un solo envío. El ID del componente es opcional.
+              </p>
+
+              {componentEntries.map((entry, index) => (
+                <div
+                  key={entry.entryId}
+                  className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-[#50504f]">Componente {index + 1}</p>
+                    {componentEntries.length > 1 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleRemoveComponentEntry(entry.entryId)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <Input
+                    label="Componente *"
+                    value={entry.component_name}
+                    onChange={(e) => updateComponentEntry(entry.entryId, 'component_name', e.target.value)}
+                    placeholder="Ej: Aire acondicionado split, Bomba hidráulica"
+                    required
+                    fullWidth
+                  />
+
+                  <Input
+                    label="Número ID del componente"
+                    value={entry.component_id}
+                    onChange={(e) => updateComponentEntry(entry.entryId, 'component_id', e.target.value)}
+                    placeholder="Opcional. Ej: AC-001, BOMBA-12"
+                    fullWidth
+                  />
+
+                  <Input
+                    label="Valor último mantenimiento (COP)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={entry.last_maintenance_cost}
+                    onChange={(e) =>
+                      updateComponentEntry(entry.entryId, 'last_maintenance_cost', e.target.value)
+                    }
+                    placeholder="0.00"
+                    fullWidth
+                  />
+
+                  <Textarea
+                    label="Notas"
+                    value={entry.notes}
+                    onChange={(e) => updateComponentEntry(entry.entryId, 'notes', e.target.value)}
+                    rows={2}
+                    fullWidth
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           <Select
             label="Contratista"
@@ -390,18 +563,7 @@ export const Mantenimientos = () => {
             fullWidth
           />
 
-          <Input
-            label="Valor último mantenimiento (COP)"
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.last_maintenance_cost}
-            onChange={(e) => setFormData({ ...formData, last_maintenance_cost: e.target.value })}
-            placeholder="0.00"
-            fullWidth
-          />
-
-          {formData.last_maintenance_cost.trim() && (
+          {editingItem && formData.last_maintenance_cost.trim() && (
             <p className="text-sm text-gray-600 -mt-2">
               Referencia para el próximo mantenimiento ({formData.next_maintenance_date || 'sin fecha'}):{' '}
               <span className="font-semibold text-[#50504f]">
@@ -417,7 +579,7 @@ export const Mantenimientos = () => {
             onChange={(e) =>
               setFormData({
                 ...formData,
-                maintenance_kind: e.target.value as 'preventive' | 'corrective',
+                maintenance_kind: e.target.value as MaintenanceKind,
               })
             }
             required
@@ -442,7 +604,7 @@ export const Mantenimientos = () => {
                 required
                 fullWidth
               />
-              {formData.last_maintenance_cost.trim() && (
+              {editingItem && formData.last_maintenance_cost.trim() && (
                 <p className="mt-1 text-xs text-gray-500">
                   Costo referencia último mtto: {formatCurrency(parseOptionalCost(formData.last_maintenance_cost))}
                 </p>
@@ -457,18 +619,10 @@ export const Mantenimientos = () => {
             onChange={(e) =>
               setFormData({
                 ...formData,
-                component_status: e.target.value as 'active' | 'inactive',
+                component_status: e.target.value as ComponentStatus,
               })
             }
             required
-            fullWidth
-          />
-
-          <Textarea
-            label="Notas"
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            rows={3}
             fullWidth
           />
 
@@ -483,7 +637,11 @@ export const Mantenimientos = () => {
             >
               Cancelar
             </Button>
-            <Button type="submit">{editingItem ? 'Guardar cambios' : 'Crear registro'}</Button>
+            <Button type="submit">
+              {editingItem
+                ? 'Guardar cambios'
+                : `Crear ${componentEntries.filter((entry) => entry.component_name.trim()).length || 1} registro(s)`}
+            </Button>
           </div>
         </form>
       </Modal>

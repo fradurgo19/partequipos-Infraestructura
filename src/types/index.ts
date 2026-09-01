@@ -263,7 +263,7 @@ export interface Maintenance {
   id: string;
   site_id: string;
   component_type: string;
-  component_id: string;
+  component_id?: string | null;
   component_name?: string;
   contractor_id?: string;
   maintenance_kind: MaintenanceKind;
