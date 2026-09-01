@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Mail, Phone, MapPin, FileText } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Edit, Trash2, Mail, Phone, MapPin, FileText, FilterX } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
+import { Select } from '../atoms/Select';
 import { Textarea } from '../atoms/Textarea';
 import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
@@ -39,10 +40,14 @@ function normalizeSpecialty(specialty: unknown): string[] {
   return [];
 }
 
+const normalizeCityKey = (city?: string | null): string => city?.trim().toUpperCase() ?? '';
+
 export const Contractors = () => {
   const { profile } = useAuth();
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterCity, setFilterCity] = useState('all');
+  const [filterSpecialty, setFilterSpecialty] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editingContractor, setEditingContractor] = useState<Contractor | null>(null);
   const [formData, setFormData] = useState({
@@ -179,6 +184,34 @@ export const Contractors = () => {
 
   const canManage = profile?.role === 'admin' || profile?.role === 'infrastructure' || profile?.role === 'supervision';
 
+  const cityFilterOptions = useMemo(() => {
+    const cities = contractors
+      .map((contractor) => contractor.city?.trim())
+      .filter((city): city is string => Boolean(city));
+
+    return [...new Set(cities)].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  }, [contractors]);
+
+  const hasActiveFilters = filterCity !== 'all' || filterSpecialty !== 'all';
+
+  const filteredContractors = useMemo(
+    () =>
+      contractors.filter((contractor) => {
+        const matchesCity =
+          filterCity === 'all' || normalizeCityKey(contractor.city) === normalizeCityKey(filterCity);
+        const specs = normalizeSpecialty(contractor.specialty);
+        const matchesSpecialty =
+          filterSpecialty === 'all' || specs.includes(filterSpecialty);
+        return matchesCity && matchesSpecialty;
+      }),
+    [contractors, filterCity, filterSpecialty]
+  );
+
+  const handleClearFilters = () => {
+    setFilterCity('all');
+    setFilterSpecialty('all');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -205,9 +238,49 @@ export const Contractors = () => {
         )}
       </div>
 
+      <Card>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+            <Select
+              label="Ciudad"
+              value={filterCity}
+              onChange={(e) => setFilterCity(e.target.value)}
+              options={[
+                { value: 'all', label: 'Todas las ciudades' },
+                ...cityFilterOptions.map((city) => ({ value: city, label: city })),
+              ]}
+              fullWidth
+            />
+            <Select
+              label="Especialidad"
+              value={filterSpecialty}
+              onChange={(e) => setFilterSpecialty(e.target.value)}
+              options={[
+                { value: 'all', label: 'Todas las especialidades' },
+                ...SPECIALTIES.map((specialty) => ({ value: specialty, label: specialty })),
+              ]}
+              fullWidth
+            />
+          </div>
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleClearFilters}
+              className="flex items-center gap-2 shrink-0 self-end lg:self-auto"
+            >
+              <FilterX className="w-4 h-4" aria-hidden />
+              <span>Borrar filtros</span>
+            </Button>
+          )}
+        </div>
+      </Card>
+
       {/* Lista de contratistas */}
+      {filteredContractors.length > 0 && (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-        {contractors.map((contractor) => {
+        {filteredContractors.map((contractor) => {
           const specs = normalizeSpecialty(contractor.specialty);
           return (
           <Card key={contractor.id} hover className="border-l-4 border-blue-500">
@@ -294,6 +367,7 @@ export const Contractors = () => {
           );
         })}
       </div>
+      )}
 
       {contractors.length === 0 && (
         <Card>
@@ -309,6 +383,19 @@ export const Contractors = () => {
                 Agregar Contratista
               </Button>
             )}
+          </div>
+        </Card>
+      )}
+
+      {contractors.length > 0 && filteredContractors.length === 0 && (
+        <Card>
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay contratistas con estos filtros</h3>
+            <p className="text-gray-500 mb-4">Prueba ajustando la ciudad o la especialidad</p>
+            <Button type="button" variant="secondary" onClick={handleClearFilters}>
+              <FilterX className="w-4 h-4 mr-2" />
+              Borrar filtros
+            </Button>
           </div>
         </Card>
       )}
