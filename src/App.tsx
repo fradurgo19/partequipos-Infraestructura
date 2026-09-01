@@ -9,7 +9,6 @@ import { Tasks } from './pages/Tasks';
 import { PurchaseOrders } from './pages/PurchaseOrders';
 import { Contractors } from './pages/Contractors';
 import { Contracts } from './pages/Contracts';
-import { Measurements } from './pages/Measurements';
 import { InternalRequests } from './pages/InternalRequests';
 import { PublicInternalRequest } from './pages/PublicInternalRequest';
 import { Quotations } from './pages/Quotations';
@@ -34,7 +33,7 @@ function App() {
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/contractors" element={<Contractors />} />
             <Route path="/contracts" element={<Contracts />} />
-            <Route path="/measurements" element={<Measurements />} />
+            <Route path="/measurements" element={<Navigate to="/contract-tracking" replace />} />
             <Route path="/internal-requests" element={<InternalRequests />} />
             <Route path="/quotations" element={<Quotations />} />
             <Route path="/contract-tracking" element={<ContractTracking />} />

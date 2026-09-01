@@ -35,7 +35,7 @@ interface ContractTracking {
 
 export const ContractTracking = () => {
   useAuth();
-  const [activeTab, setActiveTab] = useState<'measurements' | 'deadlines'>('measurements');
+  const [activeTab, setActiveTab] = useState<'work_cuts' | 'deadlines'>('work_cuts');
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [tracking, setTracking] = useState<ContractTracking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,7 +140,7 @@ export const ContractTracking = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-[#50504f]">Seguimiento de contratos</h1>
-          <p className="text-gray-600 mt-1">Mediciones y cumplimiento de plazos</p>
+          <p className="text-gray-600 mt-1">Cortes de obra y cumplimiento de plazos</p>
         </div>
       </div>
 
@@ -148,15 +148,15 @@ export const ContractTracking = () => {
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('measurements')}
+            onClick={() => setActiveTab('work_cuts')}
             className={`${
-              activeTab === 'measurements'
+              activeTab === 'work_cuts'
                 ? 'border-[#cf1b22] text-[#cf1b22]'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
           >
             <Ruler className="w-5 h-5" />
-            Mediciones
+            Cortes de Obra
           </button>
           <button
             onClick={() => setActiveTab('deadlines')}
@@ -173,7 +173,7 @@ export const ContractTracking = () => {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'measurements' && (
+      {activeTab === 'work_cuts' && (
         <div>
           <Measurements />
         </div>
