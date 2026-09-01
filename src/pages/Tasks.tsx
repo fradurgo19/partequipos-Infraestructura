@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Plus, Filter, Search, Camera, Clock, CheckCircle, FileText, Calendar, Eye, Edit, RotateCcw } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
@@ -159,6 +159,8 @@ export const Tasks = () => {
   const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [filterSite, setFilterSite] = useState<string>('all');
+  const [filterResponsible, setFilterResponsible] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -501,15 +503,55 @@ export const Tasks = () => {
     if (!error) loadData();
   };
 
+  const siteFilterOptions = useMemo(
+    () =>
+      sites.map((site) => ({
+        value: site.id,
+        label: site.name,
+      })),
+    [sites]
+  );
+
+  const responsibleFilterOptions = useMemo(() => {
+    const options = new Map<string, string>();
+
+    for (const user of infrastructureUsers) {
+      const label = user.full_name || user.email;
+      if (label) {
+        options.set(user.id, label);
+      }
+    }
+
+    for (const task of tasks) {
+      if (task.responsible_id && task.responsible?.full_name) {
+        options.set(task.responsible_id, task.responsible.full_name);
+      }
+    }
+
+    return [...options.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], 'es', { sensitivity: 'base' }))
+      .map(([value, label]) => ({ value, label }));
+  }, [tasks, infrastructureUsers]);
+
+  const hasActiveFilters =
+    searchTerm.length > 0 ||
+    filterStatus !== 'all' ||
+    filterPriority !== 'all' ||
+    filterSite !== 'all' ||
+    filterResponsible !== 'all';
+
   const filteredTasks = tasks
     .filter((task) => {
       const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
       const matchesPriority =
         filterPriority === 'all' || normalizePriority(task.priority) === filterPriority;
+      const matchesSite = filterSite === 'all' || task.site_id === filterSite;
+      const matchesResponsible =
+        filterResponsible === 'all' || task.responsible_id === filterResponsible;
       const matchesSearch =
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.description.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesStatus && matchesPriority && matchesSearch;
+      return matchesStatus && matchesPriority && matchesSite && matchesResponsible && matchesSearch;
     })
     .sort((a, b) => comparePriority(a.priority, b.priority));
 
@@ -548,7 +590,7 @@ export const Tasks = () => {
               />
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:items-center">
             <Filter className="text-gray-400 w-5 h-5 hidden sm:block" />
             <Select
               value={filterStatus}
@@ -567,6 +609,22 @@ export const Tasks = () => {
               options={[
                 { value: 'all', label: 'Todas las prioridades' },
                 ...PRIORITY_OPTIONS,
+              ]}
+            />
+            <Select
+              value={filterSite}
+              onChange={(e) => setFilterSite(e.target.value)}
+              options={[
+                { value: 'all', label: 'Todas las sedes' },
+                ...siteFilterOptions,
+              ]}
+            />
+            <Select
+              value={filterResponsible}
+              onChange={(e) => setFilterResponsible(e.target.value)}
+              options={[
+                { value: 'all', label: 'Todos los responsables' },
+                ...responsibleFilterOptions,
               ]}
             />
           </div>
@@ -680,7 +738,7 @@ export const Tasks = () => {
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay tareas</h3>
             <p className="text-gray-500 mb-4">
-              {searchTerm || filterStatus !== 'all' || filterPriority !== 'all'
+              {hasActiveFilters
                 ? 'Prueba ajustando los filtros'
                 : 'Crea tu primera tarea para comenzar'}
             </p>
