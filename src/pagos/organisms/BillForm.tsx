@@ -21,7 +21,25 @@ import { parseCurrencyInput, parseColombianNumber, getCurrentPeriod, formatCurre
 import { focusBillFormValidationField, scrollBillFormAlertIntoView } from '../utils/billFormUtils';
 import { billService, uploadBillDocument } from '../services/billService';
 import { useBillSiteLocations } from '../hooks/useBillSiteLocations';
-import { resolveBillLocationFromStored, findBillLocationEntry } from '../constants/billLocations';
+import {
+  STANDARD_BILL_BUSINESS_GROUPS,
+  BillLocationEntry,
+} from '../constants/billLocations';
+import {
+  getCanonicalSiteCities,
+  getCanonicalSiteByKey,
+  getCanonicalSitesByCity,
+} from '../constants/billSiteRegistry';
+import { resolveBillFormSite } from '../utils/billSiteResolution';
+
+const findSiteIdInCatalog = (
+  city: string,
+  address: string,
+  catalog: BillLocationEntry[]
+): string | undefined => {
+  const match = catalog.find((entry) => entry.city === city && entry.address === address);
+  return match?.siteId;
+};
 
 const initialFormData: UtilityBillFormData = {
   description: '',
@@ -30,6 +48,7 @@ const initialFormData: UtilityBillFormData = {
   contractNumber: '',
   costCenter: 'Administración',
   city: '',
+  siteKey: '',
   businessGroup: '',
   location: '',
   siteId: undefined,
@@ -195,8 +214,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   const submitValidationBannerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const isEditMode = Boolean(billId);
-  const { catalog, loading: locationsLoading, cities, getBusinessGroups, getAddresses } =
-    useBillSiteLocations();
+  const { catalog, loading: locationsLoading } = useBillSiteLocations();
 
   const [consumptionRowIds, setConsumptionRowIds] = useState<string[]>(() =>
     Array.from(
@@ -233,33 +251,33 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   ];
 
   const cityOptions = useMemo(
-    () => cities.map((city) => ({ value: city, label: city })),
-    [cities]
+    () => getCanonicalSiteCities().map((city) => ({ value: city, label: city })),
+    []
   );
 
-  const businessGroupOptions = useMemo(() => {
+  const siteOptions = useMemo(() => {
     if (!formData.city) return [];
-    return getBusinessGroups(formData.city).map((group) => ({
-      value: group,
-      label: group
+    return getCanonicalSitesByCity(formData.city).map((entry) => ({
+      value: entry.key,
+      label: entry.siteName,
     }));
-  }, [formData.city, getBusinessGroups]);
+  }, [formData.city]);
 
-  const locationAddressOptions = useMemo(() => {
-    if (!formData.city || !formData.businessGroup) return [];
-    return getAddresses(formData.city, formData.businessGroup).map((entry) => ({
-      value: entry.address,
-      label: entry.address,
-      title: entry.address,
-    }));
-  }, [formData.city, formData.businessGroup, getAddresses]);
+  const businessGroupOptions = useMemo(
+    () =>
+      STANDARD_BILL_BUSINESS_GROUPS.map((group) => ({
+        value: group,
+        label: group,
+      })),
+    []
+  );
 
   useEffect(() => {
     if (!isEditMode || locationsLoading || !initialData?.location) {
       return;
     }
 
-    const resolved = resolveBillLocationFromStored(
+    const resolved = resolveBillFormSite(
       initialData.location,
       initialData.city,
       initialData.businessGroup,
@@ -273,8 +291,9 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     setFormData((prev) => ({
       ...prev,
       city: resolved.city,
-      businessGroup: resolved.businessGroup,
-      location: resolved.address,
+      siteKey: resolved.siteKey,
+      businessGroup: initialData.businessGroup || resolved.businessGroup,
+      location: resolved.location,
       siteId: resolved.siteId ?? initialData?.siteId,
     }));
   }, [catalog, locationsLoading, isEditMode, initialData]);
@@ -438,48 +457,58 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     setFormData((prev) => ({
       ...prev,
       city: value,
-      businessGroup: '',
+      siteKey: '',
       location: '',
       siteId: undefined,
     }));
     setErrors((prev) => {
       const next = { ...prev };
       delete next.city;
-      delete next.businessGroup;
+      delete next.siteKey;
       delete next.location;
       return next;
     });
+  };
+
+  const handleSiteChange = (siteKey: string) => {
+    const site = getCanonicalSiteByKey(siteKey);
+    if (!site) {
+      setFormData((prev) => ({
+        ...prev,
+        siteKey: '',
+        location: '',
+        siteId: undefined,
+      }));
+      return;
+    }
+
+    const siteId = findSiteIdInCatalog(site.city, site.canonicalAddress, catalog);
+    setFormData((prev) => ({
+      ...prev,
+      siteKey,
+      location: site.canonicalAddress,
+      siteId,
+    }));
+    if (errors.siteKey) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.siteKey;
+        delete next.location;
+        return next;
+      });
+    }
   };
 
   const handleBusinessGroupChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
       businessGroup: value,
-      location: '',
-      siteId: undefined,
     }));
     setErrors((prev) => {
       const next = { ...prev };
       delete next.businessGroup;
-      delete next.location;
       return next;
     });
-  };
-
-  const handleLocationChange = (value: string) => {
-    const entry = findBillLocationEntry(formData.city, formData.businessGroup, value, catalog);
-    setFormData((prev) => ({
-      ...prev,
-      location: value,
-      siteId: entry?.siteId,
-    }));
-    if (errors.location) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next.location;
-        return next;
-      });
-    }
   };
 
   const handleConsumptionChange = (index: number, field: keyof UtilityBillFormData['consumptions'][number], value: string) => {
@@ -873,29 +902,37 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
             />
           </BillFormField>
 
+          <BillFormField fieldKey="siteKey">
+            <Select
+              label="Sede *"
+              value={formData.siteKey}
+              options={siteOptions}
+              onChange={(e) => handleSiteChange(e.target.value)}
+              placeholder={formData.city ? 'Seleccione una sede' : 'Primero seleccione ciudad'}
+              error={errors.siteKey}
+              disabled={!formData.city || locationsLoading}
+            />
+          </BillFormField>
+
           <BillFormField fieldKey="businessGroup">
             <Select
               label="Grupo *"
               value={formData.businessGroup}
               options={businessGroupOptions}
               onChange={(e) => handleBusinessGroupChange(e.target.value)}
-              placeholder={formData.city ? 'Seleccione un grupo' : 'Primero seleccione ciudad'}
+              placeholder="Seleccione un grupo"
               error={errors.businessGroup}
-              disabled={!formData.city || locationsLoading}
+              disabled={locationsLoading}
             />
           </BillFormField>
 
           <BillFormField fieldKey="location">
-            <Select
+            <Input
               label="Ubicación *"
               value={formData.location}
-              options={locationAddressOptions}
-              onChange={(e) => handleLocationChange(e.target.value)}
-              placeholder={
-                formData.businessGroup ? 'Seleccione una ubicación' : 'Primero seleccione un grupo'
-              }
+              readOnly
+              placeholder="Se completa al seleccionar la sede"
               error={errors.location}
-              disabled={!formData.city || !formData.businessGroup || locationsLoading}
             />
           </BillFormField>
 

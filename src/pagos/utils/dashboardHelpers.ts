@@ -1,4 +1,5 @@
 import { ServiceType, UtilityBill } from '../types';
+import { billMatchesCanonicalSite } from './billSiteResolution';
 
 export const DASHBOARD_SERVICE_TYPE_ORDER: ServiceType[] = [
   'electricity',
@@ -52,10 +53,8 @@ export const sumBillTotal = (bills: UtilityBill[]): number =>
 
 export const normalizeLocation = (location?: string | null): string => location?.trim() || '';
 
-export const billMatchesLocation = (bill: UtilityBill, locationFilter: string): boolean => {
-  if (locationFilter === 'all') return true;
-  return normalizeLocation(bill.location) === locationFilter;
-};
+export const billMatchesLocation = (bill: UtilityBill, locationFilter: string): boolean =>
+  billMatchesCanonicalSite(bill, locationFilter);
 
 export const billHasServiceType = (
   bill: UtilityBill,

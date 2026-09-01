@@ -49,6 +49,10 @@ export const validateBillForm = (formData: UtilityBillFormData): ValidationError
     errors.city = 'La ciudad es requerida';
   }
 
+  if (!formData.siteKey.trim()) {
+    errors.siteKey = 'La sede es requerida';
+  }
+
   if (!formData.businessGroup.trim()) {
     errors.businessGroup = 'El grupo es requerido';
   }
@@ -73,6 +77,7 @@ const BILL_FORM_FIELD_LABELS: Record<string, string> = {
   invoiceNumber: 'Número de factura',
   contractNumber: 'Número de contrato',
   city: 'Ciudad',
+  siteKey: 'Sede',
   businessGroup: 'Grupo',
   location: 'Ubicación',
   dueDate: 'Fecha de vencimiento',
@@ -120,7 +125,7 @@ export const getFirstValidationErrorKey = (errors: ValidationErrors): string | u
     return consumptionKeys[0];
   }
 
-  const locationOrder = ['city', 'businessGroup', 'location', 'dueDate'];
+  const locationOrder = ['city', 'siteKey', 'businessGroup', 'location', 'dueDate'];
   for (const key of locationOrder) {
     if (errors[key]) {
       return key;

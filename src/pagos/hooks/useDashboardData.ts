@@ -14,6 +14,7 @@ import {
   formatUnitsSummary,
   sumBillTotal,
 } from '../utils/dashboardHelpers';
+import { groupBillsByCanonicalSite } from '../utils/billSiteResolution';
 
 const buildKpis = (bills: UtilityBill[], selectedPeriods: string[], allBills: UtilityBill[]): DashboardKPI => {
   const monthlyTotal = sumBillTotal(bills);
@@ -92,40 +93,42 @@ const buildServiceTypeData = (bills: UtilityBill[]): ServiceTypeChartItem[] =>
   }).filter((item) => item.value > 0 || item.consumption > 0);
 
 const buildLocationData = (bills: UtilityBill[]): LocationChartData => {
-  const byLocation = new Map<
-    string,
-    { total: number; count: number; units: Map<string, number> }
-  >();
+  const grouped = groupBillsByCanonicalSite(bills);
 
-  bills.forEach((bill) => {
-    const key = bill.location?.trim() || 'Sin sede';
-    const current = byLocation.get(key) ?? { total: 0, count: 0, units: new Map() };
-    current.total += Number(bill.totalAmount) || 0;
-    current.count += 1;
+  const entries = [...grouped.entries()].map(([, { label, bills: siteBills }]) => {
+    const units = new Map<string, number>();
+    let total = 0;
 
-    if (bill.consumptions?.length) {
-      bill.consumptions.forEach((line) => {
-        accumulateConsumptionUnits(current.units, Number(line.consumption) || 0, line.unitOfMeasure);
-      });
-    } else {
-      accumulateConsumptionUnits(current.units, Number(bill.consumption) || 0, bill.unitOfMeasure);
-    }
+    siteBills.forEach((bill) => {
+      total += Number(bill.totalAmount) || 0;
+      if (bill.consumptions?.length) {
+        bill.consumptions.forEach((line) => {
+          accumulateConsumptionUnits(units, Number(line.consumption) || 0, line.unitOfMeasure);
+        });
+      } else {
+        accumulateConsumptionUnits(units, Number(bill.consumption) || 0, bill.unitOfMeasure);
+      }
+    });
 
-    byLocation.set(key, current);
+    return {
+      label,
+      total,
+      count: siteBills.length,
+      units,
+    };
   });
 
-  const labels = [...byLocation.entries()]
-    .sort(([, left], [, right]) => {
-      const totalDiff = right.total - left.total;
-      if (totalDiff !== 0) return totalDiff;
-      return left.localeCompare(right, 'es');
-    })
-    .map(([label]) => label);
+  const sorted = [...entries].sort((left, right) => {
+    const totalDiff = right.total - left.total;
+    if (totalDiff !== 0) return totalDiff;
+    return left.label.localeCompare(right.label, 'es');
+  });
+
   return {
-    labels,
-    data: labels.map((label) => byLocation.get(label)?.total ?? 0),
-    counts: labels.map((label) => byLocation.get(label)?.count ?? 0),
-    unitsSummary: labels.map((label) => formatUnitsSummary(byLocation.get(label)?.units ?? new Map())),
+    labels: sorted.map((entry) => entry.label),
+    data: sorted.map((entry) => entry.total),
+    counts: sorted.map((entry) => entry.count),
+    unitsSummary: sorted.map((entry) => formatUnitsSummary(entry.units)),
   };
 };
 

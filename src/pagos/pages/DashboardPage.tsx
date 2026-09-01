@@ -45,7 +45,7 @@ const hasActiveDashboardFilters = ({
   rangeMode,
   selectedPeriods,
   selectedRangeKeys,
-  locationFilter,
+  siteFilter,
   serviceTypeFilter,
   startDate,
   endDate,
@@ -55,7 +55,7 @@ const hasActiveDashboardFilters = ({
   rangeMode: DashboardRangeMode;
   selectedPeriods: string[];
   selectedRangeKeys: string[];
-  locationFilter: string;
+  siteFilter: string;
   serviceTypeFilter: ServiceType | 'all';
   startDate: string;
   endDate: string;
@@ -65,7 +65,7 @@ const hasActiveDashboardFilters = ({
   if (rangeMode !== 'global') return true;
   if (selectedPeriods.length > 0) return true;
   if (selectedRangeKeys.length > 0) return true;
-  if (locationFilter !== 'all') return true;
+  if (siteFilter !== 'all') return true;
   if (serviceTypeFilter !== 'all') return true;
   if (startDate) return true;
   if (endDate) return true;
@@ -75,14 +75,14 @@ const hasActiveDashboardFilters = ({
 
 export const DashboardPage: React.FC = () => {
   const { bills: allBills, loading, error } = useBills({});
-  const { availablePeriods, availableLocations, availableYears } =
+  const { availablePeriods, availableSites, availableYears } =
     useDashboardFilterOptions(allBills);
 
   const [rangeMode, setRangeMode] = useState<DashboardRangeMode>('global');
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
   const [selectedRangeKeys, setSelectedRangeKeys] = useState<string[]>([]);
   const [yearForRanges, setYearForRanges] = useState<number>(new Date().getFullYear());
-  const [locationFilter, setLocationFilter] = useState('all');
+  const [siteFilter, setSiteFilter] = useState('all');
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceType | 'all'>('all');
   const [compareActive, setCompareActive] = useState(false);
   const [comparePeriods, setComparePeriods] = useState<string[]>([]);
@@ -122,7 +122,7 @@ export const DashboardPage: React.FC = () => {
     setSelectedPeriods([]);
     setSelectedRangeKeys([]);
     setYearForRanges(availableYears[0] ?? new Date().getFullYear());
-    setLocationFilter('all');
+    setSiteFilter('all');
     setServiceTypeFilter('all');
     setCompareActive(false);
     setComparePeriods([]);
@@ -134,7 +134,7 @@ export const DashboardPage: React.FC = () => {
     rangeMode,
     selectedPeriods,
     selectedRangeKeys,
-    locationFilter,
+    siteFilter,
     serviceTypeFilter,
     startDate,
     endDate,
@@ -153,11 +153,11 @@ export const DashboardPage: React.FC = () => {
   const scopeFilters = useMemo(
     () => ({
       periods: [] as string[],
-      locationFilter,
+      locationFilter: siteFilter,
       serviceType: serviceTypeFilter,
       ...dateRangeFilters,
     }),
-    [locationFilter, serviceTypeFilter, dateRangeFilters]
+    [siteFilter, serviceTypeFilter, dateRangeFilters]
   );
 
   /** Misma sede/tipo, todos los periodos → base del % de variación. */
@@ -170,22 +170,22 @@ export const DashboardPage: React.FC = () => {
     () =>
       filterDashboardBills(allBills, {
         periods: selectedPeriods,
-        locationFilter,
+        locationFilter: siteFilter,
         serviceType: serviceTypeFilter,
         ...dateRangeFilters,
       }),
-    [allBills, selectedPeriods, locationFilter, serviceTypeFilter, dateRangeFilters]
+    [allBills, selectedPeriods, siteFilter, serviceTypeFilter, dateRangeFilters]
   );
 
   const periodBillsCompare = useMemo(() => {
     if (!compareActive || comparePeriods.length === 0) return [];
     return filterDashboardBills(allBills, {
       periods: comparePeriods,
-      locationFilter,
+      locationFilter: siteFilter,
       serviceType: serviceTypeFilter,
       ...dateRangeFilters,
     });
-  }, [allBills, compareActive, comparePeriods, locationFilter, serviceTypeFilter, dateRangeFilters]);
+  }, [allBills, compareActive, comparePeriods, siteFilter, serviceTypeFilter, dateRangeFilters]);
 
   const { mainData, compareData, compareTrendData, locationCompareDataAligned } =
     useDashboardComparison(
@@ -273,13 +273,13 @@ export const DashboardPage: React.FC = () => {
             className="py-1.5 text-sm min-h-0"
           />
           <Select
-            label="Sede / ubicación"
-            value={locationFilter}
+            label="Sede"
+            value={siteFilter}
             options={[
               { value: 'all', label: 'Todas las sedes' },
-              ...availableLocations.map((location) => ({ value: location, label: location })),
+              ...availableSites.map((siteName) => ({ value: siteName, label: siteName })),
             ]}
-            onChange={(e) => setLocationFilter(e.target.value)}
+            onChange={(e) => setSiteFilter(e.target.value)}
             className="py-1.5 text-sm min-h-0"
           />
           <div className="col-span-2 lg:col-span-1 xl:col-span-2 grid grid-cols-2 gap-2">

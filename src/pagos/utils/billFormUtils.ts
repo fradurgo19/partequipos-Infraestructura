@@ -1,5 +1,5 @@
 import { UtilityBill, UtilityBillFormData, BillConsumption } from '../types';
-import { resolveBillLocationFromStored } from '../constants/billLocations';
+import { resolveBillFormSite } from './billSiteResolution';
 import { getBillFormFieldDomId } from './validators';
 
 const CONSUMPTIONS_SECTION_ID = 'bill-form-section-consumptions';
@@ -72,7 +72,7 @@ export function billToFormData(bill: UtilityBill): UtilityBillFormData {
           })
         ];
 
-  const resolved = resolveBillLocationFromStored(
+  const resolved = resolveBillFormSite(
     bill.location ?? '',
     bill.city,
     bill.businessGroup
@@ -85,8 +85,9 @@ export function billToFormData(bill: UtilityBill): UtilityBillFormData {
     contractNumber: bill.contractNumber ?? '',
     costCenter: bill.costCenter ?? '',
     city: resolved.city,
-    businessGroup: resolved.businessGroup,
-    location: resolved.address,
+    siteKey: resolved.siteKey,
+    businessGroup: bill.businessGroup ?? resolved.businessGroup,
+    location: resolved.location,
     siteId: bill.siteId ?? resolved.siteId,
     dueDate: toDateString(bill.dueDate) ?? '',
     attachedDocument: null,

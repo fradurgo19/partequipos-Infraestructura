@@ -136,7 +136,7 @@ export const LocationChart: React.FC<LocationChartProps> = ({ locationData, comp
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-      <h3 className="text-sm font-semibold text-[#50504f] mb-4">Por sede / ubicación</h3>
+      <h3 className="text-sm font-semibold text-[#50504f] mb-4">Por sede</h3>
       <div
         className={needsScroll ? 'overflow-y-auto pr-1' : undefined}
         style={{ height: viewportHeight }}

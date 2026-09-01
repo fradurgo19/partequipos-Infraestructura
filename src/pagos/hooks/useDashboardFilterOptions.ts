@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { UtilityBill } from '../types';
+import { collectCanonicalSiteFilterOptions } from '../utils/billSiteResolution';
 
 export const useDashboardFilterOptions = (allBills: UtilityBill[]) =>
   useMemo(() => {
@@ -7,9 +8,7 @@ export const useDashboardFilterOptions = (allBills: UtilityBill[]) =>
       ...new Set(allBills.map((bill) => bill.period).filter(Boolean)),
     ].sort((a, b) => b.localeCompare(a));
 
-    const availableLocations = [
-      ...new Set(allBills.map((bill) => bill.location?.trim()).filter(Boolean) as string[]),
-    ].sort((a, b) => a.localeCompare(b, 'es'));
+    const availableSites = collectCanonicalSiteFilterOptions(allBills);
 
     const yearsFromPeriods = availablePeriods
       .map((period) => Number(period.slice(0, 4)))
@@ -20,5 +19,5 @@ export const useDashboardFilterOptions = (allBills: UtilityBill[]) =>
       availableYears.push(new Date().getFullYear());
     }
 
-    return { availablePeriods, availableLocations, availableYears };
+    return { availablePeriods, availableSites, availableYears };
   }, [allBills]);

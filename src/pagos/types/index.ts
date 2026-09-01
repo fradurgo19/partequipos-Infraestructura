@@ -74,6 +74,7 @@ export interface UtilityBillFormData {
   contractNumber: string;
   costCenter: string;
   city: string;
+  siteKey: string;
   businessGroup: string;
   location: string;
   siteId?: string;
