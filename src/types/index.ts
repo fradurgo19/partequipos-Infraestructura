@@ -79,6 +79,7 @@ export interface Task {
   budget_approval_date?: string;
   delivery_date?: string;
   completion_date?: string;
+  completion_cost?: string;
   initial_photo_url?: string;
   completion_photo_url?: string;
   service_order_id?: string;

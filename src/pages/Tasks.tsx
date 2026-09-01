@@ -163,6 +163,10 @@ export const Tasks = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [formData, setFormData] = useState(emptyTaskForm());
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [completingTask, setCompletingTask] = useState<TaskRow | null>(null);
+  const [completionCostText, setCompletionCostText] = useState('');
+  const [completionCostError, setCompletionCostError] = useState('');
 
   const canEdit = profile?.role === 'admin';
 
@@ -287,8 +291,12 @@ export const Tasks = () => {
     loadData();
   };
 
-  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
-    if (!profile) return;
+  const handleStatusChange = async (
+    taskId: string,
+    newStatus: TaskStatus,
+    completionCost?: string
+  ): Promise<boolean> => {
+    if (!profile) return false;
 
     const task = tasks.find(t => t.id === taskId);
     const updateData: Record<string, string | null> = { status: newStatus };
@@ -299,28 +307,76 @@ export const Tasks = () => {
     }
 
     if (newStatus === 'completed') {
+      const trimmedCost = completionCost?.trim();
+      if (!trimmedCost) {
+        return false;
+      }
       updateData.completion_date = new Date().toISOString().split('T')[0];
       updateData.completed_at = new Date().toISOString();
+      updateData.completion_cost = trimmedCost;
     }
 
     const { error } = await supabase.from('tasks').update(updateData).eq('id', taskId);
 
-    if (!error) {
-      let eventType = 'updated';
-      if (newStatus === 'completed') eventType = 'completed';
-      else if (newStatus === 'in_progress') eventType = 'started';
-      const uid = session?.user?.id ?? profile.id;
-      await supabase.from('task_timeline').insert([
-        {
-          task_id: taskId,
-          event_type: eventType,
-          description: `Estado cambiado a ${STATUS_LABELS[newStatus]}`,
-          user_id: uid,
-        },
-      ]);
-
-      loadData();
+    if (error) {
+      console.error('Error al actualizar estado de tarea:', error);
+      return false;
     }
+
+    let eventType = 'updated';
+    if (newStatus === 'completed') eventType = 'completed';
+    else if (newStatus === 'in_progress') eventType = 'started';
+
+    const timelineDescription =
+      newStatus === 'completed'
+        ? `Tarea completada. Costo: ${completionCost?.trim()}`
+        : `Estado cambiado a ${STATUS_LABELS[newStatus]}`;
+
+    const uid = session?.user?.id ?? profile.id;
+    await supabase.from('task_timeline').insert([
+      {
+        task_id: taskId,
+        event_type: eventType,
+        description: timelineDescription,
+        user_id: uid,
+      },
+    ]);
+
+    loadData();
+    return true;
+  };
+
+  const openCompleteModal = (task: TaskRow) => {
+    setCompletingTask(task);
+    setCompletionCostText(task.completion_cost ?? '');
+    setCompletionCostError('');
+    setShowCompleteModal(true);
+  };
+
+  const closeCompleteModal = () => {
+    setShowCompleteModal(false);
+    setCompletingTask(null);
+    setCompletionCostText('');
+    setCompletionCostError('');
+  };
+
+  const handleConfirmComplete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!completingTask) return;
+
+    const trimmedCost = completionCostText.trim();
+    if (!trimmedCost) {
+      setCompletionCostError('Indique cuánto costó completar la tarea');
+      return;
+    }
+
+    const success = await handleStatusChange(completingTask.id, 'completed', trimmedCost);
+    if (!success) {
+      setCompletionCostError('No se pudo completar la tarea. Intente nuevamente.');
+      return;
+    }
+
+    closeCompleteModal();
   };
 
   const handleRevertCompletedTask = async (taskId: string, closeModalAfter = false) => {
@@ -335,6 +391,7 @@ export const Tasks = () => {
       status: 'pending',
       completion_date: null,
       completed_at: null,
+      completion_cost: null,
       start_date: null,
       started_at: null,
     };
@@ -606,7 +663,7 @@ export const Tasks = () => {
                         </Button>
                       )}
                       {canEdit && task.status === 'in_progress' && (
-                        <Button size="sm" variant="secondary" onClick={() => handleStatusChange(task.id, 'completed')}>
+                        <Button size="sm" variant="secondary" onClick={() => openCompleteModal(task)}>
                           Completar
                         </Button>
                       )}
@@ -654,6 +711,7 @@ export const Tasks = () => {
               <div><p className="text-gray-500 text-xs">Asignado a</p><p className="font-medium">{getAssignedToLabel(selectedTask)}</p></div>
               <div><p className="text-gray-500 text-xs">Responsable</p><p className="font-medium">{getResponsibleName(selectedTask)}</p></div>
               <div><p className="text-gray-500 text-xs">Presupuesto</p><p className="font-medium">{formatCurrency(selectedTask.budget_amount)}</p></div>
+              <div><p className="text-gray-500 text-xs">Costo de completación</p><p className="font-medium">{selectedTask.completion_cost || '—'}</p></div>
               <div><p className="text-gray-500 text-xs">Fecha solicitud</p><p className="font-medium">{formatDate(selectedTask.request_date)}</p></div>
               <div><p className="text-gray-500 text-xs">Fecha inicio</p><p className="font-medium">{formatDate(selectedTask.start_date)}</p></div>
               <div><p className="text-gray-500 text-xs">Fecha orden de servicio</p><p className="font-medium">{formatDate(selectedTask.service_order_date)}</p></div>
@@ -707,6 +765,39 @@ export const Tasks = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={showCompleteModal}
+        onClose={closeCompleteModal}
+        title={`Completar tarea - ${completingTask?.title ?? ''}`}
+        size="md"
+      >
+        <form onSubmit={handleConfirmComplete} className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Registre el costo final de completar esta tarea antes de marcarla como completada.
+          </p>
+          <Input
+            label="Costo de completación"
+            placeholder="Ej: $1.250.000 COP"
+            value={completionCostText}
+            onChange={(e) => {
+              setCompletionCostText(e.target.value);
+              if (completionCostError) setCompletionCostError('');
+            }}
+            error={completionCostError}
+            fullWidth
+            required
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={closeCompleteModal}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="secondary">
+              Confirmar completación
+            </Button>
+          </div>
+        </form>
       </Modal>
 
       <Modal
