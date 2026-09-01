@@ -39,6 +39,13 @@ const REQUESTING_AREAS = [
   'Bienes inmuebles'
 ];
 
+const ASSIGNED_TO_OPTIONS = [
+  { value: 'Infraestructura', label: 'Infraestructura' },
+  { value: 'Administrativo', label: 'Administrativo' },
+] as const;
+
+type AssignedToOption = (typeof ASSIGNED_TO_OPTIONS)[number]['value'];
+
 type TaskRow = Task & {
   requester?: { id: string; full_name: string; role: string };
   assignee?: { id: string; full_name: string; role: string };
@@ -66,6 +73,12 @@ const getSiteName = (task: TaskRow): string => task.site?.name || '—';
 
 const getResponsibleName = (task: TaskRow): string => task.responsible?.full_name || '—';
 
+const getAssignedToLabel = (task: TaskRow): string =>
+  task.assigned_to || task.assignee?.full_name || 'Infraestructura';
+
+const resolveAssignedTo = (value?: string | null): AssignedToOption =>
+  value === 'Administrativo' ? 'Administrativo' : 'Infraestructura';
+
 const buildTaskPayload = (
   formData: ReturnType<typeof emptyTaskForm>,
   infrastructureUserId?: string
@@ -77,7 +90,8 @@ const buildTaskPayload = (
   site_id: formData.site_id || null,
   project_name: formData.project_name || null,
   requester_name: formData.requester_name,
-  assignee_id: infrastructureUserId || null,
+  assigned_to: formData.assigned_to,
+  assignee_id: formData.assigned_to === 'Infraestructura' ? infrastructureUserId || null : null,
   responsible_id: formData.responsible_id || null,
   budget_amount: formData.budget_amount ? Number.parseFloat(formData.budget_amount) : null,
   priority: formData.priority,
@@ -119,6 +133,7 @@ const emptyTaskForm = () => ({
   site_id: '',
   project_name: '',
   requester_name: '',
+  assigned_to: 'Infraestructura' as AssignedToOption,
   assignee_id: '',
   responsible_id: '',
   budget_amount: '',
@@ -366,6 +381,7 @@ export const Tasks = () => {
       site_id: task.site_id ?? '',
       project_name: task.project_name ?? '',
       requester_name: task.requester_name ?? task.requester?.full_name ?? '',
+      assigned_to: resolveAssignedTo(task.assigned_to),
       assignee_id: task.assignee_id ?? '',
       responsible_id: task.responsible_id ?? '',
       budget_amount: task.budget_amount?.toString() ?? '',
@@ -630,7 +646,7 @@ export const Tasks = () => {
               <div><p className="text-gray-500 text-xs">Sede</p><p className="font-medium">{getSiteName(selectedTask)}</p></div>
               <div><p className="text-gray-500 text-xs">Proyecto</p><p className="font-medium">{selectedTask.project_name || '—'}</p></div>
               <div><p className="text-gray-500 text-xs">Solicitante</p><p className="font-medium">{getRequesterName(selectedTask)}</p></div>
-              <div><p className="text-gray-500 text-xs">Asignado a</p><p className="font-medium">{selectedTask.assignee?.full_name || 'Infraestructura'}</p></div>
+              <div><p className="text-gray-500 text-xs">Asignado a</p><p className="font-medium">{getAssignedToLabel(selectedTask)}</p></div>
               <div><p className="text-gray-500 text-xs">Responsable</p><p className="font-medium">{getResponsibleName(selectedTask)}</p></div>
               <div><p className="text-gray-500 text-xs">Presupuesto</p><p className="font-medium">{formatCurrency(selectedTask.budget_amount)}</p></div>
               <div><p className="text-gray-500 text-xs">Fecha solicitud</p><p className="font-medium">{formatDate(selectedTask.request_date)}</p></div>
@@ -798,19 +814,19 @@ export const Tasks = () => {
               fullWidth
               required
             />
-            <div>
-              <label htmlFor="task-assignee-display" className="block text-sm font-medium text-gray-700 mb-1">
-                Asignado a
-              </label>
-              <input
-                id="task-assignee-display"
-                type="text"
-                value="Infraestructura"
-                disabled
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
-              />
-            </div>
+            <Select
+              label="Asignado a"
+              value={formData.assigned_to}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  assigned_to: resolveAssignedTo(e.target.value),
+                })
+              }
+              options={[...ASSIGNED_TO_OPTIONS]}
+              fullWidth
+              required
+            />
           </div>
 
           <Select

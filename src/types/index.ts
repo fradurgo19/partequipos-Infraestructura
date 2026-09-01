@@ -62,6 +62,7 @@ export interface Task {
   requester_name?: string;
   requester_id: string;
   assignee_id?: string;
+  assigned_to?: string;
   responsible_id?: string;
   status: TaskStatus;
   priority?: TaskPriority;

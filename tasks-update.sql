@@ -17,6 +17,7 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS service_order_id uuid;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS notification_sent boolean DEFAULT false;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS notification_recipients text[];
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS responsible_id uuid REFERENCES profiles(id) ON DELETE SET NULL;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assigned_to text;
 
 -- Agregar campo photo_url a task_timeline para almacenar fotos de cada evento
 ALTER TABLE task_timeline ADD COLUMN IF NOT EXISTS photo_url text;
@@ -29,6 +30,8 @@ CREATE INDEX IF NOT EXISTS idx_tasks_request_date ON tasks(request_date);
 CREATE INDEX IF NOT EXISTS idx_tasks_site_project ON tasks(site_id, project_name);
 CREATE INDEX IF NOT EXISTS idx_tasks_status_date ON tasks(status, request_date);
 
+COMMENT ON COLUMN tasks.responsible_id IS 'Usuario responsable de ejecutar la tarea';
+COMMENT ON COLUMN tasks.assigned_to IS 'Equipo asignado (Infraestructura, Administrativo, etc.)';
 COMMENT ON COLUMN tasks.project_name IS 'Nombre del proyecto (opcional)';
 COMMENT ON COLUMN tasks.requester_name IS 'Nombre de quien solicita la tarea';
 COMMENT ON COLUMN tasks.request_date IS 'Fecha de solicitud de la tarea';
