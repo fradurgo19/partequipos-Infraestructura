@@ -6,23 +6,19 @@ import {
 } from '../../middleware/pagosAuth.js';
 import { getPagosTable, transformUserToFrontend } from '../../pagos/transforms.js';
 import { resolveActorIsTi } from '../../pagos/access.js';
+import { listPagosUsers } from '../../pagos/handlers/listUsers.js';
 
 const router = express.Router();
 const PAGOS_TABLE = getPagosTable();
 
 router.get('/', authenticatePagosToken, requirePagosBillManager, async (req, res) => {
   try {
-    const actorIsTi = await resolveActorIsTi(req.pagosUser);
-    const { data: users, error } = await supabase
-      .from(PAGOS_TABLE)
-      .select('id, email, full_name, role, department, location, is_ti, created_at, updated_at')
-      .eq('is_ti', actorIsTi)
-      .order('created_at', { ascending: false });
-
-    if (error) return res.status(500).json({ error: 'Error al obtener usuarios' });
-    res.json((users || []).map(transformUserToFrontend));
+    const users = await listPagosUsers(req.pagosUser);
+    res.json(users);
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener usuarios' });
+    console.error('Error al listar usuarios pagos:', error);
+    const status = error?.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al obtener usuarios' });
   }
 });
 

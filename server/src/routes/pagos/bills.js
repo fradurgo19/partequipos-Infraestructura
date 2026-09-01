@@ -5,8 +5,8 @@ import {
   transformBillToFrontend,
   transformConsumptionToFrontend,
 } from '../../pagos/transforms.js';
-import { canViewAllBills, applyBillListScope, resolveActorIsTi } from '../../pagos/access.js';
-import { applyTiBillDeleteScope } from '../../pagos/tiScope.js';
+import { canViewAllBills, resolveBillListTiFilter, resolveActorIsTi } from '../../pagos/access.js';
+import { getTiScopeSupport } from '../../pagos/tiScope.js';
 import { fetchConsumptionsByBillIds } from '../../pagos/storage.js';
 import { createPagosBill } from '../../pagos/handlers/createBill.js';
 import { getPagosBillById } from '../../pagos/handlers/getBillById.js';
@@ -35,8 +35,12 @@ router.get('/', authenticatePagosToken, async (req, res) => {
     const viewAll = await canViewAllBills(req.pagosUser);
     const isConsolidated = consolidated === true || consolidated === 'true';
 
+    const tiFilter = await resolveBillListTiFilter(req.pagosUser, { consolidated: isConsolidated });
+
     let query = supabase.from('utility_bills').select('*');
-    query = await applyBillListScope(query, req.pagosUser, { consolidated: isConsolidated });
+    if (tiFilter !== undefined) {
+      query = query.eq('is_ti', tiFilter);
+    }
     if (!viewAll) {
       query = query.eq('user_id', req.pagosUser.id);
     }
@@ -55,14 +59,18 @@ router.get('/', authenticatePagosToken, async (req, res) => {
     }
 
     const { data: bills, error } = await query.order('created_at', { ascending: false });
-    if (error) return res.status(500).json({ error: 'Error al obtener facturas' });
+    if (error) {
+      console.error('Error al listar facturas:', error);
+      return res.status(500).json({ error: error.message || 'Error al obtener facturas' });
+    }
 
     const transformed = await attachConsumptions(bills || []);
     res.set('Cache-Control', 'no-store');
     res.json(transformed);
   } catch (error) {
     console.error('Error al listar facturas:', error);
-    res.status(500).json({ error: 'Error al obtener facturas' });
+    const status = error?.statusCode || 500;
+    res.status(status).json({ error: error.message || 'Error al obtener facturas' });
   }
 });
 
@@ -125,8 +133,11 @@ router.post('/bulk-delete', authenticatePagosToken, async (req, res) => {
     let deletedCount = 0;
 
     if (viewAll) {
+      const scope = await getTiScopeSupport();
       let deleteQuery = supabase.from('utility_bills').delete().in('id', idList);
-      deleteQuery = await applyTiBillDeleteScope(deleteQuery, actorIsTi);
+      if (scope.bills) {
+        deleteQuery = deleteQuery.eq('is_ti', actorIsTi);
+      }
       const { data: deletedRows, error: deleteError } = await deleteQuery.select('id');
 
       if (deleteError) {

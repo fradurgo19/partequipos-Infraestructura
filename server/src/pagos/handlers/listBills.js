@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabaseClient.js';
-import { canViewAllBills, applyBillListScope } from '../access.js';
+import { canViewAllBills, resolveBillListTiFilter } from '../access.js';
 import { fetchConsumptionsByBillIds } from '../storage.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 
@@ -19,9 +19,13 @@ export const listPagosBills = async (pagosUser, query = {}) => {
   const { period, serviceType, city, businessGroup, location, status, search, consolidated } = query;
   const viewAll = await canViewAllBills(pagosUser);
   const isConsolidated = consolidated === true || consolidated === 'true';
+  const tiFilter = await resolveBillListTiFilter(pagosUser, { consolidated: isConsolidated });
 
   let dbQuery = supabase.from('utility_bills').select('*');
-  dbQuery = await applyBillListScope(dbQuery, pagosUser, { consolidated: isConsolidated });
+
+  if (tiFilter !== undefined) {
+    dbQuery = dbQuery.eq('is_ti', tiFilter);
+  }
 
   if (!viewAll) {
     dbQuery = dbQuery.eq('user_id', pagosUser.id);
@@ -43,9 +47,10 @@ export const listPagosBills = async (pagosUser, query = {}) => {
   const { data: bills, error } = await dbQuery
     .order('created_at', { ascending: false })
     .order('id', { ascending: false });
+
   if (error) {
     console.error('Error listPagosBills:', error);
-    const dbError = new Error('Error al obtener facturas');
+    const dbError = new Error(error.message || 'Error al obtener facturas');
     dbError.statusCode = 500;
     throw dbError;
   }

@@ -121,7 +121,7 @@ export const canManagePagosScope = async (pagosUser) => {
 
 export const canViewAllBillsInScope = async (pagosUser) => canManagePagosScope(pagosUser);
 
-export const applyBillListScope = async (query, pagosUser, { consolidated = false } = {}) => {
+export const resolveBillListTiFilter = async (pagosUser, { consolidated = false } = {}) => {
   if (consolidated) {
     const profile = await getPagosProfileAccess(pagosUser);
     const canConsolidate = Boolean(pagosUser?.infraAdmin) || isCoordinator(profile.role);
@@ -130,15 +130,24 @@ export const applyBillListScope = async (query, pagosUser, { consolidated = fals
       error.statusCode = 403;
       throw error;
     }
-    return query;
+    return undefined;
   }
 
-  const actorIsTi = await resolveActorIsTi(pagosUser);
-  const scopeEnabled = await isTiBillsScopeEnabled();
-  if (!scopeEnabled) {
+  const scope = await getTiScopeSupport();
+  if (!scope.bills) {
+    return undefined;
+  }
+
+  return resolveActorIsTi(pagosUser);
+};
+
+/** @deprecated Use resolveBillListTiFilter and apply .eq() synchronously on the query builder. */
+export const applyBillListScope = async (query, pagosUser, options = {}) => {
+  const tiFilter = await resolveBillListTiFilter(pagosUser, options);
+  if (tiFilter === undefined) {
     return query;
   }
-  return query.eq('is_ti', actorIsTi);
+  return query.eq('is_ti', tiFilter);
 };
 
 export const assertBillScopeAccess = async (pagosUser, billRow) => {
