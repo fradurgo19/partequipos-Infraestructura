@@ -50,7 +50,7 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
   ),
   site(
     'barranquilla-bodega-8',
-    'BARRANQUILLA CL 110 NRO.10-427 BODEGA NRO. 8',
+    'Barranquilla CL 110 NRO.10-427 Bodega NRO. 8',
     'BARRANQUILLA',
     'BARRANQUILLA CL 110 NRO.10-427 BODEGA NRO. 8',
     [
@@ -67,13 +67,13 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
   ),
   site(
     'barranquilla-bodega-7',
-    'BARRANQUILLA CL 110 NRO.10-427 BODEGA NRO. 7',
+    'Barranquilla CL 110 NRO.10-427 Bodega NRO. 7',
     'BARRANQUILLA',
     'CL 110 NRO. 10-427 BODEGA NRO. 7'
   ),
   site(
     'bogota-sede-nueva-cra68d',
-    'BOGOTA SEDE NUEVA CRA68D Nro.17A - 84',
+    'Bogota Sede Nueva CRA68D Nro.17A - 84',
     'BOGOTA',
     'BOGOTA SEDE NUEVA CRA68D Nro.17A - 84',
     [
@@ -85,14 +85,14 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
   site('istmina', 'Istmina', 'ISTMINA-CHOCO', 'BOMBA ZEUZ LA 70 ALM ERA EN MVTO'),
   site(
     'buenaventura-lote-37',
-    'BUENAVENTURA KM 13 VIA ALTERNA LOTE 37',
+    'Buenaventura KM 13 Via Alterna Lote 37',
     'BUENAVENTURA',
     'BUENAVENTURA KM 13 VIA ALTERNA',
     ['LOTE 37']
   ),
   site(
     'buenaventura-lote-38',
-    'BUENAVENTURA KM 13 VIA ALTERNA LOTE 38',
+    'Buenaventura KM 13 Via Alterna Lote 38',
     'BUENAVENTURA',
     'LOTE 38'
   ),
