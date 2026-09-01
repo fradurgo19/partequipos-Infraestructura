@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, TrendingUp, MapPin, DollarSign, Calendar } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, TrendingUp, MapPin, DollarSign, Calendar, FilterX } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
+import { Select } from '../atoms/Select';
 import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
+import { ImageLightbox } from '../molecules/ImageLightbox';
 import { InternalRequestForm } from '../organisms/InternalRequestForm';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -18,9 +20,90 @@ interface Indicators {
 }
 
 type InternalRequestWithRelations = InternalRequest & {
-  site?: { id?: string; name: string; location?: string };
+  site?: { id?: string; name: string; location?: string; city?: string };
   task?: { id?: string; title: string; status?: string; budget_amount?: number };
   requester?: { id?: string; full_name: string };
+};
+
+const buildIndicators = (requestsData: InternalRequestWithRelations[]): Indicators => {
+  const requestsBySiteMap = new Map<string, number>();
+  const investmentBySiteMap = new Map<string, number>();
+
+  requestsData.forEach((request) => {
+    if (request.site?.name) {
+      const siteName = request.site.name;
+      requestsBySiteMap.set(siteName, (requestsBySiteMap.get(siteName) || 0) + 1);
+
+      if (request.task?.budget_amount) {
+        investmentBySiteMap.set(
+          siteName,
+          (investmentBySiteMap.get(siteName) || 0) + (request.task.budget_amount || 0)
+        );
+      }
+    }
+  });
+
+  const requestsBySite = Array.from(requestsBySiteMap.entries()).map(([site_name, count]) => ({
+    site_name,
+    count,
+  }));
+
+  const investmentBySite = Array.from(investmentBySiteMap.entries()).map(([site_name, amount]) => ({
+    site_name,
+    amount,
+  }));
+
+  const totalInvestment = Array.from(investmentBySiteMap.values()).reduce((sum, amount) => sum + amount, 0);
+
+  return {
+    requestsBySite,
+    investmentBySite,
+    totalRequests: requestsData.length,
+    totalInvestment,
+  };
+};
+
+const isImageUrl = (url: string): boolean => /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(url);
+
+interface RequestAttachmentsGalleryProps {
+  photoUrls?: string[];
+  designUrls?: string[];
+  onPreview: (url: string) => void;
+}
+
+const RequestAttachmentsGallery: React.FC<RequestAttachmentsGalleryProps> = ({
+  photoUrls = [],
+  designUrls = [],
+  onPreview,
+}) => {
+  const attachments = [...photoUrls, ...designUrls];
+  if (attachments.length === 0) return null;
+
+  return (
+    <div className="mt-3">
+      <p className="text-gray-500 text-xs mb-2">Adjuntos ({attachments.length})</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {attachments.map((url) => (
+          <button
+            key={url}
+            type="button"
+            onClick={() => onPreview(url)}
+            className="group relative rounded-lg overflow-hidden border border-gray-200 bg-gray-50 hover:border-[#cf1b22] focus:outline-none focus:ring-2 focus:ring-[#cf1b22]"
+            title="Ampliar adjunto"
+          >
+            {isImageUrl(url) ? (
+              <img src={url} alt="" className="w-full h-24 sm:h-28 object-cover" />
+            ) : (
+              <div className="flex items-center justify-center h-24 sm:h-28 p-2 text-xs text-[#50504f]">
+                Ver archivo
+              </div>
+            )}
+            <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export const InternalRequests = () => {
@@ -29,12 +112,9 @@ export const InternalRequests = () => {
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [indicators, setIndicators] = useState<Indicators>({
-    requestsBySite: [],
-    investmentBySite: [],
-    totalRequests: 0,
-    totalInvestment: 0,
-  });
+  const [cityFilter, setCityFilter] = useState('all');
+  const [siteFilter, setSiteFilter] = useState('all');
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState(() =>
     createEmptyInternalRequestForm({
       department: profile?.department || '',
@@ -47,15 +127,13 @@ export const InternalRequests = () => {
     const [requestsResult, sitesResult] = await Promise.all([
       supabase
         .from('internal_requests')
-        .select('*, site:sites(id, name, location), task:tasks(id, title, status), requester:profiles!internal_requests_created_by_fkey(id, full_name)')
+        .select('*, site:sites(id, name, location, city), task:tasks(id, title, status), requester:profiles!internal_requests_created_by_fkey(id, full_name)')
         .order('created_at', { ascending: false }),
       supabase.from('sites').select('*').order('name'),
     ]);
 
     if (!requestsResult.error && requestsResult.data) {
-      const requestsData = requestsResult.data as InternalRequestWithRelations[];
-      setRequests(requestsData);
-      calculateIndicators(requestsData);
+      setRequests(requestsResult.data as InternalRequestWithRelations[]);
     }
     if (!sitesResult.error && sitesResult.data) {
       setSites(sitesResult.data);
@@ -75,43 +153,63 @@ export const InternalRequests = () => {
     setShowModal(true);
   };
 
-  const calculateIndicators = (requestsData: InternalRequestWithRelations[]) => {
-    const requestsBySiteMap = new Map<string, number>();
-    const investmentBySiteMap = new Map<string, number>();
+  const cityOptions = useMemo(() => {
+    const cities = sites
+      .map((site) => site.city?.trim())
+      .filter((city): city is string => Boolean(city));
+    return [...new Set(cities)].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  }, [sites]);
 
-    requestsData.forEach((request: InternalRequestWithRelations) => {
-      if (request.site?.name) {
-        const siteName = request.site.name;
-        requestsBySiteMap.set(siteName, (requestsBySiteMap.get(siteName) || 0) + 1);
-        
-        // Si hay tarea asociada con presupuesto, sumar a inversión
-        if (request.task?.budget_amount) {
-          investmentBySiteMap.set(
-            siteName,
-            (investmentBySiteMap.get(siteName) || 0) + (request.task.budget_amount || 0)
-          );
+  const siteFilterOptions = useMemo(() => {
+    const scopedSites =
+      cityFilter === 'all' ? sites : sites.filter((site) => site.city?.trim() === cityFilter);
+    return [...scopedSites].sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  }, [sites, cityFilter]);
+
+  const filteredRequests = useMemo(
+    () =>
+      requests.filter((request) => {
+        if (siteFilter !== 'all' && request.site_id !== siteFilter) {
+          return false;
         }
-      }
-    });
+        if (cityFilter !== 'all') {
+          const requestCity =
+            request.site?.city?.trim() ||
+            sites.find((site) => site.id === request.site_id)?.city?.trim();
+          if (requestCity !== cityFilter) {
+            return false;
+          }
+        }
+        return true;
+      }),
+    [requests, siteFilter, cityFilter, sites]
+  );
 
-    const requestsBySite = Array.from(requestsBySiteMap.entries()).map(([site_name, count]) => ({
-      site_name,
-      count,
-    }));
+  const indicators = useMemo(() => buildIndicators(filteredRequests), [filteredRequests]);
 
-    const investmentBySite = Array.from(investmentBySiteMap.entries()).map(([site_name, amount]) => ({
-      site_name,
-      amount,
-    }));
+  const filtersActive = cityFilter !== 'all' || siteFilter !== 'all';
 
-    const totalInvestment = Array.from(investmentBySiteMap.values()).reduce((sum, amount) => sum + amount, 0);
+  const handleCityFilterChange = (value: string) => {
+    setCityFilter(value);
+    if (siteFilter === 'all') return;
 
-    setIndicators({
-      requestsBySite,
-      investmentBySite,
-      totalRequests: requestsData.length,
-      totalInvestment,
-    });
+    const selectedSite = sites.find((site) => site.id === siteFilter);
+    if (value !== 'all' && selectedSite?.city?.trim() !== value) {
+      setSiteFilter('all');
+    }
+  };
+
+  const handleClearFilters = () => {
+    setCityFilter('all');
+    setSiteFilter('all');
+  };
+
+  const handlePreviewAttachment = (url: string) => {
+    if (isImageUrl(url)) {
+      setPreviewImageUrl(url);
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -326,6 +424,45 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
         </Button>
       </div>
 
+      <Card className="p-3 sm:p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-w-[240px]">
+            <Select
+              label="Ciudad"
+              value={cityFilter}
+              onChange={(e) => handleCityFilterChange(e.target.value)}
+              options={[
+                { value: 'all', label: 'Todas las ciudades' },
+                ...cityOptions.map((city) => ({ value: city, label: city })),
+              ]}
+              fullWidth
+            />
+            <Select
+              label="Sede"
+              value={siteFilter}
+              onChange={(e) => setSiteFilter(e.target.value)}
+              options={[
+                { value: 'all', label: 'Todas las sedes' },
+                ...siteFilterOptions.map((site) => ({ value: site.id, label: site.name })),
+              ]}
+              fullWidth
+            />
+          </div>
+          {filtersActive && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleClearFilters}
+              className="flex items-center gap-1.5"
+            >
+              <FilterX className="w-4 h-4" aria-hidden />
+              Borrar filtros
+            </Button>
+          )}
+        </div>
+      </Card>
+
       {/* Indicadores */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="border-l-4 border-blue-500">
@@ -425,7 +562,7 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
 
       {/* Lista de Solicitudes */}
       <div className="grid grid-cols-1 gap-4">
-        {requests.map((request: InternalRequestWithRelations) => (
+        {filteredRequests.map((request: InternalRequestWithRelations) => (
           <Card key={request.id} hover>
             <div className="space-y-4">
               <div className="flex items-start justify-between">
@@ -449,6 +586,9 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
                     <div>
                       <p className="text-gray-500 text-xs">Sede</p>
                       <p className="font-medium text-[#50504f]">{request.site?.name || 'N/A'}</p>
+                      {request.site?.city && (
+                        <p className="text-xs text-gray-500">{request.site.city}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-gray-500 text-xs">Solicitante</p>
@@ -489,18 +629,11 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
                     </div>
                   )}
 
-                  {request.photo_urls && request.photo_urls.length > 0 && (
-                    <div className="grid grid-cols-4 gap-2 mt-3">
-                      {request.photo_urls.slice(0, 4).map((url: string) => (
-                        <img
-                          key={url}
-                          src={url}
-                          alt=""
-                          className="w-full h-20 object-cover rounded"
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <RequestAttachmentsGallery
+                    photoUrls={request.photo_urls}
+                    designUrls={request.design_urls}
+                    onPreview={handlePreviewAttachment}
+                  />
                 </div>
               </div>
 
@@ -517,18 +650,37 @@ Por favor, revise la solicitud y la tarea asociada en el sistema.`,
         ))}
       </div>
 
-      {requests.length === 0 && (
+      {filteredRequests.length === 0 && (
         <Card>
           <div className="text-center py-12">
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay solicitudes</h3>
-            <p className="text-gray-500 mb-4">Crea tu primera solicitud</p>
-            <Button onClick={openNewRequestModal}>
-              <Plus className="w-5 h-5 mr-2" />
-              Nueva Solicitud
-            </Button>
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              {requests.length > 0 ? 'No hay solicitudes con los filtros seleccionados' : 'No hay solicitudes'}
+            </h3>
+            <p className="text-gray-500 mb-4">
+              {requests.length > 0
+                ? 'Prueba con otra ciudad o sede'
+                : 'Crea tu primera solicitud'}
+            </p>
+            {requests.length === 0 ? (
+              <Button onClick={openNewRequestModal}>
+                <Plus className="w-5 h-5 mr-2" />
+                Nueva Solicitud
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={handleClearFilters}>
+                <FilterX className="w-4 h-4 mr-2" />
+                Borrar filtros
+              </Button>
+            )}
           </div>
         </Card>
       )}
+
+      <ImageLightbox
+        imageUrl={previewImageUrl}
+        title="Adjunto de solicitud"
+        onClose={() => setPreviewImageUrl(null)}
+      />
 
       <Modal
         isOpen={showModal}
