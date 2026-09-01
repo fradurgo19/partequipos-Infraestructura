@@ -31,6 +31,7 @@ export const Quotations = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showOcrModal, setShowOcrModal] = useState(false);
+  const [showOcrPicker, setShowOcrPicker] = useState(false);
   const [selectedOcrQuotation, setSelectedOcrQuotation] = useState<Quotation | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -282,7 +283,20 @@ export const Quotations = () => {
 
   const openOcrModal = (quotation: Quotation) => {
     setSelectedOcrQuotation(quotation);
+    setShowOcrPicker(false);
     setShowOcrModal(true);
+  };
+
+  const handleOpenOcrPicker = () => {
+    if (quotations.length === 0) {
+      setShowOcrPicker(true);
+      return;
+    }
+    if (quotations.length === 1) {
+      openOcrModal(quotations[0]);
+      return;
+    }
+    setShowOcrPicker(true);
   };
 
   const handleDownloadSavedOcrExcel = (quotation: Quotation) => {
@@ -312,13 +326,36 @@ export const Quotations = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-[#50504f]">Comparativo de Cotizaciones</h1>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">Compare hasta tres cotizaciones de proveedores</p>
         </div>
-        {canManage && (
-          <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            <span className="text-sm sm:text-base">Nuevo Comparativo</span>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="secondary" onClick={handleOpenOcrPicker} className="w-full sm:w-auto">
+            <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <span className="text-sm sm:text-base">Imagen a Excel</span>
           </Button>
-        )}
+          {canManage && (
+            <Button onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <span className="text-sm sm:text-base">Nuevo Comparativo</span>
+            </Button>
+          )}
+        </div>
       </div>
+
+      <Card className="border border-[#cf1b22]/20 bg-[#fff7f7]">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <div>
+            <p className="font-semibold text-[#50504f] flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-[#cf1b22]" aria-hidden />
+              Convertidor imagen a Excel
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Suba la foto de una cotización, extraiga el texto a tabla editable y descargue el archivo Excel.
+            </p>
+          </div>
+          <Button variant="secondary" onClick={handleOpenOcrPicker} className="w-full sm:w-auto shrink-0">
+            Abrir convertidor
+          </Button>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4">
         {quotations.map((quotation: Quotation) => {
@@ -327,8 +364,8 @@ export const Quotations = () => {
           return (
             <Card key={quotation.id} hover>
               <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg text-[#50504f]">{quotation.title}</h3>
                       <Badge variant={(() => {
@@ -563,7 +600,7 @@ export const Quotations = () => {
                     )}
                   </div>
 
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 w-full lg:w-56 shrink-0">
                     <Button
                       size="sm"
                       variant="secondary"
@@ -754,6 +791,48 @@ export const Quotations = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={showOcrPicker}
+        onClose={() => setShowOcrPicker(false)}
+        title="Convertidor imagen a Excel"
+      >
+        {quotations.length === 0 ? (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Primero debe existir un comparativo de cotizaciones para asociar la tabla extraída de la imagen.
+            </p>
+            {canManage ? (
+              <Button
+                onClick={() => {
+                  setShowOcrPicker(false);
+                  setShowModal(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Crear comparativo
+              </Button>
+            ) : (
+              <p className="text-sm text-gray-500">Solicite a un administrador que cree un comparativo.</p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">Seleccione la cotización a la que desea asociar la imagen:</p>
+            {quotations.map((quotation) => (
+              <button
+                key={quotation.id}
+                type="button"
+                onClick={() => openOcrModal(quotation)}
+                className="w-full text-left rounded-lg border border-gray-200 px-4 py-3 hover:border-[#cf1b22] hover:bg-[#fff7f7] transition-colors"
+              >
+                <p className="font-medium text-[#50504f]">{quotation.title}</p>
+                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{quotation.description}</p>
+              </button>
+            ))}
+          </div>
+        )}
       </Modal>
 
       <QuotationImageToExcelModal
