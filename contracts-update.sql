@@ -12,7 +12,8 @@ ADD COLUMN IF NOT EXISTS project_name text, -- Nombre del proyecto asociado
 ADD COLUMN IF NOT EXISTS payment_schedule jsonb, -- Cronograma de pagos
 ADD COLUMN IF NOT EXISTS deliverables jsonb, -- Entregables del contrato
 ADD COLUMN IF NOT EXISTS warranty_period integer, -- Período de garantía en días
-ADD COLUMN IF NOT EXISTS warranty_terms text; -- Términos de garantía
+ADD COLUMN IF NOT EXISTS warranty_terms text, -- Términos de garantía
+ADD COLUMN IF NOT EXISTS attachment_urls text[] DEFAULT '{}'; -- Documentos e imágenes adjuntos del contrato
 
 -- Tabla para "Otro sí" (actividades adicionales)
 CREATE TABLE IF NOT EXISTS contract_addendums (
@@ -96,4 +97,5 @@ COMMENT ON COLUMN contracts.activity_type IS 'Tipo de actividad del contrato';
 COMMENT ON COLUMN contracts.cost_center IS 'Centro de costos';
 COMMENT ON COLUMN contracts.internal_client_type IS 'Tipo de cliente interno (Maquinaria, Repuestos, Bienes inmuebles)';
 COMMENT ON COLUMN contracts.budget_control IS 'Control de presupuesto del contrato';
+COMMENT ON COLUMN contracts.attachment_urls IS 'URLs de documentos e imágenes adjuntos al contrato';
 

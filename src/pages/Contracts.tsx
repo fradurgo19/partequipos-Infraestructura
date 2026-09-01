@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, CheckCircle, FileText } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -7,6 +7,7 @@ import { Select } from '../atoms/Select';
 import { Textarea } from '../atoms/Textarea';
 import { Modal } from '../molecules/Modal';
 import { Badge } from '../atoms/Badge';
+import { FileUpload } from '../molecules/FileUpload';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Contract, Contractor, Site, ContractAddendum } from '../types';
@@ -37,6 +38,75 @@ const ACTIVITY_TYPES = [
   'Otro',
 ];
 
+const isImageAttachment = (url: string): boolean =>
+  /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+
+const getAttachmentLabel = (url: string): string => {
+  const segment = url.split('/').pop() ?? 'archivo';
+  return decodeURIComponent(segment.split('?')[0]);
+};
+
+const getContractAttachments = (contract: Contract): string[] => {
+  if (contract.attachment_urls && contract.attachment_urls.length > 0) {
+    return contract.attachment_urls;
+  }
+  if (contract.contract_document_url) {
+    return [contract.contract_document_url];
+  }
+  return [];
+};
+
+interface ContractAttachmentsGalleryProps {
+  urls: string[];
+  editable?: boolean;
+  onRemove?: (url: string) => void;
+}
+
+const ContractAttachmentsGallery: React.FC<ContractAttachmentsGalleryProps> = ({
+  urls,
+  editable = false,
+  onRemove,
+}) => {
+  if (urls.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      {urls.map((url) => (
+        <div key={url} className="relative group border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+          {isImageAttachment(url) ? (
+            <a href={url} target="_blank" rel="noopener noreferrer" title="Abrir imagen">
+              <img src={url} alt="" className="w-full h-28 object-cover" />
+            </a>
+          ) : (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Abrir documento"
+              className="flex flex-col items-center justify-center h-28 p-2 text-center text-xs text-[#50504f] hover:bg-gray-100"
+            >
+              <FileText className="w-8 h-8 text-[#cf1b22] mb-1" aria-hidden />
+              <span className="line-clamp-2 break-all">{getAttachmentLabel(url)}</span>
+            </a>
+          )}
+          {editable && onRemove && (
+            <button
+              type="button"
+              onClick={() => onRemove(url)}
+              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Quitar adjunto"
+            >
+              <Trash2 className="w-3 h-3" aria-hidden />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export const Contracts = () => {
   const { profile } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -66,6 +136,7 @@ export const Contracts = () => {
     activities: [] as Array<{ id: string; description: string; amount: string }>,
     deliverables: [] as string[],
     payment_schedule: [] as Array<{ date: string; amount: string; description: string }>,
+    attachment_urls: [] as string[],
   });
 
   const [addendumData, setAddendumData] = useState({
@@ -186,6 +257,7 @@ export const Contracts = () => {
         amount: Number.parseFloat(p.amount) || 0,
         description: p.description,
       })) : null,
+      attachment_urls: formData.attachment_urls.length > 0 ? formData.attachment_urls : null,
       budget_control: null,
       status: 'draft',
       legal_review_status: 'pending',
@@ -273,6 +345,7 @@ export const Contracts = () => {
       })),
       deliverables: contract.deliverables || [],
       payment_schedule: contract.payment_schedule || [],
+      attachment_urls: getContractAttachments(contract),
     });
     setShowModal(true);
   };
@@ -296,6 +369,7 @@ export const Contracts = () => {
       activities: [],
       deliverables: [],
       payment_schedule: [],
+      attachment_urls: [],
     });
     setEditingContract(null);
   };
@@ -454,6 +528,15 @@ export const Contracts = () => {
                       <Badge variant={contract.legal_review_status === 'approved' ? 'success' : 'pending'} size="sm">
                         Revisión Jurídica: {contract.legal_review_status}
                       </Badge>
+                    </div>
+                  )}
+
+                  {getContractAttachments(contract).length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-gray-200">
+                      <p className="text-xs text-gray-500 mb-2">
+                        Documentos e imágenes ({getContractAttachments(contract).length})
+                      </p>
+                      <ContractAttachmentsGallery urls={getContractAttachments(contract)} />
                     </div>
                   )}
                 </div>
@@ -698,6 +781,37 @@ export const Contracts = () => {
               </div>
             ))}
           </fieldset>
+
+          <div className="space-y-3 pt-2 border-t border-gray-200">
+            <h3 className="font-semibold text-[#50504f] flex items-center gap-2">
+              <FileText className="w-5 h-5 text-[#cf1b22]" aria-hidden />
+              Documentos e imágenes del contrato
+            </h3>
+            <FileUpload
+              multiple
+              compressImages
+              bucket="documents"
+              folder="contracts"
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+              uploadLabel="Adjuntar documentos o imágenes"
+              onUploadComplete={(urls) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  attachment_urls: [...prev.attachment_urls, ...urls],
+                }));
+              }}
+            />
+            <ContractAttachmentsGallery
+              urls={formData.attachment_urls}
+              editable
+              onRemove={(url) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  attachment_urls: prev.attachment_urls.filter((item) => item !== url),
+                }));
+              }}
+            />
+          </div>
 
           <div className="flex justify-end gap-3 pt-4">
             <Button

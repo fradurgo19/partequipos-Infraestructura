@@ -340,6 +340,7 @@ export interface Contract {
   cost_center?: string;
   internal_client_type?: string;
   contract_document_url?: string;
+  attachment_urls?: string[];
   legal_review_notes?: string;
   budget_control?: {
     total_budget: number;
