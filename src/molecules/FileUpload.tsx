@@ -15,6 +15,7 @@ interface FileUploadProps {
   compressImages?: boolean;
   uploadMode?: 'authenticated' | 'public';
   onUploadComplete?: (urls: string[]) => void;
+  onFileSelected?: (file: File) => void;
   existingFiles?: string[];
   onRemove?: (url: string) => void;
   uploadLabel?: string;
@@ -73,6 +74,7 @@ export const FileUpload = ({
   compressImages = false,
   uploadMode = 'authenticated',
   onUploadComplete,
+  onFileSelected,
   existingFiles = [],
   onRemove,
   uploadLabel,
@@ -85,6 +87,10 @@ export const FileUpload = ({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+
+    if (!multiple && files[0]) {
+      onFileSelected?.(files[0]);
+    }
 
     if (!compressImages) {
       const oversizedFiles = files.filter((file) => file.size > maxSize * 1024 * 1024);

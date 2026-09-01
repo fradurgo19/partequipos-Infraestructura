@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Download, TrendingDown, TrendingUp, Mail } from 'lucide-react';
+import { Plus, Download, TrendingDown, TrendingUp, Mail, FileSpreadsheet } from 'lucide-react';
 import { Card } from '../atoms/Card';
 import { Button } from '../atoms/Button';
 import { Input } from '../atoms/Input';
@@ -12,6 +12,8 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Quotation } from '../types';
 import { generateQuotationComparisonPDF } from '../services/pdfGenerator';
+import { QuotationImageToExcelModal } from '../organisms/QuotationImageToExcelModal';
+import { downloadTableAsExcel } from '../utils/quotationExcel';
 
 // Tipos de cotización
 const TIPOS_COTIZACION = [
@@ -28,6 +30,8 @@ export const Quotations = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
+  const [selectedOcrQuotation, setSelectedOcrQuotation] = useState<Quotation | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -276,6 +280,21 @@ export const Quotations = () => {
     }
   };
 
+  const openOcrModal = (quotation: Quotation) => {
+    setSelectedOcrQuotation(quotation);
+    setShowOcrModal(true);
+  };
+
+  const handleDownloadSavedOcrExcel = (quotation: Quotation) => {
+    if (!quotation.ocr_table_data?.length) {
+      return;
+    }
+    downloadTableAsExcel(
+      quotation.ocr_table_data,
+      `${quotation.title.replaceAll(/\s+/g, '_')}_imagen_a_excel`
+    );
+  };
+
   const canManage = profile?.role === 'admin' || profile?.role === 'infrastructure' || profile?.role === 'supervision';
 
   if (loading) {
@@ -497,6 +516,38 @@ export const Quotations = () => {
                       </div>
                     )}
 
+                    {quotation.ocr_table_data && quotation.ocr_table_data.length > 0 && (
+                      <div className="mt-4 overflow-x-auto border border-gray-200 rounded-lg">
+                        <p className="text-xs font-medium text-gray-600 px-3 py-2 bg-gray-50 border-b border-gray-200">
+                          Tabla extraída de imagen
+                        </p>
+                        <table className="min-w-full text-xs">
+                          <tbody>
+                            {quotation.ocr_table_data.slice(0, 6).map((row) => (
+                              <tr
+                                key={`ocr-preview-${quotation.id}-${row.join('\u0001')}`}
+                                className="border-b border-gray-100"
+                              >
+                                {row.map((cell) => (
+                                  <td
+                                    key={`ocr-preview-cell-${quotation.id}-${row.join('\u0001')}-${cell}`}
+                                    className="px-2 py-1"
+                                  >
+                                    {cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {quotation.ocr_table_data.length > 6 && (
+                          <p className="text-xs text-gray-500 px-3 py-2">
+                            +{quotation.ocr_table_data.length - 6} filas más en Excel
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Mostrar comparativos si existen */}
                     {quotation.comparativo_por_monto && (
                       <div className="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
@@ -513,6 +564,24 @@ export const Quotations = () => {
                   </div>
 
                   <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => openOcrModal(quotation)}
+                    >
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      Imagen a Excel
+                    </Button>
+                    {quotation.ocr_table_data && quotation.ocr_table_data.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDownloadSavedOcrExcel(quotation)}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Excel guardado
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="secondary"
@@ -686,6 +755,16 @@ export const Quotations = () => {
           </div>
         </form>
       </Modal>
+
+      <QuotationImageToExcelModal
+        isOpen={showOcrModal}
+        onClose={() => {
+          setShowOcrModal(false);
+          setSelectedOcrQuotation(null);
+        }}
+        quotation={selectedOcrQuotation}
+        onSaved={loadData}
+      />
     </div>
   );
 };

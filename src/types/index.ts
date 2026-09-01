@@ -204,6 +204,8 @@ export interface Quotation {
   comparativo_por_monto?: any;
   comparativo_por_valor?: any;
   comparativo_por_descripcion?: any;
+  ocr_image_url?: string;
+  ocr_table_data?: string[][] | null;
   status: 'pending' | 'reviewed' | 'approved';
   reviewed_by?: string;
   reviewed_at?: string;

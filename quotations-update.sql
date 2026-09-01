@@ -9,6 +9,8 @@ ALTER TABLE quotations ADD COLUMN IF NOT EXISTS pdf_comparativo_url text;
 ALTER TABLE quotations ADD COLUMN IF NOT EXISTS comparativo_por_monto jsonb;
 ALTER TABLE quotations ADD COLUMN IF NOT EXISTS comparativo_por_valor jsonb;
 ALTER TABLE quotations ADD COLUMN IF NOT EXISTS comparativo_por_descripcion jsonb;
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS ocr_image_url text;
+ALTER TABLE quotations ADD COLUMN IF NOT EXISTS ocr_table_data jsonb;
 
 -- Comentarios para los nuevos campos
 COMMENT ON COLUMN quotations.tipo_cotizacion IS 'Tipo de cotización';
