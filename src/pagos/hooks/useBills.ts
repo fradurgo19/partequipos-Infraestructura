@@ -39,6 +39,7 @@ export const useBills = (filters?: FilterOptions) => {
     filters?.location,
     filters?.status,
     filters?.search,
+    filters?.consolidated,
   ]);
 
   const refresh = () => {

@@ -4,6 +4,7 @@ import { PagosAuthProvider, usePagosAuth } from './context/PagosAuthContext';
 import { PagosAuthLayout } from './templates/PagosAuthLayout';
 import { PagosProtectedLayout } from './templates/PagosProtectedLayout';
 import { PagosRoleProtectedRoute } from './components/PagosRoleProtectedRoute';
+import { isTiPagosUser } from './utils/pagosPermissions';
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
 const SignupPage = lazy(() => import('./pages/SignupPage').then((m) => ({ default: m.SignupPage })));
@@ -25,7 +26,12 @@ const Loading = () => (
 const PagosHomeRedirect = () => {
   const { profile, loading } = usePagosAuth();
   if (loading) return <Loading />;
-  const homePath = profile?.role === 'area_coordinator' ? 'dashboard' : 'reports';
+  const homePath =
+    profile?.role === 'area_coordinator'
+      ? 'dashboard'
+      : isTiPagosUser(profile)
+        ? 'bills'
+        : 'reports';
   return <Navigate to={homePath} replace />;
 };
 
@@ -87,7 +93,7 @@ export const PagosApp = () => (
           path="bills"
           element={
             <PagosProtectedLayout>
-              <PagosRoleProtectedRoute allowedRoles={['area_coordinator']}>
+              <PagosRoleProtectedRoute allowedRoles={['area_coordinator']} allowTi>
                 <BillsPage />
               </PagosRoleProtectedRoute>
             </PagosProtectedLayout>
@@ -97,7 +103,7 @@ export const PagosApp = () => (
           path="users"
           element={
             <PagosProtectedLayout>
-              <PagosRoleProtectedRoute allowedRoles={['area_coordinator']}>
+              <PagosRoleProtectedRoute allowedRoles={['area_coordinator']} allowTi>
                 <UsersPage />
               </PagosRoleProtectedRoute>
             </PagosProtectedLayout>

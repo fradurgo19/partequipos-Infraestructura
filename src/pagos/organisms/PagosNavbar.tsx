@@ -2,6 +2,11 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FileText, PlusCircle, LogOut, BarChart3, Users, LayoutDashboard, PieChart } from 'lucide-react';
 import { usePagosAuth } from '../context/PagosAuthContext';
+import {
+  canAccessPagosBillManagement,
+  isPagosCoordinator,
+  isTiPagosUser,
+} from '../utils/pagosPermissions';
 
 export const PagosNavbar: React.FC = () => {
   const location = useLocation();
@@ -17,34 +22,46 @@ export const PagosNavbar: React.FC = () => {
     navigate('/login');
   };
 
+  const canManageBills = canAccessPagosBillManagement(profile);
+  const isCoordinator = isPagosCoordinator(profile);
+  const isTiUser = isTiPagosUser(profile);
+
   const allNavItems = [
-    { path: '/pagos/dashboard', label: 'Dashboard', icon: PieChart, roles: ['area_coordinator'] },
-    { path: '/pagos/bills', label: 'Facturas', icon: FileText, roles: ['area_coordinator'] },
+    { path: '/pagos/dashboard', label: 'Dashboard', icon: PieChart, visible: isCoordinator },
+    {
+      path: '/pagos/bills',
+      label: isTiUser ? 'Facturas TI' : 'Facturas',
+      icon: FileText,
+      visible: canManageBills,
+    },
     {
       path: '/pagos/new-bill',
-      label: 'Nueva Factura',
+      label: isTiUser ? 'Nueva Factura TI' : 'Nueva Factura',
       icon: PlusCircle,
-      roles: ['area_coordinator', 'basic_user'],
+      visible: isCoordinator || isTiUser || profile?.role === 'basic_user',
     },
     {
       path: '/pagos/reports',
       label: 'Mis Facturas',
       icon: BarChart3,
-      roles: ['area_coordinator', 'basic_user'],
+      visible: isCoordinator || isTiUser || profile?.role === 'basic_user',
     },
-    { path: '/pagos/users', label: 'Usuarios', icon: Users, roles: ['area_coordinator'] },
+    {
+      path: '/pagos/users',
+      label: isTiUser ? 'Usuarios TI' : 'Usuarios',
+      icon: Users,
+      visible: canManageBills,
+    },
   ];
 
-  const navItems = allNavItems.filter((item) =>
-    item.roles.includes(profile?.role || 'basic_user')
-  );
+  const navItems = allNavItems.filter((item) => item.visible);
 
   return (
     <nav className="bg-gradient-to-r from-[#cf1b22] via-[#a11217] to-[#50504f] border-b border-[#cf1b22]/60 sticky top-0 z-50 shadow-lg">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-6">
-            <Link to="/pagos/dashboard" className="flex items-center space-x-2">
+            <Link to={isCoordinator ? '/pagos/dashboard' : isTiUser ? '/pagos/bills' : '/pagos/reports'} className="flex items-center space-x-2">
               <span className="text-lg font-bold text-white">Pagos · Facturas</span>
             </Link>
             <div className="hidden md:flex space-x-2">
@@ -79,7 +96,11 @@ export const PagosNavbar: React.FC = () => {
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-white">{profile?.fullName}</p>
               <p className="text-xs text-white/80 capitalize">
-                {isInfraAdminAccess ? 'admin · pagos' : profile?.role?.replace('_', ' ')}
+                {isInfraAdminAccess
+                  ? 'admin · pagos'
+                  : isTiUser
+                    ? 'ti · pagos'
+                    : profile?.role?.replace('_', ' ')}
               </p>
             </div>
             <button

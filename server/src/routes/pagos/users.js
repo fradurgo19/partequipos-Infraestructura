@@ -2,18 +2,21 @@ import express from 'express';
 import { supabase } from '../../lib/supabaseClient.js';
 import {
   authenticatePagosToken,
-  requirePagosCoordinator,
+  requirePagosBillManager,
 } from '../../middleware/pagosAuth.js';
 import { getPagosTable, transformUserToFrontend } from '../../pagos/transforms.js';
+import { resolveActorIsTi } from '../../pagos/access.js';
 
 const router = express.Router();
 const PAGOS_TABLE = getPagosTable();
 
-router.get('/', authenticatePagosToken, requirePagosCoordinator, async (req, res) => {
+router.get('/', authenticatePagosToken, requirePagosBillManager, async (req, res) => {
   try {
+    const actorIsTi = await resolveActorIsTi(req.pagosUser);
     const { data: users, error } = await supabase
       .from(PAGOS_TABLE)
-      .select('id, email, full_name, role, department, location, created_at, updated_at')
+      .select('id, email, full_name, role, department, location, is_ti, created_at, updated_at')
+      .eq('is_ti', actorIsTi)
       .order('created_at', { ascending: false });
 
     if (error) return res.status(500).json({ error: 'Error al obtener usuarios' });
@@ -23,12 +26,15 @@ router.get('/', authenticatePagosToken, requirePagosCoordinator, async (req, res
   }
 });
 
-router.post('/create', authenticatePagosToken, requirePagosCoordinator, async (req, res) => {
+router.post('/create', authenticatePagosToken, requirePagosBillManager, async (req, res) => {
   try {
     const { email, password, fullName, location, department, role } = req.body;
     if (!email || !password || !fullName || !location) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
+
+    const actorIsTi = await resolveActorIsTi(req.pagosUser);
+    const assignedRole = actorIsTi ? 'basic_user' : role || 'basic_user';
 
     const { data: existing } = await supabase.from(PAGOS_TABLE).select('id').eq('email', email).maybeSingle();
     if (existing) {
@@ -49,11 +55,12 @@ router.post('/create', authenticatePagosToken, requirePagosCoordinator, async (r
     const { data: user, error: updateError } = await supabase
       .from(PAGOS_TABLE)
       .update({
-        role: role || 'basic_user',
+        role: assignedRole,
         department: department || null,
+        is_ti: actorIsTi,
       })
       .eq('id', userId)
-      .select('id, email, full_name, role, department, location, created_at, updated_at')
+      .select('id, email, full_name, role, department, location, is_ti, created_at, updated_at')
       .single();
 
     if (updateError || !user) {
@@ -66,7 +73,7 @@ router.post('/create', authenticatePagosToken, requirePagosCoordinator, async (r
   }
 });
 
-router.put('/:id', authenticatePagosToken, requirePagosCoordinator, async (req, res) => {
+router.put('/:id', authenticatePagosToken, requirePagosBillManager, async (req, res) => {
   try {
     const { id } = req.params;
     const { fullName, location, department, role, password } = req.body;
@@ -74,13 +81,26 @@ router.put('/:id', authenticatePagosToken, requirePagosCoordinator, async (req, 
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
+    const actorIsTi = await resolveActorIsTi(req.pagosUser);
+    const { data: existingUser, error: existingError } = await supabase
+      .from(PAGOS_TABLE)
+      .select('id, is_ti')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (existingError || !existingUser || Boolean(existingUser.is_ti) !== actorIsTi) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const assignedRole = actorIsTi ? 'basic_user' : role || 'basic_user';
+
     const { error: updateError } = await supabase
       .from(PAGOS_TABLE)
       .update({
         full_name: fullName,
         location,
         department: department || null,
-        role: role || 'basic_user',
+        role: assignedRole,
       })
       .eq('id', id);
 
@@ -100,7 +120,7 @@ router.put('/:id', authenticatePagosToken, requirePagosCoordinator, async (req, 
 
     const { data: user, error } = await supabase
       .from(PAGOS_TABLE)
-      .select('id, email, full_name, role, department, location, created_at, updated_at')
+      .select('id, email, full_name, role, department, location, is_ti, created_at, updated_at')
       .eq('id', id)
       .single();
 
@@ -114,14 +134,20 @@ router.put('/:id', authenticatePagosToken, requirePagosCoordinator, async (req, 
   }
 });
 
-router.delete('/:id', authenticatePagosToken, requirePagosCoordinator, async (req, res) => {
+router.delete('/:id', authenticatePagosToken, requirePagosBillManager, async (req, res) => {
   try {
     const { id } = req.params;
     if (id === req.pagosUser.id) {
       return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
     }
 
-    const { data, error } = await supabase.from(PAGOS_TABLE).delete().eq('id', id).select('id');
+    const actorIsTi = await resolveActorIsTi(req.pagosUser);
+    const { data, error } = await supabase
+      .from(PAGOS_TABLE)
+      .delete()
+      .eq('id', id)
+      .eq('is_ti', actorIsTi)
+      .select('id');
     if (error || !data?.length) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }

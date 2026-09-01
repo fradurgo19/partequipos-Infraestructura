@@ -129,6 +129,7 @@ export const pagosAuthService = {
         role: data.role,
         department: data.department || undefined,
         location: data.location || undefined,
+        isTi: Boolean(data.isTi),
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
       };

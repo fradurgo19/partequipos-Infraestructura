@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { resolvePagosProfileId } from '../ensurePagosProfile.js';
+import { assertBillScopeAccess } from '../access.js';
 import { notifyBillApproved, notifyBillPaid } from '../billNotificationEmail.js';
 import { transformBillToFrontend } from '../transforms.js';
 
@@ -35,7 +36,7 @@ export const updatePagosBillStatus = async (billId, status, pagosUser) => {
 
   const { data: existingBill, error: existingError } = await supabase
     .from('utility_bills')
-    .select('status')
+    .select('status, is_ti')
     .eq('id', billId)
     .maybeSingle();
 
@@ -44,6 +45,8 @@ export const updatePagosBillStatus = async (billId, status, pagosUser) => {
     notFound.statusCode = 404;
     throw notFound;
   }
+
+  await assertBillScopeAccess(pagosUser, existingBill);
 
   const updateData = { status };
   if (status === 'approved') {

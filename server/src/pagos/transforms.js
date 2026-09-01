@@ -40,6 +40,7 @@ export const transformBillToFrontend = (row, consumptions = []) => ({
   notes: row.notes,
   approvedBy: row.approved_by,
   approvedAt: row.approved_at,
+  isTi: Boolean(row.is_ti),
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   consumptions,
@@ -52,6 +53,7 @@ export const transformUserToFrontend = (row) => ({
   role: row.role,
   department: row.department,
   location: row.location,
+  isTi: Boolean(row.is_ti),
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });

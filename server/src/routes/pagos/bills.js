@@ -5,14 +5,14 @@ import {
   transformBillToFrontend,
   transformConsumptionToFrontend,
 } from '../../pagos/transforms.js';
-import { canViewAllBills } from '../../pagos/access.js';
+import { canViewAllBills, applyBillListScope, resolveActorIsTi } from '../../pagos/access.js';
 import { fetchConsumptionsByBillIds } from '../../pagos/storage.js';
 import { createPagosBill } from '../../pagos/handlers/createBill.js';
 import { getPagosBillById } from '../../pagos/handlers/getBillById.js';
 import { updatePagosBill } from '../../pagos/handlers/updateBill.js';
 import { deletePagosBill } from '../../pagos/handlers/deleteBill.js';
 import { approvePagosBill, updatePagosBillStatus } from '../../pagos/handlers/updateBillStatus.js';
-import { assertPagosCoordinator } from '../../pagos/handlers/coordinatorAccess.js';
+import { assertPagosBillManager } from '../../pagos/handlers/coordinatorAccess.js';
 
 const router = express.Router();
 
@@ -30,10 +30,12 @@ const attachConsumptions = async (bills) => {
 
 router.get('/', authenticatePagosToken, async (req, res) => {
   try {
-    const { period, serviceType, city, businessGroup, location, status, search } = req.query;
+    const { period, serviceType, city, businessGroup, location, status, search, consolidated } = req.query;
     const viewAll = await canViewAllBills(req.pagosUser);
+    const isConsolidated = consolidated === true || consolidated === 'true';
 
     let query = supabase.from('utility_bills').select('*');
+    query = await applyBillListScope(query, req.pagosUser, { consolidated: isConsolidated });
     if (!viewAll) {
       query = query.eq('user_id', req.pagosUser.id);
     }
@@ -117,6 +119,7 @@ router.post('/bulk-delete', authenticatePagosToken, async (req, res) => {
 
     const idList = ids.map((id) => String(id).trim()).filter(Boolean);
     const viewAll = await canViewAllBills(req.pagosUser);
+    const actorIsTi = await resolveActorIsTi(req.pagosUser);
 
     let deletedCount = 0;
 
@@ -125,6 +128,7 @@ router.post('/bulk-delete', authenticatePagosToken, async (req, res) => {
         .from('utility_bills')
         .delete()
         .in('id', idList)
+        .eq('is_ti', actorIsTi)
         .select('id');
 
       if (deleteError) {
@@ -156,7 +160,7 @@ router.post('/bulk-delete', authenticatePagosToken, async (req, res) => {
 
 router.post('/:id/approve', authenticatePagosToken, async (req, res) => {
   try {
-    await assertPagosCoordinator(req.pagosUser);
+    await assertPagosBillManager(req.pagosUser);
     const bill = await approvePagosBill(req.params.id, req.pagosUser);
     res.json(bill);
   } catch (error) {
@@ -168,7 +172,7 @@ router.post('/:id/approve', authenticatePagosToken, async (req, res) => {
 
 router.patch('/:id/status', authenticatePagosToken, async (req, res) => {
   try {
-    await assertPagosCoordinator(req.pagosUser);
+    await assertPagosBillManager(req.pagosUser);
     const bill = await updatePagosBillStatus(req.params.id, req.body.status, req.pagosUser);
     res.json(bill);
   } catch (error) {

@@ -5,6 +5,7 @@ import { BillStatusBadge } from '../atoms/BillStatusBadge';
 import { Button } from '../../atoms/Button';
 import { formatCurrency, formatDate, translateServiceType } from '../utils/formatters';
 import { sortBills } from '../utils/billSort';
+import { canManagePagosBillsTable } from '../utils/pagosPermissions';
 import { usePagosAuth } from '../context/PagosAuthContext';
 import { billService } from '../services/billService';
 import { BillDetailsModal } from '../molecules/BillDetailsModal';
@@ -40,7 +41,7 @@ export const BillsTable: React.FC<BillsTableProps> = ({ bills, onBillUpdated, on
   const tableRef = useRef<HTMLTableElement>(null);
   const isSyncingScrollRef = useRef(false);
 
-  const isAreaCoordinator = profile?.role === 'area_coordinator';
+  const canManageBills = canManagePagosBillsTable(profile);
 
   const handleSort = (column: keyof UtilityBill) => {
     setSortState(prev => ({
@@ -102,7 +103,7 @@ export const BillsTable: React.FC<BillsTableProps> = ({ bills, onBillUpdated, on
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    if (!isAreaCoordinator) return;
+    if (!canManageBills) return;
 
     setLoading(id);
     try {
@@ -302,7 +303,7 @@ export const BillsTable: React.FC<BillsTableProps> = ({ bills, onBillUpdated, on
                     {bill.location}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    {isAreaCoordinator ? (
+                    {canManageBills ? (
                       <select
                         value={selectedStatus}
                         onChange={(e) => handleStatusChange(bill.id, e.target.value)}

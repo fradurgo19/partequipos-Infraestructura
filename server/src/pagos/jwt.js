@@ -12,7 +12,7 @@ export const signPagosToken = (user) => {
   }
 
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, pagos: true },
+    { id: user.id, email: user.email, role: user.role, is_ti: Boolean(user.is_ti), pagos: true },
     JWT_SECRET,
     { expiresIn: '7d' }
   );

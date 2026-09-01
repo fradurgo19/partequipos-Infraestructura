@@ -10,6 +10,7 @@ const mapProfileResponse = (user) => ({
   role: user.role,
   department: user.department,
   location: user.location,
+  isTi: Boolean(user.is_ti),
   createdAt: user.created_at,
   updatedAt: user.updated_at,
 });
@@ -17,7 +18,7 @@ const mapProfileResponse = (user) => ({
 export const getPagosProfileById = async (userId) => {
   const { data: user, error } = await supabase
     .from(PAGOS_TABLE)
-    .select('id, email, full_name, role, department, location, created_at, updated_at')
+    .select('id, email, full_name, role, department, location, is_ti, created_at, updated_at')
     .eq('id', userId)
     .single();
 

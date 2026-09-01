@@ -7,6 +7,8 @@ import { Select } from '../../atoms/Select';
 import { UserProfile, UserRole } from '../types';
 import { PAGOS_API } from '../config';
 import { pagosAuthService } from '../services/authService';
+import { usePagosAuth } from '../context/PagosAuthContext';
+import { isTiPagosUser } from '../utils/pagosPermissions';
 
 interface NewUserForm {
   email: string;
@@ -27,6 +29,8 @@ const initialForm: NewUserForm = {
 };
 
 export const UsersPage: React.FC = () => {
+  const { profile } = usePagosAuth();
+  const isTiScope = isTiPagosUser(profile);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -60,10 +64,12 @@ export const UsersPage: React.FC = () => {
     { value: 'BOGOTA APTO LA RIVIERA CL 23 NRO.72-91 APT 701', label: 'BOGOTA APTO LA RIVIERA CL 23 NRO.72-91 APT 701' }
   ];
 
-  const roleOptions = [
-    { value: 'basic_user', label: 'Usuario Básico' },
-    { value: 'area_coordinator', label: 'Coordinador de Área' }
-  ];
+  const roleOptions = isTiScope
+    ? [{ value: 'basic_user', label: 'Usuario TI' }]
+    : [
+        { value: 'basic_user', label: 'Usuario Básico' },
+        { value: 'area_coordinator', label: 'Coordinador de Área' },
+      ];
 
   useEffect(() => {
     loadUsers();
@@ -265,8 +271,14 @@ export const UsersPage: React.FC = () => {
       <div className="bg-gradient-to-r from-[#cf1b22] via-[#a11217] to-[#50504f] rounded-2xl shadow-2xl p-8 border border-[#cf1b22]/40">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Gestión de Usuarios</h1>
-            <p className="text-white/80 text-lg">Administración y control de usuarios del sistema</p>
+            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
+              {isTiScope ? 'Gestión de Usuarios TI' : 'Gestión de Usuarios'}
+            </h1>
+            <p className="text-white/80 text-lg">
+              {isTiScope
+                ? 'Administración de usuarios del área de tecnología'
+                : 'Administración y control de usuarios del sistema'}
+            </p>
           </div>
           <button 
             onClick={() => showForm ? handleCancelEdit() : setShowForm(true)}

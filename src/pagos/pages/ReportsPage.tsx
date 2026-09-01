@@ -8,6 +8,7 @@ import { billService } from '../services/billService';
 import { UtilityBill, BillStatus } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { canEditPagosBill } from '../utils/billPermissions';
+import { canManagePagosBillsTable } from '../utils/pagosPermissions';
 import { BillDetailsModal } from '../molecules/BillDetailsModal';
 import { PAGOS_API } from '../config';
 import { pagosAuthService } from '../services/authService';
@@ -27,7 +28,7 @@ export const ReportsPage: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [users, setUsers] = useState<Array<{ id: string; fullName: string; email: string }>>([]);
 
-  const isAdmin = profile?.role === 'area_coordinator';
+  const isAdmin = canManagePagosBillsTable(profile);
   const hasActiveFilters = selectedPeriod !== 'all' || selectedUser !== 'all';
 
   const handleClearFilters = () => {

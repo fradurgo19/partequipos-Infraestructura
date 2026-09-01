@@ -62,6 +62,7 @@ export interface UtilityBill {
   notes?: string;
   approvedBy?: string;
   approvedAt?: Date | string;
+  isTi?: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;
   consumptions?: BillConsumption[];
@@ -103,6 +104,7 @@ export interface UserProfile {
   role: UserRole;
   department?: string;
   location?: string;
+  isTi?: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -180,6 +182,7 @@ export interface FilterOptions {
   location?: string | 'all';
   status?: BillStatus | 'all';
   search?: string;
+  consolidated?: boolean;
 }
 
 export interface BillsTableColumn {

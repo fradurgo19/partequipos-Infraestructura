@@ -58,6 +58,7 @@ export const billService = {
       params.append('status', filters.status);
     }
     if (filters?.search) params.append('search', filters.search);
+    if (filters?.consolidated) params.append('consolidated', 'true');
 
     const queryString = params.toString();
     const url = queryString ? `${PAGOS_API}/bills?${queryString}` : `${PAGOS_API}/bills`;

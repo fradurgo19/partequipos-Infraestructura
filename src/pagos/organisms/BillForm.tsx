@@ -20,6 +20,8 @@ import {
 import { parseCurrencyInput, parseColombianNumber, getCurrentPeriod, formatCurrency } from '../utils/formatters';
 import { focusBillFormValidationField, scrollBillFormAlertIntoView } from '../utils/billFormUtils';
 import { billService, uploadBillDocument } from '../services/billService';
+import { usePagosAuth } from '../context/PagosAuthContext';
+import { isTiPagosUser } from '../utils/pagosPermissions';
 import { useBillSiteLocations } from '../hooks/useBillSiteLocations';
 import {
   STANDARD_BILL_BUSINESS_GROUPS,
@@ -216,6 +218,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   const topAlertRef = useRef<HTMLDivElement>(null);
   const submitValidationBannerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { profile } = usePagosAuth();
+  const isTiBill = isTiPagosUser(profile);
   const isEditMode = Boolean(billId);
   const { catalog, loading: locationsLoading } = useBillSiteLocations();
 
@@ -724,6 +728,13 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
           />
         )}
       </div>
+
+      {isTiBill && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Esta factura se registrará en el módulo de <strong>TI</strong>. No será visible en la gestión
+          operativa de facturas, pero sí en el dashboard consolidado de pagos.
+        </div>
+      )}
 
       <Card>
         <h2 className="text-xl font-semibold text-gray-900 mb-6">Información de la Factura</h2>

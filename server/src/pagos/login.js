@@ -5,7 +5,7 @@ import { getPagosTable } from './transforms.js';
 
 const PAGOS_TABLE = getPagosTable();
 const PROFILE_FIELDS =
-  'id, email, full_name, role, department, location, created_at, updated_at, password_hash';
+  'id, email, full_name, role, department, location, is_ti, created_at, updated_at, password_hash';
 
 const mapProfileResponse = (user) => ({
   id: user.id,
@@ -14,6 +14,7 @@ const mapProfileResponse = (user) => ({
   role: user.role,
   department: user.department,
   location: user.location,
+  isTi: Boolean(user.is_ti),
   createdAt: user.created_at,
   updatedAt: user.updated_at,
 });

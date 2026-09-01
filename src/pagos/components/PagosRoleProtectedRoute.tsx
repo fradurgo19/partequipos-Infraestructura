@@ -2,15 +2,18 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { usePagosAuth } from '../context/PagosAuthContext';
 import { UserRole } from '../types';
+import { canAccessPagosBillManagement } from '../utils/pagosPermissions';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles: UserRole[];
+  allowedRoles?: UserRole[];
+  allowTi?: boolean;
 }
 
 export const PagosRoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   children,
-  allowedRoles,
+  allowedRoles = [],
+  allowTi = false,
 }) => {
   const { profile, loading } = usePagosAuth();
 
@@ -22,7 +25,10 @@ export const PagosRoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     );
   }
 
-  if (!profile || !allowedRoles.includes(profile.role)) {
+  const hasRoleAccess = Boolean(profile && allowedRoles.includes(profile.role));
+  const hasTiAccess = allowTi && canAccessPagosBillManagement(profile) && Boolean(profile?.isTi);
+
+  if (!profile || (!hasRoleAccess && !hasTiAccess)) {
     return <Navigate to="/pagos/reports" replace />;
   }
 

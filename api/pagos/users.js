@@ -1,6 +1,6 @@
 import { resolvePagosUserFromRequest } from '../../server/src/pagos/vercelAuth.js';
 import {
-  assertPagosCoordinator,
+  assertPagosBillManager,
   listPagosUsers,
 } from '../../server/src/pagos/handlers/listUsers.js';
 
@@ -12,8 +12,8 @@ export default async function handler(req, res) {
 
   try {
     const pagosUser = await resolvePagosUserFromRequest(req);
-    assertPagosCoordinator(pagosUser);
-    const users = await listPagosUsers();
+    await assertPagosBillManager(pagosUser);
+    const users = await listPagosUsers(pagosUser);
 
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json(users);

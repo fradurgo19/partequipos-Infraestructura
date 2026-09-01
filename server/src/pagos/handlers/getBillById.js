@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabaseClient.js';
-import { canViewAllBills } from '../access.js';
+import { canViewAllBills, assertBillScopeAccess } from '../access.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 
 export const getPagosBillById = async (pagosUser, billId) => {
@@ -16,6 +16,8 @@ export const getPagosBillById = async (pagosUser, billId) => {
     notFound.statusCode = 404;
     throw notFound;
   }
+
+  await assertBillScopeAccess(pagosUser, billRow);
 
   const { data: consumptionsData } = await supabase
     .from('bill_consumptions')

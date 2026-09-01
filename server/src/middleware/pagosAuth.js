@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient.js';
-import { isInfraAdminProfile } from '../pagos/access.js';
+import { isInfraAdminProfile, canManagePagosScope } from '../pagos/access.js';
 import { attachPagosProfileId } from '../pagos/ensurePagosProfile.js';
 import { getPagosJwtSecret, verifyPagosToken } from '../pagos/jwt.js';
 
@@ -77,4 +77,16 @@ export const requirePagosCoordinator = (req, res, next) => {
   }
 
   return res.status(403).json({ error: 'No tienes permisos de coordinador' });
+};
+
+export const requirePagosBillManager = async (req, res, next) => {
+  try {
+    if (await canManagePagosScope(req.pagosUser)) {
+      return next();
+    }
+    return res.status(403).json({ error: 'No tienes permisos para gestionar facturas' });
+  } catch (error) {
+    console.error('Error en autorización pagos:', error);
+    return res.status(500).json({ error: 'Error de autorización' });
+  }
 };

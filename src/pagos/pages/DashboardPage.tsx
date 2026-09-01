@@ -74,7 +74,7 @@ const hasActiveDashboardFilters = ({
 };
 
 export const DashboardPage: React.FC = () => {
-  const { bills: allBills, loading, error } = useBills({});
+  const { bills: allBills, loading, error } = useBills({ consolidated: true });
   const { availablePeriods, availableSites, availableYears } =
     useDashboardFilterOptions(allBills);
 

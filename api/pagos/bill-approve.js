@@ -1,5 +1,5 @@
 import { resolvePagosUserFromRequest } from '../../server/src/pagos/vercelAuth.js';
-import { assertPagosCoordinator } from '../../server/src/pagos/handlers/coordinatorAccess.js';
+import { assertPagosBillManager } from '../../server/src/pagos/handlers/coordinatorAccess.js';
 import { approvePagosBill } from '../../server/src/pagos/handlers/updateBillStatus.js';
 
 const resolveBillId = (req) => {
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
   try {
     const pagosUser = await resolvePagosUserFromRequest(req);
-    await assertPagosCoordinator(pagosUser);
+    await assertPagosBillManager(pagosUser);
     const bill = await approvePagosBill(billId, pagosUser);
 
     res.setHeader('Cache-Control', 'no-store');

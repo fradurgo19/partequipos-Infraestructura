@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabaseClient.js';
-import { canViewAllBills } from '../access.js';
+import { canViewAllBills, applyBillListScope } from '../access.js';
 import { fetchConsumptionsByBillIds } from '../storage.js';
 import { transformBillToFrontend, transformConsumptionToFrontend } from '../transforms.js';
 
@@ -16,10 +16,13 @@ const attachConsumptions = async (bills) => {
 };
 
 export const listPagosBills = async (pagosUser, query = {}) => {
-  const { period, serviceType, city, businessGroup, location, status, search } = query;
+  const { period, serviceType, city, businessGroup, location, status, search, consolidated } = query;
   const viewAll = await canViewAllBills(pagosUser);
+  const isConsolidated = consolidated === true || consolidated === 'true';
 
   let dbQuery = supabase.from('utility_bills').select('*');
+  dbQuery = await applyBillListScope(dbQuery, pagosUser, { consolidated: isConsolidated });
+
   if (!viewAll) {
     dbQuery = dbQuery.eq('user_id', pagosUser.id);
   }

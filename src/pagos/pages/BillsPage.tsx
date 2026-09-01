@@ -10,6 +10,7 @@ import { FilterOptions, UtilityBill } from '../types';
 import { translateServiceType, translateStatus } from '../utils/formatters';
 import { billService } from '../services/billService';
 import { usePagosAuth } from '../context/PagosAuthContext';
+import { isTiPagosUser } from '../utils/pagosPermissions';
 
 const DEFAULT_FILTERS: FilterOptions = {
   period: 'all',
@@ -63,7 +64,8 @@ const matchesFilterOptions = (bill: UtilityBill, filters: FilterOptions) => {
 };
 
 export const BillsPage: React.FC = () => {
-  const { loading: authLoading } = usePagosAuth();
+  const { loading: authLoading, profile } = usePagosAuth();
+  const isTiScope = isTiPagosUser(profile);
   const [filters, setFilters] = useState<FilterOptions>(DEFAULT_FILTERS);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [filterSourceBills, setFilterSourceBills] = useState<UtilityBill[]>([]);
@@ -190,8 +192,14 @@ export const BillsPage: React.FC = () => {
       <div className="bg-gradient-to-r from-[#cf1b22] via-[#a11217] to-[#50504f] rounded-2xl shadow-2xl p-8 border border-[#cf1b22]/40">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Gestión de Facturas</h1>
-            <p className="text-white/80 text-lg">Administración completa de facturas de servicios</p>
+            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">
+              {isTiScope ? 'Gestión de Facturas TI' : 'Gestión de Facturas'}
+            </h1>
+            <p className="text-white/80 text-lg">
+              {isTiScope
+                ? 'Facturas del área de tecnología, aisladas del flujo operativo'
+                : 'Administración completa de facturas de servicios'}
+            </p>
           </div>
           <div className="flex items-center space-x-3">
             <button
@@ -204,7 +212,7 @@ export const BillsPage: React.FC = () => {
             <Link to="/pagos/new-bill">
               <button className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#cf1b22] to-[#a11217] hover:from-[#b2181d] hover:to-[#7f0c12] text-white rounded-xl transition-all shadow-lg font-medium">
                 <PlusCircle className="w-5 h-5" />
-                <span>Nueva Factura</span>
+                <span>{isTiScope ? 'Nueva Factura TI' : 'Nueva Factura'}</span>
               </button>
             </Link>
           </div>
