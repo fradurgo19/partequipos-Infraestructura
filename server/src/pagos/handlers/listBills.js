@@ -44,6 +44,7 @@ export const listPagosBills = async (pagosUser, query = {}) => {
     .order('created_at', { ascending: false })
     .order('id', { ascending: false });
   if (error) {
+    console.error('Error listPagosBills:', error);
     const dbError = new Error('Error al obtener facturas');
     dbError.statusCode = 500;
     throw dbError;

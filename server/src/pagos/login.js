@@ -2,10 +2,16 @@ import bcrypt from 'bcryptjs';
 import { supabase } from '../lib/supabaseClient.js';
 import { signPagosToken } from './jwt.js';
 import { getPagosTable } from './transforms.js';
+import { isTiProfilesScopeEnabled } from './tiScope.js';
 
 const PAGOS_TABLE = getPagosTable();
-const PROFILE_FIELDS =
-  'id, email, full_name, role, department, location, is_ti, created_at, updated_at, password_hash';
+const PROFILE_FIELDS_BASE =
+  'id, email, full_name, role, department, location, created_at, updated_at, password_hash';
+
+const getLoginProfileFields = async () => {
+  const tiEnabled = await isTiProfilesScopeEnabled();
+  return tiEnabled ? `${PROFILE_FIELDS_BASE}, is_ti` : PROFILE_FIELDS_BASE;
+};
 
 const mapProfileResponse = (user) => ({
   id: user.id,
@@ -40,10 +46,11 @@ export const authenticatePagosCredentials = async (email, password) => {
   }
 
   const trimmedEmail = email.trim();
+  const profileFields = await getLoginProfileFields();
 
   const { data: user, error: userError } = await supabase
     .from(PAGOS_TABLE)
-    .select(PROFILE_FIELDS)
+    .select(profileFields)
     .ilike('email', trimmedEmail)
     .maybeSingle();
 

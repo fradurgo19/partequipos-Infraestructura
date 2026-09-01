@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { resolveActorIsTi } from '../access.js';
+import { withTiBillFlag } from '../tiScope.js';
 import { normalizeBillBody } from '../billBody.js';
 import { resolvePagosProfileId } from '../ensurePagosProfile.js';
 import { resolveBillSiteId } from '../siteMatching.js';
@@ -44,12 +45,10 @@ export const createPagosBill = async (pagosUser, bill) => {
   const ownerProfileId = await resolvePagosProfileId(pagosUser);
   const actorIsTi = await resolveActorIsTi(pagosUser);
 
-  const { data: createdBill, error } = await supabase
-    .from('utility_bills')
-    .insert({
+  const billPayload = await withTiBillFlag(
+    {
       user_id: ownerProfileId,
       site_id: siteId,
-      is_ti: actorIsTi,
       service_type: normalized.serviceType,
       provider: normalized.provider,
       description: normalized.description,
@@ -69,7 +68,13 @@ export const createPagosBill = async (pagosUser, bill) => {
       document_name: normalized.documentName,
       status: normalized.status,
       notes: normalized.notes,
-    })
+    },
+    actorIsTi
+  );
+
+  const { data: createdBill, error } = await supabase
+    .from('utility_bills')
+    .insert(billPayload)
     .select()
     .single();
 

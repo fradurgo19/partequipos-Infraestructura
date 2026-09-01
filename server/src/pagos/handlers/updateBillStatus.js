@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabaseClient.js';
 import { resolvePagosProfileId } from '../ensurePagosProfile.js';
 import { assertBillScopeAccess } from '../access.js';
+import { isTiBillsScopeEnabled } from '../tiScope.js';
 import { notifyBillApproved, notifyBillPaid } from '../billNotificationEmail.js';
 import { transformBillToFrontend } from '../transforms.js';
 
@@ -34,9 +35,10 @@ export const updatePagosBillStatus = async (billId, status, pagosUser) => {
     throw error;
   }
 
+  const billFields = (await isTiBillsScopeEnabled()) ? 'status, is_ti' : 'status';
   const { data: existingBill, error: existingError } = await supabase
     .from('utility_bills')
-    .select('status, is_ti')
+    .select(billFields)
     .eq('id', billId)
     .maybeSingle();
 

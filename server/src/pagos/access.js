@@ -1,7 +1,9 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { isCoordinator } from './transforms.js';
+import { getTiScopeSupport, isTiBillsScopeEnabled } from './tiScope.js';
 
 const PAGOS_PROFILE_FIELDS = 'role, is_ti';
+const PAGOS_PROFILE_ROLE_ONLY = 'role';
 
 const getInfraProfileByUser = async (pagosUser) => {
   if (!pagosUser) return null;
@@ -52,10 +54,13 @@ export const resolveActorRole = async (pagosUser) => {
   if (!pagosUser) return null;
   if (pagosUser.infraAdmin) return 'area_coordinator';
 
+  const scope = await getTiScopeSupport();
+  const profileFields = scope.profiles ? PAGOS_PROFILE_FIELDS : PAGOS_PROFILE_ROLE_ONLY;
+
   if (pagosUser.id) {
     const { data } = await supabase
       .from('pagos_profiles')
-      .select(PAGOS_PROFILE_FIELDS)
+      .select(profileFields)
       .eq('id', pagosUser.id)
       .maybeSingle();
 
@@ -85,14 +90,16 @@ export const getPagosProfileAccess = async (pagosUser) => {
   }
 
   if (pagosUser.id) {
+    const scope = await getTiScopeSupport();
+    const profileFields = scope.profiles ? PAGOS_PROFILE_FIELDS : PAGOS_PROFILE_ROLE_ONLY;
     const { data } = await supabase
       .from('pagos_profiles')
-      .select(PAGOS_PROFILE_FIELDS)
+      .select(profileFields)
       .eq('id', pagosUser.id)
       .maybeSingle();
 
     if (data) {
-      return { role: data.role, isTi: Boolean(data.is_ti) };
+      return { role: data.role, isTi: scope.profiles ? Boolean(data.is_ti) : false };
     }
   }
 
@@ -127,6 +134,10 @@ export const applyBillListScope = async (query, pagosUser, { consolidated = fals
   }
 
   const actorIsTi = await resolveActorIsTi(pagosUser);
+  const scopeEnabled = await isTiBillsScopeEnabled();
+  if (!scopeEnabled) {
+    return query;
+  }
   return query.eq('is_ti', actorIsTi);
 };
 
@@ -135,6 +146,11 @@ export const assertBillScopeAccess = async (pagosUser, billRow) => {
     const error = new Error('Factura no encontrada');
     error.statusCode = 404;
     throw error;
+  }
+
+  const scopeEnabled = await isTiBillsScopeEnabled();
+  if (!scopeEnabled) {
+    return;
   }
 
   const actorIsTi = await resolveActorIsTi(pagosUser);

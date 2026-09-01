@@ -6,6 +6,7 @@ import {
   transformConsumptionToFrontend,
 } from '../../pagos/transforms.js';
 import { canViewAllBills, applyBillListScope, resolveActorIsTi } from '../../pagos/access.js';
+import { applyTiBillDeleteScope } from '../../pagos/tiScope.js';
 import { fetchConsumptionsByBillIds } from '../../pagos/storage.js';
 import { createPagosBill } from '../../pagos/handlers/createBill.js';
 import { getPagosBillById } from '../../pagos/handlers/getBillById.js';
@@ -124,12 +125,9 @@ router.post('/bulk-delete', authenticatePagosToken, async (req, res) => {
     let deletedCount = 0;
 
     if (viewAll) {
-      const { data: deletedRows, error: deleteError } = await supabase
-        .from('utility_bills')
-        .delete()
-        .in('id', idList)
-        .eq('is_ti', actorIsTi)
-        .select('id');
+      let deleteQuery = supabase.from('utility_bills').delete().in('id', idList);
+      deleteQuery = await applyTiBillDeleteScope(deleteQuery, actorIsTi);
+      const { data: deletedRows, error: deleteError } = await deleteQuery.select('id');
 
       if (deleteError) {
         console.error('Error en bulk delete coordinador:', deleteError);
