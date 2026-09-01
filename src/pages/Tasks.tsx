@@ -55,7 +55,7 @@ type TaskRow = Task & {
   requester?: { id: string; full_name: string; role: string };
   assignee?: { id: string; full_name: string; role: string };
   responsible?: { id: string; full_name: string };
-  site?: { id: string; name: string; location: string };
+  site?: { id: string; name: string; location: string; city?: string };
 };
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -135,6 +135,7 @@ const emptyTaskForm = () => ({
   description: '',
   task_type: '',
   requesting_area: '',
+  city: '',
   site_id: '',
   project_name: '',
   requester_name: '',
@@ -145,6 +146,8 @@ const emptyTaskForm = () => ({
   priority: 'medium' as TaskPriority,
   photo_urls: [] as string[],
 });
+
+const normalizeCityKey = (city?: string | null): string => city?.trim().toUpperCase() ?? '';
 
 export const Tasks = () => {
   const { profile, session } = useAuth();
@@ -187,7 +190,7 @@ export const Tasks = () => {
           requester:profiles!tasks_requester_id_fkey(id, full_name, role),
           assignee:profiles!tasks_assignee_id_fkey(id, full_name, role),
           responsible:profiles!tasks_responsible_id_fkey(id, full_name),
-          site:sites(id, name, location)
+          site:sites(id, name, location, city)
         `)
         .order('created_at', { ascending: false }),
       supabase.from('sites').select('*').order('name'),
@@ -436,12 +439,14 @@ export const Tasks = () => {
 
   const openEditModal = (task: TaskRow) => {
     if (!canEdit) return;
+    const matchingSite = sites.find((site) => site.id === task.site_id);
     setEditingTask(task);
     setFormData({
       title: task.title,
       description: task.description,
       task_type: task.task_type,
       requesting_area: task.requesting_area,
+      city: matchingSite?.city?.trim() ?? task.site?.city?.trim() ?? '',
       site_id: task.site_id ?? '',
       project_name: task.project_name ?? '',
       requester_name: task.requester_name ?? task.requester?.full_name ?? '',
@@ -511,6 +516,64 @@ export const Tasks = () => {
       })),
     [sites]
   );
+
+  const siteCityOptions = useMemo(() => {
+    const cities = sites
+      .map((site) => site.city?.trim())
+      .filter((city): city is string => Boolean(city));
+
+    return [...new Set(cities)].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  }, [sites]);
+
+  const sitesForSelectedCity = useMemo(() => {
+    if (!formData.city) {
+      return [];
+    }
+
+    const cityKey = normalizeCityKey(formData.city);
+    return sites
+      .filter((site) => normalizeCityKey(site.city) === cityKey)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  }, [sites, formData.city]);
+
+  const taskSiteOptions = useMemo(() => {
+    const options = sitesForSelectedCity.map((site) => ({
+      value: site.id,
+      label: site.location ? `${site.name} · ${site.location}` : site.name,
+    }));
+
+    if (
+      formData.site_id &&
+      !options.some((option) => option.value === formData.site_id)
+    ) {
+      const currentSite = sites.find((site) => site.id === formData.site_id);
+      if (currentSite) {
+        options.unshift({
+          value: currentSite.id,
+          label: currentSite.location
+            ? `${currentSite.name} · ${currentSite.location}`
+            : currentSite.name,
+        });
+      }
+    }
+
+    return options;
+  }, [sites, sitesForSelectedCity, formData.site_id]);
+
+  const handleCityChange = (city: string) => {
+    setFormData((prev) => {
+      const nextCityKey = normalizeCityKey(city);
+      const currentSite = sites.find((site) => site.id === prev.site_id);
+      const keepSite =
+        currentSite && normalizeCityKey(currentSite.city) === nextCityKey;
+
+      return {
+        ...prev,
+        city,
+        site_id: keepSite ? prev.site_id : '',
+      };
+    });
+  };
 
   const responsibleFilterOptions = useMemo(() => {
     const options = new Map<string, string>();
@@ -940,24 +1003,40 @@ export const Tasks = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <Select
-              label="Sede"
-              value={formData.site_id}
-              onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
+              label="Ciudad"
+              value={formData.city}
+              onChange={(e) => handleCityChange(e.target.value)}
               options={[
-                { value: '', label: 'Seleccione una sede' },
-                ...sites.map((site) => ({ value: site.id, label: site.name })),
+                { value: '', label: 'Seleccione una ciudad' },
+                ...siteCityOptions.map((city) => ({ value: city, label: city })),
               ]}
               fullWidth
               required
             />
-            <Input
-              label="Proyecto (Opcional)"
-              placeholder="Nombre del proyecto"
-              value={formData.project_name}
-              onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
+            <Select
+              label="Sede"
+              value={formData.site_id}
+              onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
+              options={[
+                {
+                  value: '',
+                  label: formData.city ? 'Seleccione una sede' : 'Seleccione primero una ciudad',
+                },
+                ...taskSiteOptions,
+              ]}
               fullWidth
+              required
+              disabled={!formData.city}
             />
           </div>
+
+          <Input
+            label="Proyecto (Opcional)"
+            placeholder="Nombre del proyecto"
+            value={formData.project_name}
+            onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
+            fullWidth
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <Input
