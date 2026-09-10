@@ -25,18 +25,21 @@ export const ADMINISTRATION_SERVICE_PROVIDERS = toProviderOptions([
 
 /**
  * Proveedores del tipo Impuesto Predial (`property_tax`):
- * solo autoridades municipales / alcaldías (sin ubicaciones/predios).
+ * autoridades municipales / alcaldías (sin ubicaciones/predios).
  */
 export const PROPERTY_TAX_SERVICE_PROVIDERS = toProviderOptions([
   'Municipio de Tenjo',
   'Municipio de Cisneros',
   'Municipio de Guarne',
+  'Municipio de Envigado',
+  'Municipio de Sabaneta',
   'Alcaldia municipal Turbaco',
+  'Alcaldia municipal de Urrao',
   'Alcaldia mayor de Bogotá',
   'Alcaldia distrital de Buenaventura',
   'Alcaldia de Barranquilla',
   'Alcaldia Mayor Cartagena',
-  'Municipio de Envigado',
+  'Alcaldia de Villavicencio',
 ]);
 
 /**
