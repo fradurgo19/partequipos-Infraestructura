@@ -32,6 +32,13 @@ import {
   getCanonicalSiteByKey,
   getCanonicalSitesByCity,
 } from '../constants/billSiteRegistry';
+import {
+  ADMINISTRATION_SERVICE_PROVIDERS,
+  LOGISTIC_PACIFIC_PROVIDERS,
+  PROPERTY_TAX_SERVICE_PROVIDERS,
+  RENT_SERVICE_PROVIDERS,
+  SECURITY_SERVICE_PROVIDERS,
+} from '../constants/billServiceProviders';
 import { resolveBillFormSite } from '../utils/billSiteResolution';
 
 const findSiteIdInCatalog = (
@@ -79,80 +86,10 @@ const sortSelectOptions = <T extends SelectOption>(options: T[]): T[] =>
     a.label.localeCompare(b.label, 'es', { sensitivity: 'base' })
   );
 
-const LOGISTIC_PACIFIC_PROVIDERS = [
-  { value: 'CENTRO LOGISTICO DEL PACIFICO', label: 'CENTRO LOGISTICO DEL PACIFICO' },
-  { value: 'COPROPIEDAD CENTRO LOGISTICO DEL PACIFICO', label: 'COPROPIEDAD CENTRO LOGISTICO DEL PACIFICO' },
-];
-
 const MARIELA_SANABRIA_PROVIDER = {
   value: 'MARIELA SANABRIA',
   label: 'MARIELA SANABRIA',
 };
-
-const toProviderOptions = (names: string[]) =>
-  names.map((name) => ({ value: name, label: name }));
-
-const SECURITY_SERVICE_PROVIDERS = toProviderOptions([
-  'PROSEGUR VIGILANCIA Y SEGURIDAD',
-  'ATLAS',
-  'SEGURTRONIC',
-  'VIPERS',
-  'COSMOS',
-  'Miro',
-  'TASA DE SEGURIDAD (TS) GOBERNACION VALLE DEL CAUCA',
-  'Air-e S.A.S. (SS PCOS Barranquilla)',
-  'Grupo Afinia EPM Caribe Mar de la Costa S.A.S. E.S.P.',
-]);
-
-const RENT_SERVICE_PROVIDERS = toProviderOptions([
-  'ANSERRA GLOBEL S.A.S.',
-  'COLTEBIENES',
-  'SOTO S.A.S',
-  'FERNANDO REINA Y CIA SAS',
-  'ARRENDAMIENTO VILLA CRUZ SAS',
-  'CIMA COMPAÑIA INMOBILIARIA SAS',
-  'SAJEAL SAS',
-  'AGRO ZETA SAS',
-  'CENTRO LOGISTICO STOCK CARIBE SAS',
-  'PROMOTORA INMOBILIARIA DEL PACIFICO COLOMBIANO SAS',
-  'WACONDA SAS',
-  'ARAUJO Y SEGOVIA DE CORDOBA SA',
-  'MARIELA SANABRIA ALDANA',
-  'CELPA ZONA FRANCA',
-  'CARLOS A SANCHEZ Y CIA CASYCO SAS',
-  'Arrendador',
-  ...LOGISTIC_PACIFIC_PROVIDERS.map((provider) => provider.value),
-]);
-
-const ADMINISTRATION_SERVICE_PROVIDERS = toProviderOptions([
-  'CONDOMINIO GRATIA BARRANQUILLA',
-  'CONJUNTO RESIDENCIAL CANTO LUNA',
-  'CONJUNTO RESIDENCIAL LA RIVIERA - P. H.',
-  'EDIFICIO FENIX',
-  'EDIFICIO PUNTA MADERO - PROPIEDAD HORIZONTAL',
-  'ENTRELAGOS CONDOMINIO CAMPESTRE',
-]);
-
-const PROPERTY_TAX_SERVICE_PROVIDERS = [
-  ...ADMINISTRATION_SERVICE_PROVIDERS,
-  ...toProviderOptions([
-    'LOTE GUARNE CEDI',
-    'LOTE SIBERIA',
-    'LOTE 38 CELPA',
-    'LOTE 37 CELPA',
-    'APTO GUARNE MIRADOR 360 N°407',
-    'APTO GUARNE MIRADOR 360 N°603',
-    'LOTE BARRANQUILLA LOGIK 40',
-    'FINCA EL ZARZAL',
-    'CASA EL PORTAL 1',
-    'CASA EL PORTAL 2',
-    'FINCA URRAO',
-    'LOTE CARTAGENA',
-    'BOGOTA SEDE NUEVA',
-    'MAQUINARIA FONTIBON',
-    'GUARNE BELLAVISTA',
-  ]),
-];
 
 const BillFormField: React.FC<{ fieldKey: string; children: React.ReactNode }> = ({
   fieldKey,
@@ -531,6 +468,20 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
         ...updatedConsumptions[index],
         [field]: value
       };
+
+      if (field === 'serviceType') {
+        const nextProviders =
+          value === 'other'
+            ? allProviderOptions
+            : providerOptions[value as ServiceType] || [];
+        const providerStillValid = nextProviders.some(
+          (option) => option.value === updatedItem.provider
+        );
+        if (!providerStillValid) {
+          updatedItem.provider = '';
+        }
+      }
+
       if (field === 'value') {
         updatedItem.totalAmount = value;
       }
@@ -544,6 +495,9 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[key];
+        if (field === 'serviceType') {
+          delete newErrors[`consumptions.${index}.provider`];
+        }
         return newErrors;
       });
     }
@@ -798,6 +752,12 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
             const providers = consumption.serviceType === 'other'
               ? allProviderOptions
               : providerOptions[consumption.serviceType] || [];
+            const providerLabel =
+              consumption.serviceType === 'property_tax'
+                ? 'Predio / proveedor (Impuesto Predial) *'
+                : consumption.serviceType === 'rent'
+                  ? 'Arrendador / proveedor (Arrendamiento) *'
+                  : 'Proveedor *';
             return (
               <div key={consumptionRowIds[idx]} className="border border-gray-200 rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
@@ -824,11 +784,17 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
                   </BillFormField>
                   <BillFormField fieldKey={`consumptions.${idx}.provider`}>
                     <Select
-                      label="Proveedor *"
+                      label={providerLabel}
                       value={consumption.provider}
                       options={providers}
                       onChange={(e) => handleConsumptionChange(idx, 'provider', e.target.value)}
-                      placeholder="Seleccione un proveedor"
+                      placeholder={
+                        consumption.serviceType === 'property_tax'
+                          ? 'Seleccione el predio o proveedor predial'
+                          : consumption.serviceType === 'rent'
+                            ? 'Seleccione el arrendador'
+                            : 'Seleccione un proveedor'
+                      }
                       error={errors[`consumptions.${idx}.provider`]}
                     />
                   </BillFormField>

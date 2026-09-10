@@ -1,43 +1,73 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { formatMailFrom, sendMailWithTimeout } from '../lib/mailTransporter.js';
 
-const BILL_NOTIFICATION_TO = [
-  'cduque@partequipos.com',
-  'contabilidad1@partequipos.com',
-];
-
-const BILL_NOTIFICATION_CC = [
-  'contabilidad3@partequipos.com',
-  'contabilidad4@partequipos.com',
-  'analista.contabilidad1@partequipos.com',
-];
+/** Destinatarios de contabilidad (aprobación y registro por sociedad). */
+const EMAIL_KEILIN = 'contabilidad3@partequipos.com';
+const EMAIL_KAREN = 'analista.contabilidad1@partequipos.com';
+const EMAIL_CAMILA = 'contabilidad4@partequipos.com';
+const EMAIL_CONTABILIDAD1 = 'contabilidad1@partequipos.com';
+const EMAIL_CDUQUE = 'cduque@partequipos.com';
 
 const BILL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
-
 const BILL_APPROVAL_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
-
-const BILL_PAID_NOTIFICATION_TO = ['cduque@partequipos.com'];
+const BILL_PAID_NOTIFICATION_TO = [EMAIL_CDUQUE];
 const BILL_PAID_NOTIFICATION_BCC = ['analista.mantenimiento@partequipos.com'];
 
-const BILL_APPROVAL_BASE_TO = [
-  'contabilidad4@partequipos.com',
-  'contabilidad1@partequipos.com',
+/** Lista informativa (CC) compartida; el TO principal se excluye automáticamente. */
+const BILL_ACCOUNTING_INFO_CC = [
+  EMAIL_CAMILA,
+  EMAIL_CONTABILIDAD1,
+  EMAIL_KEILIN,
+  EMAIL_KAREN,
 ];
 
-/** Destinatarios adicionales por grupo empresarial al aprobar una factura. */
-const BILL_APPROVAL_GROUP_RECIPIENTS = {
-  'PARTEQUIPOS MAQUINARIA S.A.S.': ['analista.contabilidad1@partequipos.com'],
-  'PARTEQUIPOS S.A.S.': ['contabilidad3@partequipos.com'],
-  'WACONDA S.A.S.': ['contabilidad3@partequipos.com'],
+/**
+ * Destinatario principal (TO) por sociedad.
+ * Aplica cuando cualquier usuario aprueba o registra una factura (no depende del aprobador).
+ * - PARTEQUIPOS MAQUINARIA → Keilin (contabilidad3)
+ * - PARTEQUIPOS S.A.S. → Karen (analista.contabilidad1)
+ */
+const BILL_GROUP_PRIMARY_TO = {
+  'PARTEQUIPOS MAQUINARIA SAS': EMAIL_KEILIN,
+  'PARTEQUIPOS SAS': EMAIL_KAREN,
+  'WACONDA SAS': EMAIL_KEILIN,
 };
 
-const normalizeBusinessGroupKey = (businessGroup) => businessGroup?.trim() || '';
+const normalizeBusinessGroupKey = (businessGroup) =>
+  String(businessGroup ?? '')
+    .normalize('NFD')
+    .replaceAll(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replaceAll(/\./g, '')
+    .replaceAll(/\s+/g, ' ')
+    .trim();
 
-const resolveBillApprovalRecipients = (businessGroup) => {
+const uniqueEmails = (emails) =>
+  [...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean))];
+
+/**
+ * Resuelve TO (responsable) y CC (solo información) según el grupo empresarial.
+ * Si no hay mapeo de sociedad, TO = lista informativa completa (comportamiento seguro).
+ */
+const resolveBillGroupMailRecipients = (businessGroup, { includeCduqueInCc = false } = {}) => {
   const groupKey = normalizeBusinessGroupKey(businessGroup);
-  const groupRecipients = BILL_APPROVAL_GROUP_RECIPIENTS[groupKey] ?? [];
+  const primaryTo = BILL_GROUP_PRIMARY_TO[groupKey];
 
-  return [...new Set([...BILL_APPROVAL_BASE_TO, ...groupRecipients])];
+  if (!primaryTo) {
+    const to = uniqueEmails(BILL_ACCOUNTING_INFO_CC);
+    const cc = uniqueEmails([
+      ...(includeCduqueInCc ? [EMAIL_CDUQUE] : []),
+    ]).filter((email) => !to.includes(email));
+    return { to, cc };
+  }
+
+  const to = uniqueEmails([primaryTo]);
+  const cc = uniqueEmails([
+    ...BILL_ACCOUNTING_INFO_CC,
+    ...(includeCduqueInCc ? [EMAIL_CDUQUE] : []),
+  ]).filter((email) => !to.includes(email));
+
+  return { to, cc };
 };
 
 const EMAIL_SEND_TIMEOUT_WITH_ATTACHMENT_MS = 25000;
@@ -264,7 +294,8 @@ const buildDocumentSections = (bill, attachment) => {
 const buildBillEmailContent = (bill, registrar, attachment) => {
   const serviceLabel = translateServiceType(bill.service_type);
   const contractNumber = bill.contract_number || bill.invoice_number || 'Sin número';
-  const subject = `Nueva Factura Registrada - ${contractNumber} - ${serviceLabel}`;
+  const businessGroup = bill.business_group || 'Sin grupo';
+  const subject = `Nueva Factura Registrada - ${contractNumber} - ${businessGroup} - ${serviceLabel}`;
   const registrarLabel = registrar.email
     ? `${registrar.fullName} (${registrar.email})`
     : registrar.fullName;
@@ -370,10 +401,12 @@ const buildBillEmailContent = (bill, registrar, attachment) => {
     .filter(Boolean)
     .join('\n');
 
+  const recipients = resolveBillGroupMailRecipients(businessGroup, { includeCduqueInCc: true });
+
   const mailOptions = {
     from: formatMailFrom(),
-    to: BILL_NOTIFICATION_TO.join(', '),
-    cc: BILL_NOTIFICATION_CC.join(', '),
+    to: recipients.to.join(', '),
+    cc: recipients.cc.length > 0 ? recipients.cc.join(', ') : undefined,
     bcc: BILL_NOTIFICATION_BCC.join(', '),
     subject,
     text,
@@ -515,9 +548,11 @@ const buildBillApprovedEmailContent = (bill, approver, attachment, consumptions 
     .filter(Boolean)
     .join('\n');
 
+  const recipients = resolveBillGroupMailRecipients(businessGroup);
   const mailOptions = {
     from: formatMailFrom(),
-    to: resolveBillApprovalRecipients(businessGroup).join(', '),
+    to: recipients.to.join(', '),
+    cc: recipients.cc.length > 0 ? recipients.cc.join(', ') : undefined,
     bcc: BILL_APPROVAL_NOTIFICATION_BCC.join(', '),
     subject,
     text,
