@@ -86,6 +86,7 @@ const SERVICE_TYPE_LABELS = {
   administration: 'Administración',
   property_tax: 'Impuesto Predial',
   rent: 'Arrendamiento',
+  operation_fixed_fee: 'Cuota fija de operación',
   other: 'Otro',
 };
 

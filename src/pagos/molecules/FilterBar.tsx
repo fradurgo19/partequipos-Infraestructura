@@ -46,6 +46,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     { value: 'administration', label: 'Administración' },
     { value: 'property_tax', label: 'Impuesto Predial' },
     { value: 'rent', label: 'Arrendamiento' },
+    { value: 'operation_fixed_fee', label: 'Cuota fija de operación' },
     { value: 'other', label: 'Otro' },
   ];
 

@@ -35,11 +35,26 @@ import {
 import {
   ADMINISTRATION_SERVICE_PROVIDERS,
   LOGISTIC_PACIFIC_PROVIDERS,
+  OPERATION_FIXED_FEE_PROVIDERS,
   PROPERTY_TAX_SERVICE_PROVIDERS,
   RENT_SERVICE_PROVIDERS,
   SECURITY_SERVICE_PROVIDERS,
 } from '../constants/billServiceProviders';
 import { resolveBillFormSite } from '../utils/billSiteResolution';
+
+const getProviderFieldLabel = (serviceType: ServiceType): string => {
+  if (serviceType === 'property_tax') return 'Proveedor (Impuesto Predial) *';
+  if (serviceType === 'rent') return 'Arrendador / proveedor (Arrendamiento) *';
+  if (serviceType === 'operation_fixed_fee') return 'Proveedor (Cuota fija de operación) *';
+  return 'Proveedor *';
+};
+
+const getProviderFieldPlaceholder = (serviceType: ServiceType): string => {
+  if (serviceType === 'property_tax') return 'Seleccione el municipio o alcaldía';
+  if (serviceType === 'rent') return 'Seleccione el arrendador';
+  if (serviceType === 'operation_fixed_fee') return 'Seleccione el proveedor';
+  return 'Seleccione un proveedor';
+};
 
 const findSiteIdInCatalog = (
   city: string,
@@ -181,6 +196,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     { value: 'administration', label: 'Administración' },
     { value: 'property_tax', label: 'Impuesto Predial' },
     { value: 'rent', label: 'Arrendamiento' },
+    { value: 'operation_fixed_fee', label: 'Cuota fija de operación' },
     { value: 'other', label: 'Otro' }
   ];
   const serviceTypeOptions = sortSelectOptions(serviceTypeOptionsRaw);
@@ -338,6 +354,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
     administration: ADMINISTRATION_SERVICE_PROVIDERS,
     property_tax: PROPERTY_TAX_SERVICE_PROVIDERS,
     rent: RENT_SERVICE_PROVIDERS,
+    operation_fixed_fee: OPERATION_FIXED_FEE_PROVIDERS,
     public_lighting: [
       { value: 'EPM (Empresas Públicas de Medellín)', label: 'EPM (Empresas Públicas de Medellín)' },
       { value: 'Dispac', label: 'Dispac' },
@@ -752,12 +769,8 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
             const providers = consumption.serviceType === 'other'
               ? allProviderOptions
               : providerOptions[consumption.serviceType] || [];
-            const providerLabel =
-              consumption.serviceType === 'property_tax'
-                ? 'Predio / proveedor (Impuesto Predial) *'
-                : consumption.serviceType === 'rent'
-                  ? 'Arrendador / proveedor (Arrendamiento) *'
-                  : 'Proveedor *';
+            const providerLabel = getProviderFieldLabel(consumption.serviceType);
+            const providerPlaceholder = getProviderFieldPlaceholder(consumption.serviceType);
             return (
               <div key={consumptionRowIds[idx]} className="border border-gray-200 rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
@@ -788,13 +801,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
                       value={consumption.provider}
                       options={providers}
                       onChange={(e) => handleConsumptionChange(idx, 'provider', e.target.value)}
-                      placeholder={
-                        consumption.serviceType === 'property_tax'
-                          ? 'Seleccione el predio o proveedor predial'
-                          : consumption.serviceType === 'rent'
-                            ? 'Seleccione el arrendador'
-                            : 'Seleccione un proveedor'
-                      }
+                      placeholder={providerPlaceholder}
                       error={errors[`consumptions.${idx}.provider`]}
                     />
                   </BillFormField>

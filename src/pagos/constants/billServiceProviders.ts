@@ -13,10 +13,7 @@ const LOGISTIC_PACIFIC_PROVIDER_NAMES = [
 /** Proveedores compartidos (copropiedad CELPA / Centro Logístico del Pacífico). */
 export const LOGISTIC_PACIFIC_PROVIDERS = toProviderOptions([...LOGISTIC_PACIFIC_PROVIDER_NAMES]);
 
-/**
- * Proveedores del tipo de servicio Administración.
- * También se reutilizan en Impuesto Predial (predios/conjuntos con administración).
- */
+/** Proveedores del tipo de servicio Administración. */
 export const ADMINISTRATION_SERVICE_PROVIDERS = toProviderOptions([
   'CONDOMINIO GRATIA BARRANQUILLA',
   'CONJUNTO RESIDENCIAL CANTO LUNA',
@@ -27,37 +24,25 @@ export const ADMINISTRATION_SERVICE_PROVIDERS = toProviderOptions([
 ]);
 
 /**
- * Predios / inmuebles específicos del registro de Impuesto Predial.
- * No incluye autoridades municipales: el “proveedor” identifica el predio cobrado.
+ * Proveedores del tipo Impuesto Predial (`property_tax`):
+ * solo autoridades municipales / alcaldías (sin ubicaciones/predios).
  */
-export const PROPERTY_TAX_PREDIOS_PROVIDERS = toProviderOptions([
-  'LOTE GUARNE CEDI',
-  'LOTE SIBERIA',
-  'LOTE 38 CELPA',
-  'LOTE 37 CELPA',
-  'APTO GUARNE MIRADOR 360 N°407',
-  'APTO GUARNE MIRADOR 360 N°603',
-  'LOTE BARRANQUILLA LOGIK 40',
-  'FINCA EL ZARZAL',
-  'CASA EL PORTAL 1',
-  'CASA EL PORTAL 2',
-  'FINCA URRAO',
-  'LOTE CARTAGENA',
-  'LOTE TURBACO',
-  'BOGOTA SEDE NUEVA',
-  'CRA 68D Nro.17A - 84',
-  'MAQUINARIA FONTIBON',
-  'GUARNE BELLAVISTA',
+export const PROPERTY_TAX_SERVICE_PROVIDERS = toProviderOptions([
+  'Municipio de Tenjo',
+  'Municipio de Cisneros',
+  'Municipio de Guarne',
+  'Alcaldia municipal Turbaco',
+  'Alcaldia mayor de Bogotá',
+  'Alcaldia distrital de Buenaventura',
+  'Alcaldia de Barranquilla',
+  'Alcaldia Mayor Cartagena',
+  'Municipio de Envigado',
 ]);
 
 /**
- * Proveedores del tipo de servicio Impuesto Predial (`property_tax`):
- * conjuntos/administración + predios/inmuebles sujetos a predial.
+ * Proveedores del tipo Cuota fija de operación (`operation_fixed_fee`).
  */
-export const PROPERTY_TAX_SERVICE_PROVIDERS: BillProviderOption[] = [
-  ...ADMINISTRATION_SERVICE_PROVIDERS,
-  ...PROPERTY_TAX_PREDIOS_PROVIDERS,
-];
+export const OPERATION_FIXED_FEE_PROVIDERS = toProviderOptions(['Celpa zona franca']);
 
 /**
  * Arrendadores / inmobiliarias del tipo de servicio Arrendamiento (`rent`).
@@ -103,11 +88,16 @@ export const isRentProvider = (provider: string): boolean =>
   RENT_SERVICE_PROVIDERS.some((item) => item.value === provider.trim());
 
 export const getProvidersForServiceType = (
-  serviceType: Extract<ServiceType, 'property_tax' | 'rent' | 'administration' | 'security'>
+  serviceType: Extract<
+    ServiceType,
+    'property_tax' | 'rent' | 'administration' | 'security' | 'operation_fixed_fee'
+  >
 ): BillProviderOption[] => {
   switch (serviceType) {
     case 'property_tax':
       return PROPERTY_TAX_SERVICE_PROVIDERS;
+    case 'operation_fixed_fee':
+      return OPERATION_FIXED_FEE_PROVIDERS;
     case 'rent':
       return RENT_SERVICE_PROVIDERS;
     case 'administration':

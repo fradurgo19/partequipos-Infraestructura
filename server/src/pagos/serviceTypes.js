@@ -13,6 +13,7 @@ export const PAGOS_SERVICE_TYPES = [
   'administration',
   'property_tax',
   'rent',
+  'operation_fixed_fee',
   'other',
 ];
 

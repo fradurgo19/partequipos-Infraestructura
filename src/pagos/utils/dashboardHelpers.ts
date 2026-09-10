@@ -15,6 +15,7 @@ export const DASHBOARD_SERVICE_TYPE_ORDER: ServiceType[] = [
   'administration',
   'property_tax',
   'rent',
+  'operation_fixed_fee',
   'other',
 ];
 

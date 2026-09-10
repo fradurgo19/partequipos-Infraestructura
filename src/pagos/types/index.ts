@@ -11,6 +11,7 @@ export type ServiceType =
   | 'administration'
   | 'property_tax'
   | 'rent'
+  | 'operation_fixed_fee'
   | 'public_lighting'
   | 'other';
 

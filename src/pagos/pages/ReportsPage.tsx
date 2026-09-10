@@ -154,6 +154,7 @@ export const ReportsPage: React.FC = () => {
       administration: 'Administración',
       property_tax: 'Impuesto Predial',
       rent: 'Arrendamiento',
+      operation_fixed_fee: 'Cuota fija de operación',
       other: 'Otro'
     };
     return labels[type] || type;
