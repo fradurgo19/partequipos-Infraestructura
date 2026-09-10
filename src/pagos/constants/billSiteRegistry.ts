@@ -1,5 +1,3 @@
-import { ADDITIONAL_BILL_CITIES } from './billLocations';
-
 export interface BillCanonicalSite {
   key: string;
   siteName: string;
@@ -73,10 +71,11 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
   ),
   site(
     'bogota-sede-nueva-cra68d',
-    'Bogota Sede Nueva CRA68D Nro.17A - 84',
+    'CRA 68D Nro.17A - 84',
     'BOGOTA',
-    'BOGOTA SEDE NUEVA CRA68D Nro.17A - 84',
+    'CRA 68D Nro.17A - 84',
     [
+      'BOGOTA SEDE NUEVA CRA68D Nro.17A - 84',
       'BOGOTA SEDE NUEVA CRA68D Nro.',
       'BOGOTA SEDE NUEVA CRA68D Nro.17A - 84 - REPUESTOS',
       'CRA68D Nro.17A - 84',
@@ -87,14 +86,29 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
     'buenaventura-lote-37',
     'Buenaventura KM 13 Via Alterna Lote 37',
     'BUENAVENTURA',
-    'BUENAVENTURA KM 13 VIA ALTERNA',
-    ['LOTE 37']
+    'BUENAVENTURA KM 13 VIA ALTERNA LOTE 37',
+    ['BUENAVENTURA KM 13 VIA ALTERNA', 'LOTE 37']
   ),
   site(
     'buenaventura-lote-38',
     'Buenaventura KM 13 Via Alterna Lote 38',
     'BUENAVENTURA',
-    'LOTE 38'
+    'BUENAVENTURA KM 13 VIA ALTERNA LOTE 38',
+    ['LOTE 38']
+  ),
+  site(
+    'buenaventura-lote-39',
+    'Buenaventura KM13 via alterna Lote 39',
+    'BUENAVENTURA',
+    'BUENAVENTURA KM13 VIA ALTERNA LOTE 39',
+    ['BUENAVENTURA KM 13 VIA ALTERNA LOTE 39', 'LOTE 39']
+  ),
+  site(
+    'buenaventura-lote-28-29',
+    'Buenaventura KM13 via alterna Lote 28 y 29',
+    'BUENAVENTURA',
+    'BUENAVENTURA KM13 VIA ALTERNA LOTE 28 Y 29',
+    ['BUENAVENTURA KM 13 VIA ALTERNA LOTE 28 Y 29', 'LOTE 28 Y 29', 'LOTE 28', 'LOTE 29']
   ),
   site(
     'cali-yumbo',
@@ -192,16 +206,28 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
   site('apto-guarne-407', 'Apto Guarne 407', 'GUARNE', 'APTO GUARNE 407'),
   site('apto-guarne-603', 'Apto Guarne 603', 'GUARNE', 'APTO GUARNE 603'),
   site('casa-lote-guarne', 'Casa Lote Guarne', 'GUARNE', 'CASA LOTE GUARNE'),
-  site('lote-cartagena', 'Lote Cartagena', 'CARTAGENA', 'LOTE CARTAGENA'),
+  site(
+    'lote-turbaco',
+    'Lote Turbaco',
+    'CARTAGENA',
+    'LOTE TURBACO',
+    ['LOTE CARTAGENA', 'Lote Cartagena']
+  ),
   site(
     'lote-villavicencio',
     'Lote Villavicencio Condominio Entrelagos',
     'VILLAVICENCIO',
     'Lote en Villavicencio'
   ),
-  ...ADDITIONAL_BILL_CITIES.map((city) =>
-    site(`finca-el-zarzal-${city.toLowerCase()}`, 'Finca el Zarzal', city, 'Lote', ['Lote'])
+  site('lote-siberia', 'Lote Siberia', 'SIBERIA', 'LOTE SIBERIA', ['Lote Siberia', 'Lote']),
+  site(
+    'finca-el-zarzal-cisneros',
+    'Finca el Zarzal',
+    'CISNEROS',
+    'FINCA EL ZARZAL',
+    ['Finca el Zarzal', 'Lote', 'FINCA EL ZARZAL']
   ),
+  site('lote-urrao', 'Lote Urrao', 'URRAO', 'LOTE URRAO', ['Lote', 'FINCA URRAO']),
 ];
 
 const sortLabels = (items: string[]) =>

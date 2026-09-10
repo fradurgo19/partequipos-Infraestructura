@@ -48,7 +48,7 @@ export const UsersPage: React.FC = () => {
     { value: 'CALI CALLE 15 NRO. 38-21 LOCAL 1 y 2 yumbo', label: 'CALI CALLE 15 NRO. 38-21 LOCAL 1 y 2 yumbo' },
     { value: 'BARRANQUILLA CL 110 NRO.10-427 BODEGA NRO. 8', label: 'BARRANQUILLA CL 110 NRO.10-427 BODEGA NRO. 8' },
     { value: 'BARRANQUILLA CALLE 110 NRO. 10-427 BODEGA NRO. 7', label: 'BARRANQUILLA CALLE 110 NRO. 10-427 BODEGA NRO. 7' },
-    { value: 'BOGOTA SEDE NUEVA CRA68D Nro.17A - 84', label: 'BOGOTA SEDE NUEVA CRA68D Nro.17A - 84' },
+    { value: 'CRA 68D Nro.17A - 84', label: 'CRA 68D Nro.17A - 84' },
     { value: 'SEXTA CALLE 6 NRO. 26 -7 3 BOGOTA', label: 'SEXTA CALLE 6 NRO. 26 -7 3 BOGOTA' },
     { value: 'BUCARAMANGA KM 7 VIA GIRON NRO. 4-80', label: 'BUCARAMANGA KM 7 VIA GIRON NRO. 4-80' },
     { value: 'MQ BOGOTA DG 16 NRO. 96G- 85', label: 'MQ BOGOTA DG 16 NRO. 96G- 85' },

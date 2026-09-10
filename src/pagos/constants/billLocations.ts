@@ -14,19 +14,25 @@ export const STANDARD_BILL_BUSINESS_GROUPS = [
 ] as const;
 
 /**
- * Ciudades adicionales: todos los grupos empresariales y dirección "Lote"
- * para cualquier grupo seleccionado.
+ * Ciudades adicionales del formulario (Siberia = Lote Siberia; Cisneros = Finca el Zarzal).
+ * Las sedes canónicas viven en billSiteRegistry.ts.
  */
 export const ADDITIONAL_BILL_CITIES = ['SIBERIA', 'CISNEROS', 'URRAO'] as const;
 
 const buildLoteEntriesForCities = (cities: readonly string[]): BillLocationEntry[] =>
-  cities.flatMap((city) =>
-    STANDARD_BILL_BUSINESS_GROUPS.map((businessGroup) => ({
+  cities.flatMap((city) => {
+    const addressByCity: Record<string, string> = {
+      SIBERIA: 'LOTE SIBERIA',
+      CISNEROS: 'FINCA EL ZARZAL',
+      URRAO: 'LOTE URRAO',
+    };
+    const address = addressByCity[city] ?? 'Lote';
+    return STANDARD_BILL_BUSINESS_GROUPS.map((businessGroup) => ({
       city,
       businessGroup,
-      address: 'Lote',
-    }))
-  );
+      address,
+    }));
+  });
 
 const ADDITIONAL_CITY_LOTE_CATALOG = buildLoteEntriesForCities(ADDITIONAL_BILL_CITIES);
 
@@ -39,14 +45,20 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'YUMBO-CALI', address: 'CALLE 15 NRO. 38-21 LOCAL 1 y 2 yumbo', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BARRANQUILLA', address: 'CL 110 NRO.10-427 BODEGA NRO. 8', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BARRANQUILLA', address: 'CL 110 NRO. 10-427 BODEGA NRO. 7', businessGroup: 'PARTEQUIPOS S.A.S.' },
-  { city: 'BOGOTA', address: 'CRA68D Nro.17A - 84', businessGroup: 'PARTEQUIPOS S.A.S.' },
+  { city: 'BOGOTA', address: 'CRA 68D Nro.17A - 84', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BOGOTA', address: 'CR 80 NRO.16D-54 El vergel.', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BOGOTA', address: 'CL 6 NRO. 26 -73', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BUCARAMANGA', address: 'KM 7 VIA GIRON NRO. 4-80', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BUCARAMANGA', address: 'KM 7 VIA GIRON NRO. 4-80', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
-  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
-  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'PARTEQUIPOS S.A.S.' },
-  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA LOTE 37', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA LOTE 37', businessGroup: 'PARTEQUIPOS S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM 13 VIA ALTERNA LOTE 37', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM13 VIA ALTERNA LOTE 39', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM13 VIA ALTERNA LOTE 39', businessGroup: 'PARTEQUIPOS S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM13 VIA ALTERNA LOTE 39', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM13 VIA ALTERNA LOTE 28 Y 29', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM13 VIA ALTERNA LOTE 28 Y 29', businessGroup: 'PARTEQUIPOS S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'BUENAVENTURA KM13 VIA ALTERNA LOTE 28 Y 29', businessGroup: 'WACONDA S.A.S.' },
   { city: 'CAUCASIA', address: 'CRA 20 NRO.3 A - 29', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'ISTMINA-CHOCO', address: 'BOMBA ZEUZ LA 70 ALM ERA EN MVTO', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'IBAGUE', address: 'CRA 48 SUR Nro.88-45 local 2', businessGroup: 'PARTEQUIPOS S.A.S.' },
@@ -65,12 +77,14 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'SABANETA', address: 'CL 70 SUR NRO. 43A - 15 INT 2404 CANTO LUNA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BOGOTA', address: 'CL 23 NRO.72-91 APT 701 LA RIVIERA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'CARTAGENA', address: 'CRA18 Nro. 24 45 apto 703 ED PUNTA MADERO', businessGroup: 'WACONDA S.A.S.' },
-  { city: 'CARTAGENA', address: 'LOTE CARTAGENA', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'CARTAGENA', address: 'LOTE TURBACO', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BARRANQUILLA', address: 'CRA 51 NRO.96A-79 ED FENIX', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BARRANQUILLA', address: 'CONDOMINIO GRATIA', businessGroup: 'WACONDA S.A.S.' },
   { city: 'VILLAVICENCIO', address: 'Lote en Villavicencio', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BUENAVENTURA', address: 'LOTE 37', businessGroup: 'WACONDA S.A.S.' },
   { city: 'BUENAVENTURA', address: 'LOTE 38', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'LOTE 39', businessGroup: 'WACONDA S.A.S.' },
+  { city: 'BUENAVENTURA', address: 'LOTE 28 Y 29', businessGroup: 'WACONDA S.A.S.' },
   ...ADDITIONAL_CITY_LOTE_CATALOG,
 ];
 
