@@ -14,15 +14,15 @@ export const STANDARD_BILL_BUSINESS_GROUPS = [
 ] as const;
 
 /**
- * Ciudades adicionales del formulario (Siberia = Lote Siberia; Cisneros = Finca el Zarzal; Urrao = Finca Urrao).
+ * Ciudades adicionales del formulario (Tenjo = Lote Siberia; Cisneros = Finca el Zarzal; Urrao = Finca Urrao).
  * Las sedes canónicas viven en billSiteRegistry.ts.
  */
-export const ADDITIONAL_BILL_CITIES = ['SIBERIA', 'CISNEROS', 'URRAO'] as const;
+export const ADDITIONAL_BILL_CITIES = ['TENJO', 'CISNEROS', 'URRAO'] as const;
 
 const buildLoteEntriesForCities = (cities: readonly string[]): BillLocationEntry[] =>
   cities.flatMap((city) => {
     const addressByCity: Record<string, string> = {
-      SIBERIA: 'LOTE SIBERIA',
+      TENJO: 'Lote Siberia',
       CISNEROS: 'FINCA EL ZARZAL',
       URRAO: 'FINCA URRAO',
     };

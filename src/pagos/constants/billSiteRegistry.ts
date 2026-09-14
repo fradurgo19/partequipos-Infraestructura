@@ -232,7 +232,13 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
     'VILLAVICENCIO',
     'Lote en Villavicencio'
   ),
-  site('lote-siberia', 'Lote Siberia', 'SIBERIA', 'LOTE SIBERIA', ['Lote Siberia', 'Lote']),
+  site(
+    'lote-tenjo',
+    'Lote Siberia',
+    'TENJO',
+    'Lote Siberia',
+    ['LOTE SIBERIA', 'Lote Siberia', 'Lote', 'SIBERIA', 'LOTE TENJO']
+  ),
   site(
     'finca-el-zarzal-cisneros',
     'Finca el Zarzal',
