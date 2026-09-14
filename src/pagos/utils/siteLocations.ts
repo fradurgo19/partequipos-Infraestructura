@@ -9,7 +9,10 @@ type SiteRow = {
 
 const normalizeCity = (city?: string | null) => {
   const trimmed = city?.trim();
-  return trimmed ? trimmed.toUpperCase() : 'SIN CIUDAD';
+  if (!trimmed) return 'SIN CIUDAD';
+  const upper = trimmed.toUpperCase();
+  if (upper === 'SIBERIA') return 'TENJO';
+  return upper;
 };
 
 export const mapSitesToBillLocations = (sites: SiteRow[]): BillLocationEntry[] =>

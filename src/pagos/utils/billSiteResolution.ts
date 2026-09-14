@@ -2,6 +2,7 @@ import {
   BILL_CANONICAL_SITES,
   BillCanonicalSite,
   getCanonicalSiteByKey,
+  normalizeBillCity,
 } from '../constants/billSiteRegistry';
 import { BillLocationEntry, findBillLocationEntry, mergeBillLocationCatalogs, LEGACY_BILL_LOCATION_CATALOG } from '../constants/billLocations';
 import { UtilityBill } from '../types';
@@ -78,10 +79,14 @@ const ALIAS_MAP = buildAliasMap();
 
 const resolveLoteByCity = (city?: string | null): BillCanonicalSite | null => {
   if (!city) return null;
-  const normalizedCity = city.trim().toUpperCase();
+  const normalizedCity = normalizeBillCity(city);
   return (
     BILL_CANONICAL_SITES.find(
-      (entry) => entry.city === normalizedCity && normalizeSiteAlias(entry.canonicalAddress) === 'LOTE'
+      (entry) =>
+        entry.city === normalizedCity &&
+        (normalizeSiteAlias(entry.canonicalAddress) === 'LOTE' ||
+          normalizeSiteAlias(entry.canonicalAddress) === 'LOTE SIBERIA' ||
+          normalizeSiteAlias(entry.siteName) === 'LOTE SIBERIA')
     ) ?? null
   );
 };
@@ -220,7 +225,7 @@ export const resolveBillFormSite = (
   const canonical = resolveCanonicalSite(location, city);
 
   if (canonical) {
-    const resolvedCity = city?.trim() || canonical.city;
+    const resolvedCity = normalizeBillCity(city?.trim() || canonical.city);
     const siteId =
       findSiteIdInCatalog(resolvedCity, canonical.canonicalAddress, catalog) ??
       (city && businessGroup

@@ -237,7 +237,7 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
     'Lote Siberia',
     'TENJO',
     'Lote Siberia',
-    ['LOTE SIBERIA', 'Lote Siberia', 'Lote', 'SIBERIA', 'LOTE TENJO']
+    ['LOTE SIBERIA', 'Lote Siberia', 'Lote', 'LOTE TENJO']
   ),
   site(
     'finca-el-zarzal-cisneros',
@@ -258,13 +258,30 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
 const sortLabels = (items: string[]) =>
   [...new Set(items)].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
 
-export const getCanonicalSiteCities = (): string[] =>
-  sortLabels(BILL_CANONICAL_SITES.map((entry) => entry.city));
+/** Alias de ciudad históricos → ciudad canónica del formulario. */
+const BILL_CITY_ALIASES: Record<string, string> = {
+  SIBERIA: 'TENJO',
+};
 
-export const getCanonicalSitesByCity = (city: string): BillCanonicalSite[] =>
-  BILL_CANONICAL_SITES.filter((entry) => entry.city === city).sort((a, b) =>
+/** Normaliza ciudad de factura (p. ej. SIBERIA → TENJO). */
+export const normalizeBillCity = (city?: string | null): string => {
+  const trimmed = city?.trim();
+  if (!trimmed) return '';
+  const upper = trimmed.toUpperCase();
+  return BILL_CITY_ALIASES[upper] ?? upper;
+};
+
+export const getCanonicalSiteCities = (): string[] =>
+  sortLabels(
+    BILL_CANONICAL_SITES.map((entry) => normalizeBillCity(entry.city)).filter(Boolean)
+  );
+
+export const getCanonicalSitesByCity = (city: string): BillCanonicalSite[] => {
+  const normalizedCity = normalizeBillCity(city);
+  return BILL_CANONICAL_SITES.filter((entry) => entry.city === normalizedCity).sort((a, b) =>
     a.siteName.localeCompare(b.siteName, 'es', { sensitivity: 'base' })
   );
+};
 
 export const getCanonicalSiteByKey = (key: string): BillCanonicalSite | undefined =>
   BILL_CANONICAL_SITES.find((entry) => entry.key === key);

@@ -31,6 +31,7 @@ import {
   getCanonicalSiteCities,
   getCanonicalSiteByKey,
   getCanonicalSitesByCity,
+  normalizeBillCity,
 } from '../constants/billSiteRegistry';
 import {
   ADMINISTRATION_SERVICE_PROVIDERS,
@@ -211,7 +212,10 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   ];
 
   const cityOptions = useMemo(
-    () => getCanonicalSiteCities().map((city) => ({ value: city, label: city })),
+    () =>
+      getCanonicalSiteCities()
+        .filter((city) => city !== 'SIBERIA')
+        .map((city) => ({ value: city, label: city })),
     []
   );
 
@@ -250,7 +254,7 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
 
     setFormData((prev) => ({
       ...prev,
-      city: resolved.city,
+      city: normalizeBillCity(resolved.city),
       siteKey: resolved.siteKey,
       businessGroup: initialData.businessGroup || resolved.businessGroup,
       location: resolved.location,
@@ -415,9 +419,10 @@ export const BillForm: React.FC<BillFormProps> = ({ billId, initialData }) => {
   };
 
   const handleCityChange = (value: string) => {
+    const city = normalizeBillCity(value);
     setFormData((prev) => ({
       ...prev,
-      city: value,
+      city,
       siteKey: '',
       location: '',
       siteId: undefined,
