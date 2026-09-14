@@ -14,7 +14,7 @@ export const STANDARD_BILL_BUSINESS_GROUPS = [
 ] as const;
 
 /**
- * Ciudades adicionales del formulario (Siberia = Lote Siberia; Cisneros = Finca el Zarzal).
+ * Ciudades adicionales del formulario (Siberia = Lote Siberia; Cisneros = Finca el Zarzal; Urrao = Finca Urrao).
  * Las sedes canónicas viven en billSiteRegistry.ts.
  */
 export const ADDITIONAL_BILL_CITIES = ['SIBERIA', 'CISNEROS', 'URRAO'] as const;
@@ -24,7 +24,7 @@ const buildLoteEntriesForCities = (cities: readonly string[]): BillLocationEntry
     const addressByCity: Record<string, string> = {
       SIBERIA: 'LOTE SIBERIA',
       CISNEROS: 'FINCA EL ZARZAL',
-      URRAO: 'LOTE URRAO',
+      URRAO: 'FINCA URRAO',
     };
     const address = addressByCity[city] ?? 'Lote';
     return STANDARD_BILL_BUSINESS_GROUPS.map((businessGroup) => ({
@@ -63,6 +63,7 @@ export const LEGACY_BILL_LOCATION_CATALOG: BillLocationEntry[] = [
   { city: 'ISTMINA-CHOCO', address: 'BOMBA ZEUZ LA 70 ALM ERA EN MVTO', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'IBAGUE', address: 'CRA 48 SUR Nro.88-45 local 2', businessGroup: 'PARTEQUIPOS S.A.S.' },
   { city: 'BOGOTA', address: 'DG 16 NRO. 96G- 85', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
+  { city: 'GUARNE', address: 'Guarne', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
   { city: 'GUARNE', address: 'KM26+800 MTS AUT. MED-BOGOTA', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
   { city: 'GUARNE', address: 'VEREDA BELLAVISTA - Casa archivo', businessGroup: 'PARTEQUIPOS MAQUINARIA S.A.S.' },
   { city: 'GUARNE', address: 'LOTE GUARNE CEDI', businessGroup: 'WACONDA S.A.S.' },

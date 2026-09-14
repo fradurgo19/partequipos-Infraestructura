@@ -187,13 +187,19 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
   ),
   site('bucaramanga', 'Bucaramanga', 'BUCARAMANGA', 'KM 7 VIA GIRON NRO. 4-80'),
   site(
-    'guarne-repuestos',
-    'Guarne Repuestos',
+    'guarne',
+    'Guarne',
     'GUARNE',
-    'KM26+800 MTS AUT. MED-BOGOTA',
+    'Guarne',
     [
+      'KM26+800 MTS AUT. MED-BOGOTA',
       'MAQUINARIA GUARNE KM26+800 MTS AUT. MED. B - MAQUINARIA',
+      'MAQUINARIA GUARNE KM26+800 MTS AUT. MED. B',
       'LOTE GUARNE CEDI',
+      'Guarne Repuestos',
+      'Guarne Maquinaria',
+      'GUARNE MAQUINARIA',
+      'GUARNE',
     ]
   ),
   site(
@@ -203,7 +209,14 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
     'MAQUINARIA GUARNE (CASA NUEVA) VEREDA BELLAVISTA - MAQUINARIA',
     ['VEREDA BELLAVISTA - Casa archivo']
   ),
-  site('apto-guarne-407', 'Apto Guarne 407', 'GUARNE', 'APTO GUARNE 407'),
+  site('apto-guarne-407', 'Apto Guarne 407', 'GUARNE', 'APTO GUARNE 407', [
+    'Apto Guarne 407',
+    'Mirador 360, Guarne',
+  ]),
+  site('apto-guarne-602', 'Apto Guarne 602', 'GUARNE', 'APTO GUARNE 602', [
+    'Apto Guarne 602',
+    'Apto Guane 602',
+  ]),
   site('apto-guarne-603', 'Apto Guarne 603', 'GUARNE', 'APTO GUARNE 603'),
   site('casa-lote-guarne', 'Casa Lote Guarne', 'GUARNE', 'CASA LOTE GUARNE'),
   site(
@@ -227,7 +240,13 @@ export const BILL_CANONICAL_SITES: BillCanonicalSite[] = [
     'FINCA EL ZARZAL',
     ['Finca el Zarzal', 'Lote', 'FINCA EL ZARZAL']
   ),
-  site('lote-urrao', 'Lote Urrao', 'URRAO', 'LOTE URRAO', ['Lote', 'FINCA URRAO']),
+  site(
+    'finca-urrao',
+    'Finca Urrao',
+    'URRAO',
+    'FINCA URRAO',
+    ['LOTE URRAO', 'Lote Urrao', 'Lote', 'FINCA URRAO', 'Finca Urrao']
+  ),
 ];
 
 const sortLabels = (items: string[]) =>
